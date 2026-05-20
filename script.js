@@ -12,11 +12,15 @@ const firebaseConfig = {
 // Initialisation de Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
 
 // --- VARIABLES D'ÉTAT LOCALES ---
 let tasks = [];
 let dailyTodo = [];
 let weeklyTodo = [];
+let currentUser = null; 
+let unsubscribeTasks, unsubscribeDaily, unsubscribeWeekly; 
+
 let currentTheme = localStorage.getItem('listme_theme') || 'pink';
 let viewState = 'day'; 
 let todoMode = 'daily';
@@ -39,55 +43,105 @@ function changeTheme(t) {
 
 function showPage(p) {
     document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
-    document.getElementById(`${p}-page`).style.display = 'block';
+    const target = document.getElementById(`${p}-page`);
+    if (target) target.style.display = 'block';
+    
     if(p === 'calendar') renderCalendar();
     if(p === 'todo') renderTodo();
     if(p === 'tasks') renderTasks();
 }
 
-// --- SYNCHRONISATION TEMPS RÉEL FIREBASE ---
-// Écoute de la collection "tasks"
-db.collection("tasks").onSnapshot((snapshot) => {
-    tasks = [];
-    snapshot.forEach((doc) => {
-        let data = doc.data();
-        data.id = doc.id;
-        tasks.push(data);
-    });
-    renderTasks();
-    if(viewState === 'day') renderCalendar();
+// --- SURVEILLANCE DE L'ÉTAT DE CONNEXION ---
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        currentUser = user;
+        document.getElementById('main-nav').style.display = 'flex';
+        document.getElementById('profile-user-email').innerText = user.email;
+        startRealtimeSync(user.uid); 
+        showPage('tasks');
+    } else {
+        currentUser = null;
+        document.getElementById('main-nav').style.display = 'none';
+        stopRealtimeSync();
+        document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
+        document.getElementById('auth-page').style.display = 'block';
+    }
 });
 
-// Écoute de la collection "dailyTodo"
-db.collection("dailyTodo").onSnapshot((snapshot) => {
-    dailyTodo = [];
-    snapshot.forEach((doc) => {
-        let data = doc.data();
-        data.id = doc.id;
-        dailyTodo.push(data);
-    });
-    renderTodo();
-});
+// --- SYNCHRONISATION PRIVÉE (Filtrée par UID) ---
+function startRealtimeSync(userId) {
+    unsubscribeTasks = db.collection("tasks").where("userId", "==", userId)
+        .onSnapshot((snapshot) => {
+            tasks = [];
+            snapshot.forEach((doc) => {
+                let data = doc.data(); data.id = doc.id; tasks.push(data);
+            });
+            renderTasks();
+            if(viewState === 'day') renderCalendar();
+        });
 
-// Écoute de la collection "weeklyTodo"
-db.collection("weeklyTodo").onSnapshot((snapshot) => {
-    weeklyTodo = [];
-    snapshot.forEach((doc) => {
-        let data = doc.data();
-        data.id = doc.id;
-        weeklyTodo.push(data);
-    });
-    renderTodo();
-});
+    unsubscribeDaily = db.collection("dailyTodo").where("userId", "==", userId)
+        .onSnapshot((snapshot) => {
+            dailyTodo = [];
+            snapshot.forEach((doc) => {
+                let data = doc.data(); data.id = doc.id; dailyTodo.push(data);
+            });
+            renderTodo();
+        });
 
-// --- ONGLET : MES TÂCHES CLASSIQUES ---
+    unsubscribeWeekly = db.collection("weeklyTodo").where("userId", "==", userId)
+        .onSnapshot((snapshot) => {
+            weeklyTodo = [];
+            snapshot.forEach((doc) => {
+                let data = doc.data(); data.id = doc.id; weeklyTodo.push(data);
+            });
+            renderTodo();
+        });
+}
+
+function stopRealtimeSync() {
+    if (unsubscribeTasks) unsubscribeTasks();
+    if (unsubscribeDaily) unsubscribeDaily();
+    if (unsubscribeWeekly) unsubscribeWeekly();
+    tasks = []; dailyTodo = []; weeklyTodo = [];
+}
+
+// --- LOGIQUE D'AUTHENTIFICATION ---
+document.getElementById('btn-login').onclick = () => {
+    const email = document.getElementById('auth-email').value;
+    const pass = document.getElementById('auth-pass').value;
+    if(email && pass) {
+        auth.signInWithEmailAndPassword(email, pass).catch(err => alert("Erreur : " + err.message));
+    }
+};
+
+document.getElementById('btn-register').onclick = () => {
+    const email = document.getElementById('auth-email').value;
+    const pass = document.getElementById('auth-pass').value;
+    if(email && pass) {
+        auth.createUserWithEmailAndPassword(email, pass)
+            .then(() => alert("Compte créé avec succès !"))
+            .catch(err => alert("Erreur d'inscription : " + err.message));
+    }
+};
+
+document.getElementById('btn-google').onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+        .catch((err) => {
+            alert("Erreur Google : " + err.message);
+        });
+};
+
+document.getElementById('btn-logout').onclick = () => {
+    auth.signOut();
+};
+
+// --- ONGLET : MES TÂCHES ---
 function renderTasks() {
     const c = document.getElementById('task-list'); 
-    if (!c) return;
-    c.innerHTML = '';
-    
+    if (!c) return; c.innerHTML = '';
     tasks.sort((a,b) => (a.completed === b.completed) ? 0 : a.completed ? 1 : -1);
-    
     tasks.forEach(t => {
         const d = document.createElement('div');
         d.className = `task-card ${t.importance} ${t.completed ? 'completed' : ''}`;
@@ -104,10 +158,8 @@ function renderTasks() {
     });
 }
 
-function toggleTaskCheck(id, currentStatus) { 
-    db.collection("tasks").doc(id).update({ completed: !currentStatus });
-}
-
+function toggleTaskCheck(id, currentStatus) { db.collection("tasks").doc(id).update({ completed: !currentStatus }); }
+function deleteTask(id) { db.collection("tasks").doc(id).delete(); }
 function editTask(id) {
     const task = tasks.find(t => t.id === id);
     if(task) {
@@ -120,20 +172,16 @@ function editTask(id) {
     }
 }
 
-function deleteTask(id) { 
-    db.collection("tasks").doc(id).delete();
-}
-
 document.getElementById('save-task').onclick = () => {
     const n = document.getElementById('task-name').value;
     const d = document.getElementById('task-date').value;
     const imp = document.getElementById('task-importance').value;
-    if(n && d) {
+    if(n && d && currentUser) {
         if(editingId) {
             db.collection("tasks").doc(editingId).update({ name: n, date: d, importance: imp });
             editingId = null;
         } else {
-            db.collection("tasks").add({ name: n, date: d, importance: imp, completed: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+            db.collection("tasks").add({ name: n, date: d, importance: imp, completed: false, userId: currentUser.uid });
         }
         document.getElementById('task-modal').style.display = 'none';
     }
@@ -179,12 +227,10 @@ function renderCalendar() {
     }
 }
 
-// --- ONGLET : TO-DO LIST (JOURNALIER / HEBDO) ---
+// --- ONGLET : TO-DO LIST ---
 function setTodoMode(m) { todoMode = m; renderTodo(); }
-
 function renderTodo() {
-    const c = document.getElementById('todo-content');
-    if (!c) return;
+    const c = document.getElementById('todo-content'); if (!c) return;
     document.querySelectorAll('#todo-page .bubble').forEach(b => b.classList.remove('active'));
     document.getElementById(`btn-${todoMode}`).classList.add('active');
     
@@ -250,61 +296,37 @@ function renderTodo() {
 function openTodoModal(time, isWeekly, dayNum = 1) { 
     document.getElementById('todo-time').value = time;
     const selector = document.getElementById('todo-day-selector-block');
-    if(isWeekly) {
-        selector.style.display = 'none'; 
-        document.getElementById('todo-day-select').value = dayNum;
-    } else {
-        selector.style.display = 'none';
-    }
+    if(isWeekly) { selector.style.display = 'none'; document.getElementById('todo-day-select').value = dayNum; } 
+    else { selector.style.display = 'none'; }
     document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly);
     document.getElementById('todo-modal').style.display = 'flex'; 
 }
 
-function toggleTodo(id, currentStatus) { 
-    db.collection("dailyTodo").doc(id).update({ completed: !currentStatus });
-}
-
-function toggleWeeklyTodo(id, currentStatus) {
-    db.collection("weeklyTodo").doc(id).update({ completed: !currentStatus });
-}
-
-function deleteWeeklyTodo(id) {
-    db.collection("weeklyTodo").doc(id).delete();
-}
+function toggleTodo(id, currentStatus) { db.collection("dailyTodo").doc(id).update({ completed: !currentStatus }); }
+function toggleWeeklyTodo(id, currentStatus) { db.collection("weeklyTodo").doc(id).update({ completed: !currentStatus }); }
+function deleteWeeklyTodo(id) { db.collection("weeklyTodo").doc(id).delete(); }
 
 document.getElementById('save-todo').onclick = () => {
     const n = document.getElementById('todo-task-name').value;
     const t = document.getElementById('todo-time').value;
     const isWeekly = document.getElementById('save-todo').getAttribute('data-weekly-mode') === 'true';
     
-    if(n && t) { 
+    if(n && t && currentUser) { 
         if(isWeekly) {
             const daySelect = document.getElementById('todo-day-select').value;
-            db.collection("weeklyTodo").add({ name: n, time: t, dayOfWeek: daySelect, completed: false });
+            db.collection("weeklyTodo").add({ name: n, time: t, dayOfWeek: daySelect, completed: false, userId: currentUser.uid });
         } else {
-            db.collection("dailyTodo").add({ name: n, time: t, date: todayStr, completed: false }); 
+            db.collection("dailyTodo").add({ name: n, time: t, date: todayStr, completed: false, userId: currentUser.uid }); 
         }
         document.getElementById('todo-modal').style.display = 'none';
         document.getElementById('todo-task-name').value = '';
     }
 };
 
-// --- INITIALISATION DES MODALS & APPS ---
+// --- INITIALISATION GENERALE ---
 document.getElementById('add-task-btn').onclick = () => { 
-    editingId = null; 
-    document.getElementById('task-name').value = "";
-    document.getElementById('task-date').value = todayStr; 
-    document.getElementById('modal-title').innerText = "Nouvelle Tâche";
-    document.getElementById('task-modal').style.display = 'flex'; 
+    editingId = null; document.getElementById('task-name').value = ""; document.getElementById('task-date').value = todayStr; 
+    document.getElementById('modal-title').innerText = "Nouvelle Tâche"; document.getElementById('task-modal').style.display = 'flex'; 
 };
-
 document.getElementById('close-modal').onclick = () => document.getElementById('task-modal').style.display = 'none';
-
-window.onclick = (e) => { 
-    if(e.target.className === 'modal') { 
-        document.getElementById('task-modal').style.display = 'none'; 
-        document.getElementById('todo-modal').style.display = 'none'; 
-    } 
-};
-
-showPage('tasks');
+window.onclick = (e) => { if(e.target.className === 'modal') { document.getElementById('task-modal').style.display = 'none'; document.getElementById('todo-modal').style.display = 'none'; } };
