@@ -1,6 +1,22 @@
-let tasks = JSON.parse(localStorage.getItem('listme_tasks')) || [];
-let dailyTodo = JSON.parse(localStorage.getItem('listme_todo')) || [];
-let weeklyTodo = JSON.parse(localStorage.getItem('listme_weekly')) || [];
+// --- CONFIGURATION FIREBASE PROD ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAVkf6PEZnPWLrS1smnau0J6k3ZE1wGX-4",
+  authDomain: "listme-2620d.firebaseapp.com",
+  projectId: "listme-2620d",
+  storageBucket: "listme-2620d.firebasestorage.app",
+  messagingSenderId: "145966801688",
+  appId: "1:145966801688:web:34638000fbafaff5bd346d",
+  measurementId: "G-ERX6N3R6XK"
+};
+
+// Initialisation de Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// --- VARIABLES D'ÉTAT LOCALES ---
+let tasks = [];
+let dailyTodo = [];
+let weeklyTodo = [];
 let currentTheme = localStorage.getItem('listme_theme') || 'pink';
 let viewState = 'day'; 
 let todoMode = 'daily';
@@ -29,27 +45,69 @@ function showPage(p) {
     if(p === 'tasks') renderTasks();
 }
 
-// --- MES TÂCHES CLASSIQUES ---
+// --- SYNCHRONISATION TEMPS RÉEL FIREBASE ---
+// Écoute de la collection "tasks"
+db.collection("tasks").onSnapshot((snapshot) => {
+    tasks = [];
+    snapshot.forEach((doc) => {
+        let data = doc.data();
+        data.id = doc.id;
+        tasks.push(data);
+    });
+    renderTasks();
+    if(viewState === 'day') renderCalendar();
+});
+
+// Écoute de la collection "dailyTodo"
+db.collection("dailyTodo").onSnapshot((snapshot) => {
+    dailyTodo = [];
+    snapshot.forEach((doc) => {
+        let data = doc.data();
+        data.id = doc.id;
+        dailyTodo.push(data);
+    });
+    renderTodo();
+});
+
+// Écoute de la collection "weeklyTodo"
+db.collection("weeklyTodo").onSnapshot((snapshot) => {
+    weeklyTodo = [];
+    snapshot.forEach((doc) => {
+        let data = doc.data();
+        data.id = doc.id;
+        weeklyTodo.push(data);
+    });
+    renderTodo();
+});
+
+// --- ONGLET : MES TÂCHES CLASSIQUES ---
 function renderTasks() {
     const c = document.getElementById('task-list'); 
+    if (!c) return;
     c.innerHTML = '';
+    
     tasks.sort((a,b) => (a.completed === b.completed) ? 0 : a.completed ? 1 : -1);
+    
     tasks.forEach(t => {
         const d = document.createElement('div');
         d.className = `task-card ${t.importance} ${t.completed ? 'completed' : ''}`;
         d.innerHTML = `
-            <div style="flex:1" onclick="toggleTaskCheck(${t.id})">
+            <div style="flex:1" onclick="toggleTaskCheck('${t.id}', ${t.completed})">
                 <strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong><br>
                 <small>${t.date}</small>
             </div>
             <div class="task-actions">
-                <button onclick="editTask(${t.id})" style="background:none; border:none; color:var(--primary); font-size:1.3rem; cursor:pointer;">✎</button>
-                <button onclick="deleteTask(${t.id})" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
+                <button onclick="editTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.3rem; cursor:pointer;">✎</button>
+                <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
             </div>`;
         c.appendChild(d);
     });
 }
-function toggleTaskCheck(id) { let i = tasks.findIndex(t => t.id === id); tasks[i].completed = !tasks[i].completed; saveTasks(); }
+
+function toggleTaskCheck(id, currentStatus) { 
+    db.collection("tasks").doc(id).update({ completed: !currentStatus });
+}
+
 function editTask(id) {
     const task = tasks.find(t => t.id === id);
     if(task) {
@@ -61,8 +119,10 @@ function editTask(id) {
         document.getElementById('task-modal').style.display = 'flex';
     }
 }
-function deleteTask(id) { tasks = tasks.filter(t => t.id !== id); saveTasks(); }
-function saveTasks() { localStorage.setItem('listme_tasks', JSON.stringify(tasks)); renderTasks(); }
+
+function deleteTask(id) { 
+    db.collection("tasks").doc(id).delete();
+}
 
 document.getElementById('save-task').onclick = () => {
     const n = document.getElementById('task-name').value;
@@ -70,21 +130,20 @@ document.getElementById('save-task').onclick = () => {
     const imp = document.getElementById('task-importance').value;
     if(n && d) {
         if(editingId) {
-            let index = tasks.findIndex(t => t.id === editingId);
-            tasks[index] = { ...tasks[index], name: n, date: d, importance: imp };
+            db.collection("tasks").doc(editingId).update({ name: n, date: d, importance: imp });
             editingId = null;
         } else {
-            tasks.push({ name: n, date: d, importance: imp, id: Date.now(), completed: false });
+            db.collection("tasks").add({ name: n, date: d, importance: imp, completed: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
         }
-        saveTasks();
         document.getElementById('task-modal').style.display = 'none';
     }
 };
 
-// --- CALENDRIER ---
+// --- ONGLET : CALENDRIER ---
 function setViewState(s) { viewState = s; renderCalendar(); }
 function renderCalendar() {
     const c = document.getElementById('calendar-content'); const t = document.getElementById('calendar-title'); c.innerHTML = '';
+    if (!c) return;
     document.querySelectorAll('#calendar-page .bubble').forEach(b => b.classList.remove('active'));
     document.getElementById(`btn-${viewState}`).classList.add('active');
 
@@ -120,11 +179,12 @@ function renderCalendar() {
     }
 }
 
-// --- TO-DO LIST & NOUVELLE LOGIQUE HEBDO REPERCUTÉE ---
+// --- ONGLET : TO-DO LIST (JOURNALIER / HEBDO) ---
 function setTodoMode(m) { todoMode = m; renderTodo(); }
 
 function renderTodo() {
     const c = document.getElementById('todo-content');
+    if (!c) return;
     document.querySelectorAll('#todo-page .bubble').forEach(b => b.classList.remove('active'));
     document.getElementById(`btn-${todoMode}`).classList.add('active');
     
@@ -146,7 +206,7 @@ function renderTodo() {
                         <div style="flex:1; cursor:pointer;" onclick="openTodoModal('${time}', false)">
                             ${combinedItems.map(it => {
                                 const isWeekly = it.hasOwnProperty('dayOfWeek');
-                                const checkFunc = isWeekly ? `toggleWeeklyTodo(${it.id})` : `toggleTodo(${it.id})`;
+                                const checkFunc = isWeekly ? `toggleWeeklyTodo('${it.id}', ${it.completed})` : `toggleTodo('${it.id}', ${it.completed})`;
                                 return `<div onclick="event.stopPropagation(); ${checkFunc}">${it.completed ? '✓' : '○'} ${it.name} <span style="font-size:0.7rem; opacity:0.5;">${isWeekly ? '(Hebdo)' : ''}</span></div>`;
                             }).join('') || '...'}
                         </div>
@@ -174,10 +234,10 @@ function renderTodo() {
                 <div class="weekly-subtasks">
                     ${dayTasks.map(it => `
                         <div class="weekly-item">
-                            <span onclick="toggleWeeklyTodo(${it.id})" style="cursor:pointer; ${it.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">
+                            <span onclick="toggleWeeklyTodo('${it.id}', ${it.completed})" style="cursor:pointer; ${it.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">
                                 <b>${it.time}</b> : ${it.name}
                             </span>
-                            <button onclick="deleteWeeklyTodo(${it.id})" style="background:none; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer; padding-left:10px;">×</button>
+                            <button onclick="deleteWeeklyTodo('${it.id}')" style="background:none; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer; padding-left:10px;">×</button>
                         </div>
                     `).join('') || '<span style="opacity:0.3; font-style:italic; font-size:0.85rem;">Aucune activité planifiée</span>'}
                 </div>
@@ -191,7 +251,7 @@ function openTodoModal(time, isWeekly, dayNum = 1) {
     document.getElementById('todo-time').value = time;
     const selector = document.getElementById('todo-day-selector-block');
     if(isWeekly) {
-        selector.style.display = 'none'; // Dissimulé, car le jour est sélectionné automatiquement en tâche de fond !
+        selector.style.display = 'none'; 
         document.getElementById('todo-day-select').value = dayNum;
     } else {
         selector.style.display = 'none';
@@ -200,24 +260,16 @@ function openTodoModal(time, isWeekly, dayNum = 1) {
     document.getElementById('todo-modal').style.display = 'flex'; 
 }
 
-function toggleTodo(id) { 
-    let i = dailyTodo.findIndex(it => it.id === id); 
-    dailyTodo[i].completed = !dailyTodo[i].completed; 
-    localStorage.setItem('listme_todo', JSON.stringify(dailyTodo)); 
-    renderTodo(); 
+function toggleTodo(id, currentStatus) { 
+    db.collection("dailyTodo").doc(id).update({ completed: !currentStatus });
 }
 
-function toggleWeeklyTodo(id) {
-    let i = weeklyTodo.findIndex(it => it.id === id);
-    weeklyTodo[i].completed = !weeklyTodo[i].completed;
-    localStorage.setItem('listme_weekly', JSON.stringify(weeklyTodo));
-    renderTodo();
+function toggleWeeklyTodo(id, currentStatus) {
+    db.collection("weeklyTodo").doc(id).update({ completed: !currentStatus });
 }
 
 function deleteWeeklyTodo(id) {
-    weeklyTodo = weeklyTodo.filter(it => it.id !== id);
-    localStorage.setItem('listme_weekly', JSON.stringify(weeklyTodo));
-    renderTodo();
+    db.collection("weeklyTodo").doc(id).delete();
 }
 
 document.getElementById('save-todo').onclick = () => {
@@ -228,19 +280,16 @@ document.getElementById('save-todo').onclick = () => {
     if(n && t) { 
         if(isWeekly) {
             const daySelect = document.getElementById('todo-day-select').value;
-            weeklyTodo.push({ id: Date.now(), name: n, time: t, dayOfWeek: daySelect, completed: false });
-            localStorage.setItem('listme_weekly', JSON.stringify(weeklyTodo));
+            db.collection("weeklyTodo").add({ name: n, time: t, dayOfWeek: daySelect, completed: false });
         } else {
-            dailyTodo.push({ id: Date.now(), name: n, time: t, date: todayStr, completed: false }); 
-            localStorage.setItem('listme_todo', JSON.stringify(dailyTodo)); 
+            db.collection("dailyTodo").add({ name: n, time: t, date: todayStr, completed: false }); 
         }
-        renderTodo(); 
         document.getElementById('todo-modal').style.display = 'none';
         document.getElementById('todo-task-name').value = '';
     }
 };
 
-// --- CONFIGURATION INITIALE ---
+// --- INITIALISATION DES MODALS & APPS ---
 document.getElementById('add-task-btn').onclick = () => { 
     editingId = null; 
     document.getElementById('task-name').value = "";
