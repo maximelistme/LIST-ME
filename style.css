@@ -12,7 +12,12 @@ body.theme-pink { --bg-main: #FAD0C4; --bg-line: rgba(255, 255, 255, 0.4); --car
 body.theme-dark { --bg-main: #121212; --bg-line: rgba(255, 255, 255, 0.05); --card-bg: #1e1e1e; --text-color: #ffffff; }
 body.theme-ocean { --bg-main: #1a2a3a; --bg-line: rgba(0, 206, 209, 0.1); --card-bg: #2c3e50; --text-color: #ecf0f1; }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+* { 
+    box-sizing: border-box; 
+    -webkit-tap-highlight-color: transparent; 
+    margin: 0; 
+    padding: 0; 
+}
 
 body { 
     font-family: -apple-system, sans-serif; background-color: var(--bg-main);
@@ -38,6 +43,7 @@ body {
     background: rgba(255, 255, 255, 0.22); border: none; color: white;
     padding: 10px 2px; border-radius: 25px; font-size: 0.8rem; cursor: pointer;
     transition: all 0.2s ease; flex: 1; text-align: center; display: inline-block;
+    -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
 }
 body.theme-dark .nav-bubble { background: rgba(255,255,255,0.08); }
 .nav-bubble.active { background: white !important; color: var(--primary-dark) !important; font-weight: bold; box-shadow: 0 3px 8px rgba(0,0,0,0.12); }
@@ -55,10 +61,9 @@ main { padding: 20px 15px; max-width: 600px; margin: auto; }
 .sub-menu-tab {
     background: none; border: none; color: var(--text-color); font-size: 1.1rem;
     padding: 6px 14px; cursor: pointer; opacity: 0.4; transition: all 0.2s; position: relative;
+    -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
 }
-.sub-menu-tab.active {
-    opacity: 1 !important; color: var(--primary-dark); font-size: 1.2rem;
-}
+.sub-menu-tab.active { opacity: 1 !important; color: var(--primary-dark); font-size: 1.2rem; }
 body.theme-dark .sub-menu-tab.active { color: var(--primary); }
 body.theme-ocean .sub-menu-tab.active { color: var(--primary); }
 
@@ -70,7 +75,7 @@ body.theme-ocean .sub-menu-tab.active { color: var(--primary); }
     cursor: pointer; box-shadow: 0 4px 12px rgba(0, 206, 209, 0.3);
 }
 
-/* ANIMATION TACTILE REBOND */
+/* ANIMATION TACTILE REBOND SUR SELECTION */
 .btn-validated-click { transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.4) !important; }
 .btn-validated-click:active { transform: scale(0.90) !important; filter: brightness(0.9); }
 
@@ -82,19 +87,34 @@ body.theme-ocean .sub-menu-tab.active { color: var(--primary); }
     background: white; border: none; padding: 10px 20px; border-radius: 30px; 
     color: var(--primary-dark); box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer;
     font-size: 0.9rem; transition: all 0.2s ease;
+    -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
 }
 .bubble.active { background: var(--primary) !important; color: white !important; box-shadow: 0 4px 12px rgba(0, 206, 209, 0.3); }
 
 /* CARTES PRINCIPALES */
 .task-card, .profile-card, .schedule-container, .grid-item, .day-card, .modal-content, .weekly-day-card { background: var(--card-bg) !important; color: var(--text-color); border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
 
-/* TÂCHES STANDARD */
-.task-card { padding: 18px 20px; margin-bottom: 15px; border-left: 12px solid #ccc; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; }
+/* TÂCHES STANDARD (CORRIGÉ AVEC BLOCAGE SELECTION BLEUE) */
+.task-card { 
+    padding: 18px 20px; 
+    margin-bottom: 15px; 
+    border-left: 12px solid #ccc; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    transition: all 0.3s ease;
+    
+    /* Supprime définitivement la sélection bleue parasite */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
 .task-card.high { border-left-color: var(--danger); }
 .task-card.medium { border-left-color: var(--warning); }
 .task-card.low { border-left-color: var(--success); }
 
-/* NOUVEAU STYLE : MODE TÂCHE IMMINENTE (MOINS DE 1H -> SE PLACE EN HAUT EN VIOLET) */
+/* MODE TÂCHE IMMINENTE (VIOLET) */
 .task-card.is-imminent {
     border-left-color: var(--urgent-violet) !important;
     background: linear-gradient(135deg, var(--card-bg), rgba(142, 68, 173, 0.08)) !important;
@@ -102,11 +122,7 @@ body.theme-ocean .sub-menu-tab.active { color: var(--primary); }
     border: 1px solid rgba(142, 68, 173, 0.2);
     animation: pulseUrgentViolet 2.5s infinite ease-in-out;
 }
-.task-card.is-imminent small.time-alert {
-    color: var(--urgent-violet) !important;
-    font-weight: bold;
-    animation: flashText 1.5s infinite alternate;
-}
+.task-card.is-imminent small.time-alert { color: var(--urgent-violet) !important; font-weight: bold; animation: flashText 1.5s infinite alternate; }
 body.theme-dark .task-card.is-imminent { background: linear-gradient(135deg, #1e1e1e, rgba(142, 68, 173, 0.15)) !important; }
 body.theme-ocean .task-card.is-imminent { background: linear-gradient(135deg, #2c3e50, rgba(142, 68, 173, 0.18)) !important; }
 
@@ -115,9 +131,7 @@ body.theme-ocean .task-card.is-imminent { background: linear-gradient(135deg, #2
     50% { box-shadow: 0 4px 22px rgba(142, 68, 173, 0.45); border-color: var(--urgent-violet-light); }
     100% { box-shadow: 0 4px 15px rgba(142, 68, 173, 0.2); }
 }
-@keyframes flashText {
-    from { opacity: 0.6; } to { opacity: 1; }
-}
+@keyframes flashText { from { opacity: 0.6; } to { opacity: 1; } }
 
 /* BADGES TACTILES */
 .reminder-badges-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 5px; }
@@ -125,6 +139,7 @@ body.theme-ocean .task-card.is-imminent { background: linear-gradient(135deg, #2
     padding: 10px 12px; border-radius: 12px; background: rgba(128,128,128,0.1); 
     border: 1px solid rgba(128,128,128,0.2); font-size: 0.85rem; font-weight: bold;
     cursor: pointer; transition: all 0.2s ease; text-align: center; flex: 1; min-width: 80px;
+    -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
 }
 .reminder-badge.active { background: var(--primary) !important; color: white !important; border-color: var(--primary-dark) !important; box-shadow: 0 3px 10px rgba(0, 206, 209, 0.3); }
 
@@ -133,15 +148,15 @@ body.theme-ocean .task-card.is-imminent { background: linear-gradient(135deg, #2
 .weekly-day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .weekly-day-title { color: var(--primary); font-size: 1.2rem; }
 .weekly-subtasks { display: flex; flex-direction: column; gap: 8px; padding-left: 5px; font-size: 0.95rem; }
-.weekly-item { display: flex; justify-content: space-between; align-items: center; opacity: 0.9; padding: 6px 0; border-bottom: 1px dashed rgba(128,128,128,0.15); }
+.weekly-item { display: flex; justify-content: space-between; align-items: center; opacity: 0.9; padding: 6px 0; border-bottom: 1px dashed rgba(128,128,128,0.15); -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
 
 /* CALENDRIER */
 .calendar-grid { display: grid !important; grid-template-columns: repeat(7, 1fr) !important; gap: 8px; }
 .grid-years, .grid-months { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 15px; }
-.grid-item { padding: 20px 5px; text-align: center; cursor: pointer; }
+.grid-item { padding: 20px 5px; text-align: center; cursor: pointer; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
 .grid-item.selected { background: var(--primary); color: white; }
 
-.day-card { padding: 10px 2px; min-height: 80px; text-align: center; cursor: pointer; border: 1px solid rgba(128,128,128,0.1); position: relative; }
+.day-card { padding: 10px 2px; min-height: 80px; text-align: center; cursor: pointer; border: 1px solid rgba(128,128,128,0.1); position: relative; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
 .day-card.has-high { border-bottom: 5px solid var(--danger) !important; }
 .day-card.has-medium { border-bottom: 5px solid var(--warning) !important; }
 .day-card.has-low { border-bottom: 5px solid var(--success) !important; }
@@ -152,7 +167,7 @@ body.theme-ocean .task-card.is-imminent { background: linear-gradient(135deg, #2
 .profile-card { padding: 25px; display: flex; flex-direction: column; gap: 15px; }
 .profile-card label { font-size: 0.85rem; opacity: 0.8; margin-bottom: -5px; }
 .theme-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
-.theme-option { height: 80px; border-radius: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+.theme-option { height: 80px; border-radius: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
 .theme-option.pink { background: #FAD0C4; }
 .theme-option.dark { background: #1a1a1a; border: 1px solid #333; }
 .theme-option.ocean { background: #1a2a3a; border: 1px solid var(--primary); }
