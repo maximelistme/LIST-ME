@@ -44,11 +44,12 @@
         </section>
 
         <section id="tasks-page" style="display:none;">
-            <div class="header-action header-centered">
-                <h2>Mes Tâches</h2>
+            <div class="header-action header-centered" style="padding: 10px 15px; gap: 15px;">
+                <button id="sub-btn-active-tasks" class="sub-menu-tab active" onclick="switchTaskSubView('active')">Mes Tâches</button>
+                <button id="sub-btn-archived-tasks" class="sub-menu-tab" onclick="switchTaskSubView('archive')">Archives</button>
             </div>
 
-            <div class="action-bar-left" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px;">
+            <div id="tasks-action-bar" class="action-bar-left" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px;">
                 <button id="add-task-btn" class="btn-add-bubble btn-validated-click">+ Ajouter une tâche</button>
                 
                 <select id="task-sort-filter" onchange="renderTasks()" style="padding: 10px; font-size: 0.85rem; border-radius: 20px; font-weight: bold; cursor: pointer; max-width: 160px;">
@@ -102,7 +103,7 @@
                 <div class="theme-option ocean" onclick="changeTheme('ocean')">Océan</div>
             </div>
         </section>
-    </main>
+    </nav>
 
     <div id="welcome-modal" class="modal modal-center" style="z-index: 10001;">
         <div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;">
