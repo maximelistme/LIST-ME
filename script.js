@@ -461,3 +461,17 @@ document.getElementById('close-todo-modal').onclick = () => document.getElementB
 
 // Logique de clic externe
 window.onclick = (e) => { if(e.target.className.includes('modal')) { document.getElementById('task-modal').style.display = 'none'; document.getElementById('todo-modal').style.display = 'none'; document.getElementById('calendar-day-modal').style.display = 'none'; document.getElementById('welcome-modal').style.display = 'none'; } };
+
+// Fonction d'affichage d'un Toast personnalisé et élégant
+function showToast(message) {
+    const toast = document.getElementById('toast-notification');
+    if (!toast) return;
+    
+    toast.innerText = message;
+    toast.className = "toast-show"; // Déclenche l'apparition fluide
+    
+    // Disparaît automatiquement après 3 secondes
+    setTimeout(() => {
+        toast.className = "toast-hidden";
+    }, 3000);
+}
