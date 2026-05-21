@@ -165,7 +165,6 @@ auth.onAuthStateChanged((user) => {
             } else {
                 userNickname = ""; 
             }
-            // Le logo reste "LIST'ME" en haut, on ne change plus le innerText de l'en-tête
             startRealtimeSync(user.uid); 
             showPage('tasks');
         }).catch(() => { startRealtimeSync(user.uid); showPage('tasks'); });
@@ -327,7 +326,7 @@ document.getElementById('btn-register').onclick = () => {
 document.getElementById('btn-google').onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => { showToast("Connexion Google réussie ! 🚀"); }).catch((err) => { showToast("Erreur Google : " + err.message); }); };
 document.getElementById('btn-logout').onclick = () => { auth.signOut().then(() => { showToast("Déconnexion réussie."); }); };
 
-// --- ONTLET : CALENDRIER ---
+// --- ONGLETS : CALENDRIER ---
 function setViewState(s) { viewState = s; renderCalendar(); }
 function renderCalendar() {
     const c = document.getElementById('calendar-content'); const t = document.getElementById('calendar-title'); c.innerHTML = '';
@@ -377,7 +376,7 @@ function openCalendarDayModal(day, monthName, year, dayTasks) {
     document.getElementById('calendar-day-modal').style.display = 'flex';
 }
 
-// --- ONGLET : TO-DO LIST ---
+// --- ONGLET : TO-DO LIST (Corrigé avec injection de classe pour barrer la ligne) ---
 function setTodoMode(m) { todoMode = m; renderTodo(); }
 function renderTodo() {
     const c = document.getElementById('todo-content'); if (!c) return;
@@ -402,10 +401,12 @@ function renderTodo() {
                 </div>
                 <div class="weekly-subtasks">
                     ${combinedItems.map(it => {
-                        const isWeekly = it.hasOwnProperty('dayOfWeek'); const checkFunc = isWeekly ? `toggleWeeklyTodo('${it.id}', ${it.completed})` : `toggleTodo('${it.id}', ${it.completed})`; const delFunc = isWeekly ? `deleteWeeklyTodo('${it.id}')` : `deleteDailyTodo('${it.id}')`;
+                        const isWeekly = it.hasOwnProperty('dayOfWeek'); 
+                        const checkFunc = isWeekly ? `toggleWeeklyTodo('${it.id}', ${it.completed})` : `toggleTodo('${it.id}', ${it.completed})`; 
+                        const delFunc = isWeekly ? `deleteWeeklyTodo('${it.id}')` : `deleteDailyTodo('${it.id}')`;
                         return `
                             <div class="weekly-item">
-                                <span onclick="event.stopPropagation(); ${checkFunc}" style="cursor:pointer; ${it.completed ? 'text-decoration:line-through; font-style:italic; opacity:0.5;' : ''}">
+                                <span onclick="event.stopPropagation(); ${checkFunc}" style="cursor:pointer;" class="${it.completed ? 'todo-completed' : ''}">
                                     <b>${it.time}</b> : ${it.name} ${isWeekly ? '<small style="opacity:0.5;">(Hebdo)</small>':''}
                                 </span>
                                 <div>
@@ -433,7 +434,7 @@ function renderTodo() {
                 <div class="weekly-subtasks">
                     ${dayTasks.map(it => `
                         <div class="weekly-item">
-                            <span onclick="toggleWeeklyTodo('${it.id}', ${it.completed})" style="cursor:pointer; ${it.completed ? 'text-decoration:line-through; font-style:italic; opacity:0.5;' : ''}">
+                            <span onclick="toggleWeeklyTodo('${it.id}', ${it.completed})" style="cursor:pointer;" class="${it.completed ? 'todo-completed' : ''}">
                                 <b>${it.time}</b> : ${it.name}
                             </span>
                             <div>
