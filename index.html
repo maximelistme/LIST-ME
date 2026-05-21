@@ -12,10 +12,10 @@
 <body class="theme-pink">
 
     <nav class="navbar">
-        <h1 id="app-logo-title">LIST'ME</h1>
+        <h1>LIST'ME</h1>
         <div class="main-nav-container" id="main-nav" style="display:none;">
             <button class="nav-bubble active" id="nav-btn-tasks" onclick="showPage('tasks')">Tâches</button>
-            <button class="nav-bubble" id="nav-btn-todo" onclick="showPage('todo')">Planning</button>
+            <button class="nav-bubble" id="nav-btn-todo" onclick="showPage('todo')">To-Do List</button>
             <button class="nav-bubble" id="nav-btn-calendar" onclick="showPage('calendar')">Calendrier</button>
             <button class="nav-bubble" id="nav-btn-profile" onclick="showPage('profile')">Profil</button>
         </div>
@@ -103,7 +103,9 @@
                 <div class="theme-option ocean" onclick="changeTheme('ocean')">Océan</div>
             </div>
         </section>
-    </nav>
+    </main>
+
+    <div id="toast-notification" class="toast-hidden"></div>
 
     <div id="welcome-modal" class="modal modal-center" style="z-index: 10001;">
         <div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;">
@@ -152,7 +154,7 @@
 
     <div id="todo-modal" class="modal">
         <div class="modal-content">
-            <h3 id="todo-modal-title">Planning</h3>
+            <h3 id="todo-modal-title">To-Do List</h3>
             <div id="todo-day-selector-block" style="display:none; flex-direction:column; gap:5px;">
                 <label>Jour de la semaine</label>
                 <select id="todo-day-select">
@@ -183,10 +185,7 @@
             <button onclick="document.getElementById('calendar-day-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
         </div>
     </div>
-<div id="toast-notification" class="toast-hidden"></div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-        
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
