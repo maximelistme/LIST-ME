@@ -44,7 +44,7 @@
         </section>
 
         <section id="tasks-page" style="display:none;">
-            <div class="header-action header-centered" style="padding: 10px 15px; gap: 15px;">
+            <div class="header-action header-centered">
                 <button id="sub-btn-active-tasks" class="sub-menu-tab active" onclick="switchTaskSubView('active')">Mes Tâches</button>
                 <button id="sub-btn-archived-tasks" class="sub-menu-tab" onclick="switchTaskSubView('archive')">Archives</button>
             </div>
@@ -82,116 +82,4 @@
 
         <section id="profile-page" style="display:none;">
             <div class="header-action header-centered">
-                <h2>Mon Profil</h2>
-            </div>
-            <div class="profile-card">
-                <label>Mon Surnom / Prénom</label>
-                <div style="display: flex; gap: 10px; width: 100%;">
-                    <input type="text" id="profile-nickname" placeholder="Ex: Max, Julie..." style="flex: 1;">
-                    <button id="btn-save-nickname" class="btn-primary btn-validated-click" style="padding: 10px 15px; font-size: 0.9rem; white-space: nowrap;">Enregistrer</button>
-                </div>
-                
-                <hr style="opacity: 0.1; margin: 10px 0;">
-                <p id="profile-user-email" style="font-size: 0.85rem; opacity: 0.6; text-align:center; margin-bottom:10px;"></p>
-                <button id="btn-logout" class="btn-secondary" style="background:var(--danger); color:white;">Se déconnecter</button>
-            </div>
-
-            <div class="header-action header-centered" style="margin-top: 30px;">
-                <h2>Thèmes</h2>
-            </div>
-            <div class="theme-selector">
-                <div class="theme-option pink" onclick="changeTheme('pink')">Bonbon</div>
-                <div class="theme-option dark" onclick="changeTheme('dark')">Sombre</div>
-                <div class="theme-option ocean" onclick="changeTheme('ocean')">Océan</div>
-            </div>
-        </section>
-    </main>
-
-    <div id="toast-notification" class="toast-hidden"></div>
-
-    <div id="welcome-modal" class="modal modal-center" style="z-index: 10001;">
-        <div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;">
-            <h3 id="welcome-message-text" style="color: var(--primary-dark); text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3>
-            <div id="today-summary-zone"></div>
-            <button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn-secondary btn-validated-click" style="margin-top: 15px; width: 100%;">C'est parti !</button>
-        </div>
-    </div>
-
-    <div id="task-modal" class="modal">
-        <div class="modal-content">
-            <h3 id="modal-title">Nouvelle Tâche</h3>
-            <label>Nom de la tâche</label>
-            <input type="text" id="task-name" placeholder="Ex: Aller courir...">
-            
-            <div style="display: flex; gap: 15px; width: 100%;">
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
-                    <label>Date</label>
-                    <input type="date" id="task-date">
-                </div>
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
-                    <label>Heure</label>
-                    <input type="time" id="task-time">
-                </div>
-            </div>
-            
-            <label>Rappels de notification (Cliquez pour activer)</label>
-            <div class="reminder-badges-container">
-                <div class="reminder-badge" data-value="5">5 min avant</div>
-                <div class="reminder-badge" data-value="15">15 min avant</div>
-                <div class="reminder-badge" data-value="60">1h avant</div>
-            </div>
-
-            <label>Importance</label>
-            <select id="task-importance">
-                <option value="high">Haute</option>
-                <option value="medium">Moyenne</option>
-                <option value="low">Faible</option>
-            </select>
-            <div class="modal-buttons">
-                <button id="save-task" class="btn-primary btn-validated-click">Enregistrer</button>
-                <button id="close-modal" class="btn-secondary">Annuler</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="todo-modal" class="modal">
-        <div class="modal-content">
-            <h3 id="todo-modal-title">To-Do List</h3>
-            <div id="todo-day-selector-block" style="display:none; flex-direction:column; gap:5px;">
-                <label>Jour de la semaine</label>
-                <select id="todo-day-select">
-                    <option value="1">Lundi</option>
-                    <option value="2">Mardi</option>
-                    <option value="3">Mercredi</option>
-                    <option value="4">Jeudi</option>
-                    <option value="5">Vendredi</option>
-                    <option value="6">Samedi</option>
-                    <option value="0">Dimanche</option>
-                </select>
-            </div>
-            <label>Heure</label>
-            <input type="time" id="todo-time">
-            <label>Activité</label>
-            <input type="text" id="todo-task-name" placeholder="Tâche...">
-            <div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;">
-                <button id="save-todo" class="btn-primary btn-validated-click" style="flex:1;">Ajouter</button>
-                <button id="close-todo-modal" class="btn-secondary" style="flex:1;">Annuler</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="calendar-day-modal" class="modal modal-center">
-        <div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto;">
-            <h3 id="cal-modal-date-title" style="color: var(--primary); text-align: center; margin-bottom: 5px;"></h3>
-            <div id="cal-modal-tasks-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;"></div>
-            <button onclick="document.getElementById('calendar-day-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
-        </div>
-    </div>
-
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    
-    <script src="script.js"></script>
-</body>
-</html>
+                <h2>Mon Profil
