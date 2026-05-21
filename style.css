@@ -22,28 +22,33 @@ body {
     color: var(--text-color); transition: background 0.3s ease;
 }
 
-.navbar h1, h2, h3, .calendar-title, #add-task-btn, .bubble, #modal-title, .time-label, .theme-option, .weekly-day-title, #todo-modal-title, #cal-modal-date-title, .nav-bubble, .welcome-card h3 { font-family: 'Mogra', cursive; }
+.navbar h1, h2, h3, .calendar-title, #add-task-btn, .bubble, #modal-title, .time-label, .theme-option, .weekly-day-title, #todo-modal-title, #cal-modal-date-title, .nav-bubble { font-family: 'Mogra', cursive; }
 
-/* NAVBAR COMPACTE */
-.navbar { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 15px; text-align: center; }
+/* NAVBAR UNIFIÉE (Titre en haut, Menu empilé juste dessous) */
+.navbar { 
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark)); 
+    color: white; padding: 15px 12px; display: flex; flex-direction: column; gap: 12px; align-items: center; text-align: center;
+    position: sticky; top: 0; z-index: 9999; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
 
-/* BARRE DE NAVIGATION EN BULLES SEPARÉES */
+/* GRILLE DE NAVIGATION INTELLIGENTE ET FLUIDE */
 .main-nav-container {
-    display: flex; justify-content: center; flex-wrap: wrap; gap: 8px;
-    padding: 15px 10px 5px 10px; max-width: 600px; margin: auto;
-}
-.nav-bubble {
-    background: var(--card-bg); border: none; color: var(--text-color);
-    padding: 10px 14px; border-radius: 25px; font-size: 0.85rem; cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08); transition: all 0.2s ease;
-    flex: 1; min-width: 80px; text-align: center;
-}
-.nav-bubble.active {
-    background: var(--primary) !important; color: white !important;
-    box-shadow: 0 4px 12px rgba(0, 206, 209, 0.3);
+    display: flex; justify-content: center; width: 100%; max-width: 500px; gap: 6px; margin: 0 auto;
 }
 
-main { padding: 10px 15px 20px 15px; max-width: 600px; margin: auto; }
+/* CORRECTION ALIGNEMENT ET TEXTE "CALENDRIER" */
+.nav-bubble {
+    background: rgba(255, 255, 255, 0.22); border: none; color: white;
+    padding: 10px 2px; border-radius: 25px; font-size: 0.8rem; cursor: pointer;
+    transition: all 0.2s ease; flex: 1; text-align: center; display: inline-block;
+}
+body.theme-dark .nav-bubble { background: rgba(255,255,255,0.08); }
+.nav-bubble.active {
+    background: white !important; color: var(--primary-dark) !important;
+    font-weight: bold; box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+}
+
+main { padding: 20px 15px; max-width: 600px; margin: auto; }
 
 /* TITRES CENTRÉS */
 .header-action { 
@@ -52,12 +57,10 @@ main { padding: 10px 15px 20px 15px; max-width: 600px; margin: auto; }
 }
 .header-centered { justify-content: center; text-align: center; }
 
-/* ZONE DU BOUTON SOUS LE TITRE ALIGNÉ A GAUCHE */
-.action-bar-left {
-    display: flex; justify-content: flex-start; margin-bottom: 20px; padding-left: 5px;
-}
+/* ACTION BAR LEFT */
+.action-bar-left { display: flex; justify-content: flex-start; margin-bottom: 20px; padding-left: 5px; }
 
-/* STYLE DU BOUTON AJOUTER EN BULLE COHÉRENTE */
+/* BOUTON AJOUTER */
 .btn-add-bubble {
     background: var(--primary); color: white; border: none;
     padding: 12px 22px; border-radius: 30px; font-size: 0.95rem; font-weight: bold;
@@ -66,15 +69,9 @@ main { padding: 10px 15px 20px 15px; max-width: 600px; margin: auto; }
 }
 .btn-add-bubble:active { transform: scale(0.96); background: var(--primary-dark); }
 
-/* ENCADRÉ BIENVENUE & RÉCAPITULATIF */
-.welcome-card {
-    background: var(--card-bg); padding: 20px; border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 25px;
-    border-left: 6px solid var(--primary);
-}
-.welcome-card h3 { color: var(--primary-dark); font-size: 1.3rem; margin-bottom: 10px; }
+/* WELCOME DASHBOARD SYNTÈSE */
 .welcome-summary-item {
-    font-size: 0.9rem; padding: 6px 0; opacity: 0.9;
+    font-size: 0.95rem; padding: 10px 0; opacity: 0.95; text-align: left;
     border-bottom: 1px dashed rgba(128, 128, 128, 0.15);
 }
 
