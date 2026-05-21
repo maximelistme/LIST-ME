@@ -94,7 +94,7 @@ body.theme-ocean .sub-menu-tab.active { color: var(--primary); }
 /* CARTES PRINCIPALES */
 .task-card, .profile-card, .schedule-container, .grid-item, .day-card, .modal-content, .weekly-day-card { background: var(--card-bg) !important; color: var(--text-color); border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
 
-/* TÂCHES STANDARD (CORRIGÉ AVEC BLOCAGE SELECTION BLEUE) */
+/* TÂCHES STANDARD */
 .task-card { 
     padding: 18px 20px; 
     margin-bottom: 15px; 
@@ -119,106 +119,4 @@ body.theme-ocean .sub-menu-tab.active { color: var(--primary); }
     border-left-color: var(--urgent-violet) !important;
     background: linear-gradient(135deg, var(--card-bg), rgba(142, 68, 173, 0.08)) !important;
     box-shadow: 0 4px 18px rgba(142, 68, 173, 0.25) !important;
-    border: 1px solid rgba(142, 68, 173, 0.2);
-    animation: pulseUrgentViolet 2.5s infinite ease-in-out;
-}
-.task-card.is-imminent small.time-alert { color: var(--urgent-violet) !important; font-weight: bold; animation: flashText 1.5s infinite alternate; }
-body.theme-dark .task-card.is-imminent { background: linear-gradient(135deg, #1e1e1e, rgba(142, 68, 173, 0.15)) !important; }
-body.theme-ocean .task-card.is-imminent { background: linear-gradient(135deg, #2c3e50, rgba(142, 68, 173, 0.18)) !important; }
-
-@keyframes pulseUrgentViolet {
-    0% { box-shadow: 0 4px 15px rgba(142, 68, 173, 0.2); }
-    50% { box-shadow: 0 4px 22px rgba(142, 68, 173, 0.45); border-color: var(--urgent-violet-light); }
-    100% { box-shadow: 0 4px 15px rgba(142, 68, 173, 0.2); }
-}
-@keyframes flashText { from { opacity: 0.6; } to { opacity: 1; } }
-
-/* BADGES TACTILES */
-.reminder-badges-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 5px; }
-.reminder-badge { 
-    padding: 10px 12px; border-radius: 12px; background: rgba(128,128,128,0.1); 
-    border: 1px solid rgba(128,128,128,0.2); font-size: 0.85rem; font-weight: bold;
-    cursor: pointer; transition: all 0.2s ease; text-align: center; flex: 1; min-width: 80px;
-    -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
-}
-.reminder-badge.active { background: var(--primary) !important; color: white !important; border-color: var(--primary-dark) !important; box-shadow: 0 3px 10px rgba(0, 206, 209, 0.3); }
-
-/* AGENDA COHÉRENT */
-.weekly-day-card { margin-bottom: 15px; padding: 15px 20px; border-left: 5px solid var(--primary); transition: background 0.3s; }
-.weekly-day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.weekly-day-title { color: var(--primary); font-size: 1.2rem; }
-.weekly-subtasks { display: flex; flex-direction: column; gap: 8px; padding-left: 5px; font-size: 0.95rem; }
-.weekly-item { display: flex; justify-content: space-between; align-items: center; opacity: 0.9; padding: 6px 0; border-bottom: 1px dashed rgba(128,128,128,0.15); -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
-
-/* CALENDRIER */
-.calendar-grid { display: grid !important; grid-template-columns: repeat(7, 1fr) !important; gap: 8px; }
-.grid-years, .grid-months { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 15px; }
-.grid-item { padding: 20px 5px; text-align: center; cursor: pointer; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
-.grid-item.selected { background: var(--primary); color: white; }
-
-.day-card { padding: 10px 2px; min-height: 80px; text-align: center; cursor: pointer; border: 1px solid rgba(128,128,128,0.1); position: relative; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
-.day-card.has-high { border-bottom: 5px solid var(--danger) !important; }
-.day-card.has-medium { border-bottom: 5px solid var(--warning) !important; }
-.day-card.has-low { border-bottom: 5px solid var(--success) !important; }
-.day-card.is-today { border: 2px solid var(--primary) !important; box-shadow: 0 0 10px rgba(0, 206, 209, 0.4); animation: pulseToday 2s infinite; }
-@keyframes pulseToday { 0% { border-color: var(--primary); } 50% { border-color: var(--primary-dark); box-shadow: 0 0 14px rgba(0, 206, 209, 0.7); } 100% { border-color: var(--primary); } }
-
-/* PROFIL */
-.profile-card { padding: 25px; display: flex; flex-direction: column; gap: 15px; }
-.profile-card label { font-size: 0.85rem; opacity: 0.8; margin-bottom: -5px; }
-.theme-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
-.theme-option { height: 80px; border-radius: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
-.theme-option.pink { background: #FAD0C4; }
-.theme-option.dark { background: #1a1a1a; border: 1px solid #333; }
-.theme-option.ocean { background: #1a2a3a; border: 1px solid var(--primary); }
-
-/* MODALS */
-.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: flex-end; }
-.modal-content { width: 100%; padding: 30px; border-radius: 30px 30px 0 0; display: flex; flex-direction: column; gap: 15px; }
-input, select { padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; }
-select option { background: var(--card-bg); color: var(--text-color); }
-
-.modal-center { align-items: center !important; justify-content: center !important; padding: 20px; }
-.content-center { width: 100% !important; max-width: 450px !important; border-radius: 25px !important; animation: popupScale 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-@keyframes popupScale { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-.btn-primary { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 20px; cursor: pointer; font-weight: bold; }
-.btn-secondary { background: rgba(128,128,128,0.2); color: inherit; border: none; padding: 15px; border-radius: 15px; font-weight: bold; cursor: pointer; text-align: center;}
-
-/* --- BULLE DE NOTIFICATION TOAST MODERNE --- */
-#toast-notification {
-    position: fixed;
-    top: 25px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-20px);
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    color: white;
-    padding: 12px 25px;
-    border-radius: 30px;
-    font-size: 0.9rem;
-    font-weight: bold;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    z-index: 100000;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    opacity: 0;
-    pointer-events: none;
-    text-align: center;
-    white-space: nowrap;
-}
-/* Classes d'activation gérées par le JavaScript */
-#toast-notification.toast-show {
-    transform: translateX(-50%) translateY(0);
-    opacity: 1;
-}
-/* --- CORRECTION VISUELLE TO-DO LIST (BARRÉ & ITALIQUE) --- */
-.weekly-item span {
-    transition: all 0.3s ease;
-    display: inline-block;
-}
-
-/* Force l'application des styles même si une autre règle CSS tente de s'interposer */
-.weekly-item span[style*="line-through"] {
-    font-style: italic !important;
-    text-decoration: line-through !important;
-    opacity: 0.5 !important;
-}
+    border: 1px solid rgba(1
