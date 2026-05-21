@@ -19,6 +19,7 @@ let tasks = [];
 let dailyTodo = [];
 let weeklyTodo = [];
 let currentUser = null; 
+let userNickname = ""; 
 let unsubscribeTasks, unsubscribeDaily, unsubscribeWeekly; 
 
 let currentTheme = localStorage.getItem('listme_theme') || 'pink';
@@ -47,7 +48,6 @@ function showPage(p) {
     const target = document.getElementById(`${p}-page`);
     if (target) target.style.display = 'block';
     
-    // Gérer l'état actif sur les nouvelles bulles de navigation globales
     document.querySelectorAll('.nav-bubble').forEach(btn => btn.classList.remove('active'));
     const currentNavBtn = document.getElementById(`nav-btn-${p}`);
     if (currentNavBtn) currentNavBtn.classList.add('active');
@@ -57,7 +57,7 @@ function showPage(p) {
     if(p === 'tasks') renderTasks();
 }
 
-// --- MOTEUR DE NOTIFICATIONS D'ARRIÈRE-PLAN ---
+// --- MOTEUR DE NOTIFICATIONS ---
 function requestNotificationPermission() {
     if ("Notification" in window) { Notification.requestPermission(); }
 }
@@ -128,16 +128,14 @@ function runNotificationEngine() {
 }
 setInterval(runNotificationEngine, 30000);
 
-// --- COMPORTEMENT DES BADGES DE RAPPEL TACTILES ---
+// --- COMPORTEMENT BADGES DE RAPPEL ---
 document.querySelectorAll('.reminder-badge').forEach(badge => {
     badge.onclick = () => { badge.classList.toggle('active'); };
 });
 
 function getSelectedRemindersFromBadges() {
     let activeReminders = [];
-    document.querySelectorAll('.reminder-badge.active').forEach(badge => {
-        activeReminders.push(badge.getAttribute('data-value'));
-    });
+    document.querySelectorAll('.reminder-badge.active').forEach(badge => { activeReminders.push(badge.getAttribute('data-value')); });
     return activeReminders;
 }
 
@@ -159,18 +157,23 @@ auth.onAuthStateChanged((user) => {
         
         db.collection("users").doc(user.uid).get().then((doc) => {
             if (doc.exists && doc.data().nickname) {
-                const nick = doc.data().nickname;
-                document.getElementById('profile-nickname').value = nick;
-                document.getElementById('app-logo-title').innerText = `LIST'ME - ${nick}`;
+                userNickname = doc.data().nickname;
+                document.getElementById('profile-nickname').value = userNickname;
+                document.getElementById('app-logo-title').innerText = `LIST'ME - ${userNickname}`;
             } else {
+                userNickname = "";
                 document.getElementById('app-logo-title').innerText = "LIST'ME";
             }
+            startRealtimeSync(user.uid); 
+            showPage('tasks');
+        }).catch(() => {
+            startRealtimeSync(user.uid);
+            showPage('tasks');
         });
 
-        startRealtimeSync(user.uid); 
-        showPage('tasks');
     } else {
         currentUser = null;
+        userNickname = "";
         document.getElementById('main-nav').style.display = 'none';
         document.getElementById('app-logo-title').innerText = "LIST'ME";
         stopRealtimeSync();
@@ -179,24 +182,27 @@ auth.onAuthStateChanged((user) => {
     }
 });
 
-// Enregistrement du surnom
 document.getElementById('btn-save-nickname').onclick = () => {
     const nick = document.getElementById('profile-nickname').value.trim();
     if (nick && currentUser) {
         db.collection("users").doc(currentUser.uid).set({ nickname: nick }, { merge: true })
             .then(() => {
+                userNickname = nick;
                 document.getElementById('app-logo-title').innerText = `LIST'ME - ${nick}`;
+                updateWelcomeDashboard(); 
                 alert("Surnom enregistré avec succès !");
             });
     }
 };
 
-// --- SYNCHRONISATION PRIVÉE ---
+// --- SYNCHRONISATION PRIVÉE FIREBASE ---
 function startRealtimeSync(userId) {
     unsubscribeTasks = db.collection("tasks").where("userId", "==", userId)
         .onSnapshot((snapshot) => {
             tasks = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; tasks.push(data); });
-            renderTasks(); if(viewState === 'day') renderCalendar();
+            renderTasks(); 
+            updateWelcomeDashboard(); 
+            if(viewState === 'day') renderCalendar();
         });
     unsubscribeDaily = db.collection("dailyTodo").where("userId", "==", userId)
         .onSnapshot((snapshot) => {
@@ -226,6 +232,36 @@ document.getElementById('btn-register').onclick = () => {
 };
 document.getElementById('btn-google').onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch((err) => { alert("Erreur Google : " + err.message); }); };
 document.getElementById('btn-logout').onclick = () => { auth.signOut(); };
+
+// --- LOGIQUE MESSAGE DE BIENVENUE & RÉCAPITULATIF DU JOUR ---
+function updateWelcomeDashboard() {
+    const dashboard = document.getElementById('welcome-dashboard');
+    const msgText = document.getElementById('welcome-message-text');
+    const summaryZone = document.getElementById('today-summary-zone');
+    if(!dashboard) return;
+    
+    let nameToDisplay = userNickname ? userNickname : "toi";
+    msgText.innerText = `Welcome back, ${nameToDisplay} ! 👋`;
+    
+    let todayTasks = tasks.filter(t => t.date === todayStr && !t.completed);
+    summaryZone.innerHTML = '';
+    
+    if(todayTasks.length === 0) {
+        summaryZone.innerHTML = `<p style="font-size: 0.9rem; font-style: italic; opacity: 0.75; margin-top: 5px;">Aucune tâche urgente pour aujourd'hui. Passe une excellente journée ! ✨</p>`;
+    } else {
+        summaryZone.innerHTML = `<p style="font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; color: var(--primary-dark);">Au programme aujourd'hui :</p>`;
+        todayTasks.forEach(t => {
+            summaryZone.innerHTML += `
+                <div class="welcome-summary-item">
+                    📌 <b>${t.time ? t.time : 'Pas d\'heure'}</b> - ${t.name} 
+                    <span style="float: right; font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 8px; background: rgba(128,128,128,0.1); color: var(--${t.importance === 'high'?'danger':t.importance==='medium'?'warning':'success'});">
+                        ${t.importance === 'high' ? 'Haute' : t.importance === 'medium' ? 'Moyenne' : 'Faible'}
+                    </span>
+                </div>`;
+        });
+    }
+    dashboard.style.display = 'block';
+}
 
 // --- ONGLET : MES TÂCHES ---
 function renderTasks() {
