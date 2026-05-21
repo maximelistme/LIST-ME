@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link href="https://fonts.googleapis.com/css2?family=Mogra&display=swap" rel="stylesheet">
     <title>LIST'ME</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -22,7 +23,7 @@
 
     <main id="app">
         <section id="auth-page">
-            <div class="header-action header-centered">
+            <div class="header-action">
                 <h2 id="auth-title">Connexion</h2>
             </div>
             <div class="profile-card">
@@ -38,12 +39,12 @@
                     Continuer avec Google
                 </button>
 
-                <button id="btn-register" class="btn-secondary" style="background:none; color:#008B8B; font-size:0.9rem; text-decoration:underline; cursor:pointer; margin-top: 5px;">Pas de compte ? S'inscrire</button>
+                <button id="btn-register" class="btn-secondary" style="background:none; color:var(--primary-dark); font-size:0.9rem; text-decoration:underline; cursor:pointer; margin-top: 5px;">Pas de compte ? S'inscrire</button>
             </div>
         </section>
 
         <section id="tasks-page" style="display:none;">
-            <div class="header-action header-centered">
+            <div class="header-action header-centered" style="padding: 10px 15px; gap: 15px;">
                 <button id="sub-btn-active-tasks" class="sub-menu-tab active" onclick="switchTaskSubView('active')">Mes Tâches</button>
                 <button id="sub-btn-archived-tasks" class="sub-menu-tab" onclick="switchTaskSubView('archive')">Archives</button>
             </div>
@@ -75,7 +76,7 @@
                 <button id="btn-month" class="bubble" onclick="setViewState('month')">Mois</button>
                 <button id="btn-day" class="bubble active" onclick="setViewState('day')">Jours</button>
             </div>
-            <div id="calendar-title" style="text-align:center; margin-bottom:15px; font-weight: bold; font-size: 1.2rem;"></div>
+            <div id="calendar-title" class="calendar-title" style="text-align:center; margin-bottom:15px;"></div>
             <div id="calendar-content"></div>
         </section>
 
@@ -85,17 +86,12 @@
             </div>
             <div class="profile-card">
                 <label>Mon Surnom / Prénom</label>
-                <div class="profile-input-group">
-                    <input type="text" id="profile-nickname" placeholder="Ex: Max, Julie...">
-                    <button id="btn-save-nickname" class="btn-primary btn-validated-click">Enregistrer</button>
-                </div>
+                <input type="text" id="profile-nickname" placeholder="Ex: WeriXx, Julie...">
+                <button id="btn-save-nickname" class="btn-primary btn-validated-click" style="padding: 10px 15px; font-size: 0.9rem;">Enregistrer le surnom</button>
                 
-                <hr style="opacity: 0.1; margin: 15px 0;">
-                <p id="profile-user-email" style="font-size: 0.85rem; opacity: 0.6; text-align:center; margin-bottom:15px;"></p>
-                
-                <div class="logout-container">
-                    <button id="btn-logout" class="btn-secondary">Se déconnecter</button>
-                </div>
+                <hr style="opacity: 0.1; margin: 10px 0;">
+                <p id="profile-user-email" style="font-size: 0.85rem; opacity: 0.6; text-align:center; margin-bottom:10px;"></p>
+                <button id="btn-logout" class="btn-secondary" style="background:var(--danger); color:white;">Se déconnecter</button>
             </div>
 
             <div class="header-action header-centered" style="margin-top: 30px;">
@@ -111,9 +107,9 @@
 
     <div id="toast-notification" class="toast-hidden"></div>
 
-    <div id="welcome-modal" class="modal modal-center" style="z-index: 10001; display: none;">
+    <div id="welcome-modal" class="modal modal-center" style="z-index: 10001;">
         <div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;">
-            <h3 id="welcome-message-text" style="color: #008B8B; text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3>
+            <h3 id="welcome-message-text" style="color: var(--primary-dark); text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3>
             <div id="today-summary-zone"></div>
             <button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn-secondary btn-validated-click" style="margin-top: 15px; width: 100%;">C'est parti !</button>
         </div>
@@ -136,11 +132,11 @@
                 </div>
             </div>
             
-            <label>Rappels de notification</label>
+            <label>Rappels de notification (Cliquez pour activer)</label>
             <div class="reminder-badges-container">
-                <div class="reminder-badge" data-value="5">5 min</div>
-                <div class="reminder-badge" data-value="15">15 min</div>
-                <div class="reminder-badge" data-value="60">1h</div>
+                <div class="reminder-badge" data-value="5">5 min avant</div>
+                <div class="reminder-badge" data-value="15">15 min avant</div>
+                <div class="reminder-badge" data-value="60">1h avant</div>
             </div>
 
             <label>Importance</label>
@@ -184,7 +180,7 @@
 
     <div id="calendar-day-modal" class="modal modal-center">
         <div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto;">
-            <h3 id="cal-modal-date-title" style="color: #00CED1; text-align: center; margin-bottom: 5px;"></h3>
+            <h3 id="cal-modal-date-title" style="color: var(--primary); text-align: center; margin-bottom: 5px;"></h3>
             <div id="cal-modal-tasks-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;"></div>
             <button onclick="document.getElementById('calendar-day-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
         </div>
