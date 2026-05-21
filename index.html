@@ -99,8 +99,8 @@
         </section>
     </main>
 
-    <div id="welcome-modal" class="modal" style="z-index: 10001;">
-        <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
+    <div id="welcome-modal" class="modal modal-center" style="z-index: 10001;">
+        <div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;">
             <h3 id="welcome-message-text" style="color: var(--primary-dark); text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3>
             <div id="today-summary-zone"></div>
             <button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">C'est parti !</button>
@@ -170,8 +170,8 @@
         </div>
     </div>
 
-    <div id="calendar-day-modal" class="modal">
-        <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+    <div id="calendar-day-modal" class="modal modal-center">
+        <div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto;">
             <h3 id="cal-modal-date-title" style="color: var(--primary); text-align: center; margin-bottom: 5px;"></h3>
             <div id="cal-modal-tasks-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;"></div>
             <button onclick="document.getElementById('calendar-day-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
