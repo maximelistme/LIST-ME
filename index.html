@@ -13,14 +13,13 @@
 
     <nav class="navbar">
         <h1 id="app-logo-title">LIST'ME</h1>
+        <div class="main-nav-container" id="main-nav" style="display:none;">
+            <button class="nav-bubble active" id="nav-btn-tasks" onclick="showPage('tasks')">Tâches</button>
+            <button class="nav-bubble" id="nav-btn-todo" onclick="showPage('todo')">Planning</button>
+            <button class="nav-bubble" id="nav-btn-calendar" onclick="showPage('calendar')">Calendrier</button>
+            <button class="nav-bubble" id="nav-btn-profile" onclick="showPage('profile')">Profil</button>
+        </div>
     </nav>
-
-    <div class="main-nav-container" id="main-nav" style="display:none;">
-        <button class="nav-bubble active" id="nav-btn-tasks" onclick="showPage('tasks')">Tâches</button>
-        <button class="nav-bubble" id="nav-btn-todo" onclick="showPage('todo')">Planning</button>
-        <button class="nav-bubble" id="nav-btn-calendar" onclick="showPage('calendar')">Calendrier</button>
-        <button class="nav-bubble" id="nav-btn-profile" onclick="showPage('profile')">Profil</button>
-    </div>
 
     <main id="app">
         <section id="auth-page">
@@ -49,11 +48,6 @@
                 <h2>Mes Tâches</h2>
             </div>
             
-            <div id="welcome-dashboard" class="welcome-card" style="display:none;">
-                <h3 id="welcome-message-text">Welcome back ! 👋</h3>
-                <div id="today-summary-zone"></div>
-            </div>
-
             <div class="action-bar-left">
                 <button id="add-task-btn" class="btn-add-bubble">+ Ajouter une tâche</button>
             </div>
@@ -105,6 +99,14 @@
         </section>
     </main>
 
+    <div id="welcome-modal" class="modal" style="z-index: 10001;">
+        <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
+            <h3 id="welcome-message-text" style="color: var(--primary-dark); text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3>
+            <div id="today-summary-zone"></div>
+            <button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">C'est parti !</button>
+        </div>
+    </div>
+
     <div id="task-modal" class="modal">
         <div class="modal-content">
             <h3 id="modal-title">Nouvelle Tâche</h3>
@@ -144,7 +146,7 @@
 
     <div id="todo-modal" class="modal">
         <div class="modal-content">
-            <h3>Planning</h3>
+            <h3 id="todo-modal-title">Planning</h3>
             <div id="todo-day-selector-block" style="display:none; flex-direction:column; gap:5px;">
                 <label>Jour de la semaine</label>
                 <select id="todo-day-select">
