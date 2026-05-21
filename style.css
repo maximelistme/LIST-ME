@@ -58,7 +58,10 @@ main { padding: 20px 15px; max-width: 600px; margin: auto; }
     cursor: pointer; box-shadow: 0 4px 12px rgba(0, 206, 209, 0.3);
     transition: transform 0.2s ease, background 0.2s ease;
 }
-.btn-add-bubble:active { transform: scale(0.96); background: var(--primary-dark); }
+
+/* NOUVEAU : ANIMATION UNIVERSELLE DE VALIDATION DE CLIC (REBOND TACTILE) */
+.btn-validated-click { transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.4) !important; }
+.btn-validated-click:active { transform: scale(0.90) !important; filter: brightness(0.9); }
 
 .welcome-summary-item { font-size: 0.95rem; padding: 10px 0; opacity: 0.95; text-align: left; border-bottom: 1px dashed rgba(128, 128, 128, 0.15); }
 
@@ -119,22 +122,15 @@ main { padding: 20px 15px; max-width: 600px; margin: auto; }
 .theme-option.dark { background: #1a1a1a; border: 1px solid #333; }
 .theme-option.ocean { background: #1a2a3a; border: 1px solid var(--primary); }
 
-/* --- MODALS DE BASE DE L'APPLI (Glissement vers le bas) --- */
+/* MODALS */
 .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: flex-end; }
-.modal-content { width: 100%; padding: 30px; border-radius: 30px 30px 0 0; display: flex; flex-direction: column; gap: 15px; transition: transform 0.3s ease; }
+.modal-content { width: 100%; padding: 30px; border-radius: 30px 30px 0 0; display: flex; flex-direction: column; gap: 15px; }
 input, select { padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; }
 select option { background: var(--card-bg); color: var(--text-color); }
 
-/* --- NOUVEAU : LOGIQUE D'AFFICHAGE POP-UP CENTRÉ (Bienvenue et Calendrier) --- */
 .modal-center { align-items: center !important; justify-content: center !important; padding: 20px; }
-.content-center { 
-    width: 100% !important; max-width: 450px !important; border-radius: 25px !important; 
-    animation: popupScale 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-}
-@keyframes popupScale {
-    from { transform: scale(0.85); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
+.content-center { width: 100% !important; max-width: 450px !important; border-radius: 25px !important; animation: popupScale 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+@keyframes popupScale { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 .btn-primary { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 20px; cursor: pointer; font-weight: bold; }
 .btn-secondary { background: rgba(128,128,128,0.2); color: inherit; border: none; padding: 15px; border-radius: 15px; font-weight: bold; cursor: pointer; text-align: center;}
