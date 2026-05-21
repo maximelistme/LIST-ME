@@ -82,7 +82,7 @@ function switchTaskSubView(view) {
     renderTasks();
 }
 
-// --- MOTEUR DE NOTIFICATIONS ---
+// --- MOTEUR DE VÉRIFICATION EN CONTINU ---
 function runNotificationEngine() {
     const now = new Date();
     if(document.getElementById('tasks-page').style.display === 'block') { renderTasks(); }
@@ -139,6 +139,7 @@ function runNotificationEngine() {
         }
     });
 }
+let lastCheckedMinute = "";
 setInterval(runNotificationEngine, 30000);
 
 function requestNotificationPermission() { if ("Notification" in window) { Notification.requestPermission(); } }
@@ -319,7 +320,9 @@ document.getElementById('btn-register').onclick = () => {
     if(email && pass) auth.createUserWithEmailAndPassword(email, pass).then(() => showToast("Compte créé avec succès ! 🎉")).catch(err => showToast("Erreur : " + err.message));
 };
 document.getElementById('btn-google').onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => { showToast("Connexion Google réussie ! 🚀"); }).catch((err) => { showToast("Erreur Google : " + err.message); }); };
-document.getElementById('btn-logout').onclick = () => { auth.signOut().then(() => { showToast("Déconnexion réussie."); }); };
+if (document.getElementById('btn-logout')) {
+    document.getElementById('btn-logout').onclick = () => { auth.signOut().then(() => { showToast("Déconnexion réussie."); }); };
+}
 
 // --- ONGLETS : CALENDRIER ---
 function setViewState(s) { viewState = s; renderCalendar(); }
@@ -423,29 +426,8 @@ function renderTodo() {
     }
 }
 
-function toggleTodo(id, currentStatus) { db.collection("dailyTodo").doc(id).update({ completed: !currentStatus }); }
-function toggleWeeklyTodo(id, currentStatus) { db.collection("weeklyTodo").doc(id).update({ completed: !currentStatus }); }
-function deleteWeeklyTodo(id) { db.collection("weeklyTodo").doc(id).delete(); }
-function deleteDailyTodo(id) { db.collection("dailyTodo").doc(id).delete(); }
-
-document.getElementById('save-todo').onclick = () => {
-    const n = document.getElementById('todo-task-name').value; const t = document.getElementById('todo-time').value;
-    const isWeekly = document.getElementById('save-todo').getAttribute('data-weekly-mode') === 'true';
-    if(n && t && currentUser) { 
-        if(editingTodoId) {
-            let collection = isWeekly ? "weeklyTodo" : "dailyTodo"; let updateData = { name: n, time: t };
-            if(isWeekly) updateData.dayOfWeek = document.getElementById('todo-day-select').value;
-            db.collection(collection).doc(editingTodoId).update(updateData); editingTodoId = null;
-        } else {
-            if(isWeekly) { db.collection("weeklyTodo").add({ name: n, time: t, dayOfWeek: document.getElementById('todo-day-select').value, completed: false, userId: currentUser.uid }); } 
-            else { db.collection("dailyTodo").add({ name: n, time: t, date: todayStr, completed: false, userId: currentUser.uid }); }
-        }
-        document.getElementById('todo-modal').style.display = 'none'; document.getElementById('todo-task-name').value = '';
-    }
-};
-
-function openTodoModal(time, isWeekly, dayNum = 1) { editingTodoId = null; document.getElementById('todo-time').value = time; document.getElementById('todo-task-name').value = ''; document.getElementById('todo-modal-title').innerText = "Ajouter au planning"; if(isWeekly) { document.getElementById('todo-day-select').value = dayNum; } document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly); document.getElementById('todo-modal').style.display = 'flex'; }
-function editTodoItem(id, name, time, isWeekly, dayNum = 1) { editingTodoId = id; document.getElementById('todo-time').value = time; document.getElementById('todo-task-name').value = name; document.getElementById('todo-modal-title').innerText = "Modifier le planning"; if(isWeekly) document.getElementById('todo-day-select').value = dayNum; document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly); document.getElementById('todo-modal').style.display = 'flex'; }
+function openTodoModal(time, isWeekly, dayNum = 1) { editingTodoId = null; document.getElementById('todo-time').value = time; document.getElementById('todo-task-name').value = ''; document.getElementById('todo-modal-title').innerText = "Ajouter à la To-Do List"; if(isWeekly) { document.getElementById('todo-day-select').value = dayNum; } document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly); document.getElementById('todo-modal').style.display = 'flex'; }
+function editTodoItem(id, name, time, isWeekly, dayNum = 1) { editingTodoId = id; document.getElementById('todo-time').value = time; document.getElementById('todo-task-name').value = name; document.getElementById('todo-modal-title').innerText = "Modifier la To-Do List"; if(isWeekly) document.getElementById('todo-day-select').value = dayNum; document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly); document.getElementById('todo-modal').style.display = 'flex'; }
 
 // --- INITIALISATION GENERALE ---
 document.getElementById('add-task-btn').onclick = () => { editingId = null; document.getElementById('task-name').value = ""; document.getElementById('task-time').value = ""; setSelectedRemindersToBadges([]); document.getElementById('task-date').value = todayStr; document.getElementById('modal-title').innerText = "Nouvelle Tâche"; document.getElementById('task-modal').style.display = 'flex'; };
