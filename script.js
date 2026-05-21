@@ -21,6 +21,7 @@ let weeklyTodo = [];
 let currentUser = null; 
 let userNickname = ""; 
 let hasShownWelcomeThisSession = false; 
+let taskSubView = "active"; 
 let unsubscribeTasks, unsubscribeDaily, unsubscribeWeekly; 
 
 let currentTheme = localStorage.getItem('listme_theme') || 'pink';
@@ -67,12 +68,24 @@ function showPage(p) {
     if(p === 'tasks') renderTasks();
 }
 
+function switchTaskSubView(view) {
+    taskSubView = view;
+    document.querySelectorAll('.sub-menu-tab').forEach(b => b.classList.remove('active'));
+    const actionBar = document.getElementById('tasks-action-bar');
+    if(view === 'active') {
+        document.getElementById('sub-btn-active-tasks').classList.add('active');
+        if(actionBar) actionBar.style.display = 'flex';
+    } else {
+        document.getElementById('sub-btn-archived-tasks').classList.add('active');
+        if(actionBar) actionBar.style.display = 'none';
+    }
+    renderTasks();
+}
+
 // --- MOTEUR DE NOTIFICATIONS ---
 function runNotificationEngine() {
     const now = new Date();
-    const currentMinuteStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()} ${now.getHours()}:${now.getMinutes()}`;
-    if (currentMinuteStr === lastCheckedMinute) return;
-    lastCheckedMinute = currentMinuteStr;
+    if(document.getElementById('tasks-page').style.display === 'block') { renderTasks(); }
 
     const todayString = now.toISOString().split('T')[0];
     const hour = now.getHours();
@@ -126,7 +139,6 @@ function runNotificationEngine() {
         }
     });
 }
-let lastCheckedMinute = "";
 setInterval(runNotificationEngine, 30000);
 
 function requestNotificationPermission() { if ("Notification" in window) { Notification.requestPermission(); } }
@@ -209,36 +221,70 @@ function triggerWelcomeModal() {
 function renderTasks() {
     const c = document.getElementById('task-list'); if (!c) return; c.innerHTML = '';
     const sortMode = document.getElementById('task-sort-filter').value;
-    let finalTasksList = [...tasks];
+    
+    let activeList = []; let archiveList = [];
+    tasks.forEach(t => {
+        if(t.completed) {
+            if(t.completedAtStr && t.completedAtStr !== todayStr) { archiveList.push(t); } else { activeList.push(t); }
+        } else { activeList.push(t); }
+    });
 
-    if (sortMode === 'chrono') {
-        let activeTasks = finalTasksList.filter(t => !t.completed);
-        let completedTasks = finalTasksList.filter(t => t.completed);
+    let filteredList = (taskSubView === "active") ? activeList : archiveList;
+
+    if (taskSubView === "active") {
+        let imminentTasks = []; let standardTasks = []; let completedTodayTasks = [];
+
+        filteredList.forEach(t => {
+            if(t.completed) { completedTodayTasks.push(t); return; }
+            if(t.date === todayStr && t.time) {
+                const now = new Date();
+                const [tHour, tMin] = t.time.split(':').map(Number);
+                const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0);
+                const remainingMinutes = (taskTimeObj - now) / 60000;
+                if(remainingMinutes > 0 && remainingMinutes <= 60) {
+                    t.isImminent = true; t.minutesLeft = Math.round(remainingMinutes); imminentTasks.push(t); return;
+                }
+            }
+            t.isImminent = false; standardTasks.push(t);
+        });
+
         const sortChronoFunc = (a, b) => { if (a.date !== b.date) return a.date.localeCompare(b.date); if (!a.time) return -1; if (!b.time) return 1; return a.time.localeCompare(b.time); };
-        activeTasks.sort(sortChronoFunc); completedTasks.sort(sortChronoFunc);
-        finalTasksList = [...activeTasks, ...completedTasks];
+        const creationSort = (a, b) => b.createdAt - a.createdAt;
+
+        if (sortMode === 'chrono') { standardTasks.sort(sortChronoFunc); completedTodayTasks.sort(sortChronoFunc); } 
+        else { standardTasks.sort(creationSort); completedTodayTasks.sort(creationSort); }
+        imminentTasks.sort((a,b) => a.minutesLeft - b.minutesLeft);
+        filteredList = [...imminentTasks, ...standardTasks, ...completedTodayTasks];
     } else {
-        finalTasksList.sort((a, b) => b.createdAt - a.createdAt);
+        filteredList.sort((a, b) => b.createdAt - a.createdAt);
     }
 
-    finalTasksList.forEach(t => {
-        const d = document.createElement('div'); d.className = `task-card ${t.importance} ${t.completed ? 'completed' : ''}`;
+    if(filteredList.length === 0) {
+        c.innerHTML = `<p style="text-align:center; opacity:0.4; font-style:italic; margin-top:30px;">${taskSubView==='active'?'Aucune tâche active !':'Vos archives sont vides'}</p>`; return;
+    }
+
+    filteredList.forEach(t => {
+        const d = document.createElement('div'); d.className = `task-card ${t.importance} ${t.completed ? 'completed' : ''} ${t.isImminent ? 'is-imminent' : ''}`;
         let remindersText = "Aucun"; if(t.reminders && t.reminders.length > 0) { remindersText = t.reminders.map(r => `${r} min avant`).join(', '); }
         d.innerHTML = `
             <div style="flex:1" onclick="toggleTaskCheck('${t.id}', ${t.completed})">
                 <strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong><br>
                 <small>📅 ${t.date} ${t.time ? '⏰ ' + t.time : ''}</small>
-                <br><small style="color:var(--primary-dark);">🔔 Rappels : ${remindersText}</small>
+                ${t.isImminent ? `<br><small class="time-alert">⚠️ ÉCHÉANCE PROCHE : Reste ${t.minutesLeft} min !</small>` : `<br><small style="color:var(--primary-dark);">🔔 Rappels : ${remindersText}</small>`}
             </div>
             <div class="task-actions">
-                <button onclick="editTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.3rem; cursor:pointer;">✎</button>
+                ${taskSubView === 'active' ? `<button onclick="editTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.3rem; cursor:pointer;">✎</button>` : ''}
                 <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
             </div>`;
         c.appendChild(d);
     });
 }
 
-function toggleTaskCheck(id, currentStatus) { db.collection("tasks").doc(id).update({ completed: !currentStatus }); }
+function toggleTaskCheck(id, currentStatus) { 
+    let updateData = { completed: !currentStatus };
+    if(!currentStatus) { updateData.completedAtStr = todayStr; } else { updateData.completedAtStr = firebase.firestore.FieldValue.delete(); }
+    db.collection("tasks").doc(id).update(updateData); 
+}
 function deleteTask(id) { db.collection("tasks").doc(id).delete().then(() => { showToast("Tâche supprimée ! 🗑️"); }); }
 
 function editTask(id) {
@@ -276,7 +322,7 @@ document.getElementById('btn-google').onclick = () => { const provider = new fir
 document.getElementById('btn-logout').onclick = () => { auth.signOut().then(() => { showToast("Déconnexion réussie."); }); };
 
 // --- ONGLETS : CALENDRIER ---
-setViewState = function(s) { viewState = s; renderCalendar(); }
+function setViewState(s) { viewState = s; renderCalendar(); }
 function renderCalendar() {
     const c = document.getElementById('calendar-content'); const t = document.getElementById('calendar-title'); c.innerHTML = '';
     if (!c) return;
@@ -326,7 +372,7 @@ function openCalendarDayModal(day, monthName, year, dayTasks) {
 }
 
 // --- ONGLET : TO-DO LIST ---
-setTodoMode = function(m) { todoMode = m; renderTodo(); }
+function setTodoMode(m) { todoMode = m; renderTodo(); }
 function renderTodo() {
     const c = document.getElementById('todo-content'); if (!c) return;
     document.querySelectorAll('#todo-page .bubble').forEach(b => b.classList.remove('active'));
@@ -398,8 +444,8 @@ document.getElementById('save-todo').onclick = () => {
     }
 };
 
-openTodoModal = function(time, isWeekly, dayNum = 1) { editingTodoId = null; document.getElementById('todo-time').value = time; document.getElementById('todo-task-name').value = ''; document.getElementById('todo-modal-title').innerText = "Ajouter au planning"; if(isWeekly) { document.getElementById('todo-day-select').value = dayNum; } document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly); document.getElementById('todo-modal').style.display = 'flex'; }
-editTodoItem = function(id, name, time, isWeekly, dayNum = 1) { editingTodoId = id; document.getElementById('todo-time').value = time; document.getElementById('todo-task-name').value = name; document.getElementById('todo-modal-title').innerText = "Modifier le planning"; if(isWeekly) document.getElementById('todo-day-select').value = dayNum; document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly); document.getElementById('todo-modal').style.display = 'flex'; }
+function openTodoModal(time, isWeekly, dayNum = 1) { editingTodoId = null; document.getElementById('todo-time').value = time; document.getElementById('todo-task-name').value = ''; document.getElementById('todo-modal-title').innerText = "Ajouter au planning"; if(isWeekly) { document.getElementById('todo-day-select').value = dayNum; } document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly); document.getElementById('todo-modal').style.display = 'flex'; }
+function editTodoItem(id, name, time, isWeekly, dayNum = 1) { editingTodoId = id; document.getElementById('todo-time').value = time; document.getElementById('todo-task-name').value = name; document.getElementById('todo-modal-title').innerText = "Modifier le planning"; if(isWeekly) document.getElementById('todo-day-select').value = dayNum; document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly); document.getElementById('todo-modal').style.display = 'flex'; }
 
 // --- INITIALISATION GENERALE ---
 document.getElementById('add-task-btn').onclick = () => { editingId = null; document.getElementById('task-name').value = ""; document.getElementById('task-time').value = ""; setSelectedRemindersToBadges([]); document.getElementById('task-date').value = todayStr; document.getElementById('modal-title').innerText = "Nouvelle Tâche"; document.getElementById('task-modal').style.display = 'flex'; };
