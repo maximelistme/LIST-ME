@@ -188,3 +188,24 @@ select option { background: var(--card-bg); color: var(--text-color); }
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); opacity: 0; pointer-events: none; text-align: center; white-space: nowrap;
 }
 #toast-notification.toast-show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* --- FIX FINAL : REBORD DES CASES DU CALENDRIER --- */
+.day-card {
+    overflow: hidden; /* Empêche les indicateurs de couleur de déborder ou d'être coupés sur les coins arrondis */
+}
+
+/* --- FIX FINAL : BOUTON SE DÉCONNECTER PROPRE ET CENTRÉ --- */
+#btn-logout {
+    width: 100%; /* Prend toute la largeur de la carte profil */
+    padding: 14px;
+    border-radius: 15px;
+    font-weight: bold;
+    font-size: 0.95rem;
+    cursor: pointer;
+    margin-top: 10px;
+    box-shadow: 0 4px 10px rgba(255, 71, 87, 0.2);
+    transition: transform 0.15s ease;
+}
+#btn-logout:active {
+    transform: scale(0.95);
+}
