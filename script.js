@@ -47,6 +47,11 @@ function showPage(p) {
     const target = document.getElementById(`${p}-page`);
     if (target) target.style.display = 'block';
     
+    // Gérer l'état actif sur les nouvelles bulles de navigation globales
+    document.querySelectorAll('.nav-bubble').forEach(btn => btn.classList.remove('active'));
+    const currentNavBtn = document.getElementById(`nav-btn-${p}`);
+    if (currentNavBtn) currentNavBtn.classList.add('active');
+    
     if(p === 'calendar') renderCalendar();
     if(p === 'todo') renderTodo();
     if(p === 'tasks') renderTasks();
@@ -54,17 +59,12 @@ function showPage(p) {
 
 // --- MOTEUR DE NOTIFICATIONS D'ARRIÈRE-PLAN ---
 function requestNotificationPermission() {
-    if ("Notification" in window) {
-        Notification.requestPermission();
-    }
+    if ("Notification" in window) { Notification.requestPermission(); }
 }
 
 function sendNotification(title, body) {
     if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(title, {
-            body: body,
-            icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png"
-        });
+        new Notification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png" });
     }
 }
 
@@ -117,7 +117,7 @@ function runNotificationEngine() {
                 if (minutesRemaining === Number(reminderMinutes)) {
                     const key = `custom-${t.id}-${reminderMinutes}`;
                     if (!heavyNotificationsSent[key]) {
-                        sendNotification(`🔔 Rappel : ${t.name}`, reminderMinutes === 0 ? `C'est l'heure !` : `Commence dans ${reminderMinutes} minutes.`);
+                        sendNotification(`🔔 Rappel : ${t.name}`, `Commence dans ${reminderMinutes} minutes.`);
                         heavyNotificationsSent[key] = true;
                         localStorage.setItem('listme_sent_notifs', JSON.stringify(heavyNotificationsSent));
                     }
@@ -130,9 +130,7 @@ setInterval(runNotificationEngine, 30000);
 
 // --- COMPORTEMENT DES BADGES DE RAPPEL TACTILES ---
 document.querySelectorAll('.reminder-badge').forEach(badge => {
-    badge.onclick = () => {
-        badge.classList.toggle('active');
-    };
+    badge.onclick = () => { badge.classList.toggle('active'); };
 });
 
 function getSelectedRemindersFromBadges() {
@@ -146,11 +144,8 @@ function getSelectedRemindersFromBadges() {
 function setSelectedRemindersToBadges(remindersArray) {
     document.querySelectorAll('.reminder-badge').forEach(badge => {
         const val = badge.getAttribute('data-value');
-        if(remindersArray && remindersArray.includes(val)) {
-            badge.classList.add('active');
-        } else {
-            badge.classList.remove('active');
-        }
+        if(remindersArray && remindersArray.includes(val)) { badge.classList.add('active'); } 
+        else { badge.classList.remove('active'); }
     });
 }
 
@@ -162,7 +157,6 @@ auth.onAuthStateChanged((user) => {
         document.getElementById('profile-user-email').innerText = user.email;
         requestNotificationPermission();
         
-        // Charger le Surnom depuis Firebase s'il existe
         db.collection("users").doc(user.uid).get().then((doc) => {
             if (doc.exists && doc.data().nickname) {
                 const nick = doc.data().nickname;
@@ -240,7 +234,7 @@ function renderTasks() {
     tasks.forEach(t => {
         const d = document.createElement('div'); d.className = `task-card ${t.importance} ${t.completed ? 'completed' : ''}`;
         let remindersText = "Aucun";
-        if(t.reminders && t.reminders.length > 0) { remindersText = t.reminders.map(r => r === '0' ? "À l'heure" : `${r} min avant`).join(', '); }
+        if(t.reminders && t.reminders.length > 0) { remindersText = t.reminders.map(r => `${r} min avant`).join(', '); }
         d.innerHTML = `
             <div style="flex:1" onclick="toggleTaskCheck('${t.id}', ${t.completed})">
                 <strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong><br>
@@ -262,7 +256,7 @@ function editTask(id) {
         document.getElementById('task-name').value = task.name;
         document.getElementById('task-date').value = task.date;
         document.getElementById('task-time').value = task.time || "";
-        setSelectedRemindersToBadges(task.reminders || []); // Active les bons badges
+        setSelectedRemindersToBadges(task.reminders || []); 
         document.getElementById('task-importance').value = task.importance;
         document.getElementById('modal-title').innerText = "Modifier la tâche";
         document.getElementById('task-modal').style.display = 'flex';
@@ -272,7 +266,7 @@ function editTask(id) {
 document.getElementById('save-task').onclick = () => {
     const n = document.getElementById('task-name').value; const d = document.getElementById('task-date').value;
     const time = document.getElementById('task-time').value; const imp = document.getElementById('task-importance').value;
-    const reminders = getSelectedRemindersFromBadges(); // Extrait les données des badges tactiles
+    const reminders = getSelectedRemindersFromBadges(); 
     
     if(n && d && currentUser) {
         let taskData = { name: n, date: d, time: time, reminders: reminders, importance: imp };
@@ -452,7 +446,7 @@ document.getElementById('save-todo').onclick = () => {
 // --- INITIALISATION GENERALE ---
 document.getElementById('add-task-btn').onclick = () => { 
     editingId = null; document.getElementById('task-name').value = ""; document.getElementById('task-time').value = ""; 
-    setSelectedRemindersToBadges([]); // Reset badges
+    setSelectedRemindersToBadges([]); 
     document.getElementById('task-date').value = todayStr; document.getElementById('modal-title').innerText = "Nouvelle Tâche"; document.getElementById('task-modal').style.display = 'flex'; 
 };
 document.getElementById('close-modal').onclick = () => document.getElementById('task-modal').style.display = 'none';
