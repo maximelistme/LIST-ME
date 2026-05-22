@@ -1,4 +1,158 @@
-<div id="todo-modal" class="modal">
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link href="https://fonts.googleapis.com/css2?family=Mogra&display=swap" rel="stylesheet">
+    <title>LIST'ME</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-pink">
+
+    <nav class="navbar">
+        <h1>LIST'ME</h1>
+        <div class="main-nav-container" id="main-nav" style="display:none;">
+            <button class="nav-bubble active" id="nav-btn-tasks" onclick="showPage('tasks')">Tâches</button>
+            <button class="nav-bubble" id="nav-btn-todo" onclick="showPage('todo')">To-Do List</button>
+            <button class="nav-bubble" id="nav-btn-calendar" onclick="showPage('calendar')">Calendrier</button>
+            <button class="nav-bubble" id="nav-btn-profile" onclick="showPage('profile')">Profil</button>
+        </div>
+    </nav>
+
+    <main id="app">
+        <section id="auth-page">
+            <div class="header-action">
+                <h2 id="auth-title">Connexion</h2>
+            </div>
+            <div class="profile-card">
+                <label>Adresse e-mail</label>
+                <input type="email" id="auth-email" placeholder="votre@mail.com">
+                <label>Mot de passe</label>
+                <input type="password" id="auth-pass" placeholder="••••••••">
+                
+                <button id="btn-login" class="btn-primary btn-validated-click" style="margin-top: 10px;">Se connecter</button>
+                
+                <button id="btn-google" class="btn-primary btn-validated-click" style="margin-top: 10px; background: #ffffff; color: #2C3E50; border: 1px solid rgba(128,128,128,0.3); display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;">
+                    <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.79 2.7v2.24h2.9c1.69-1.55 2.69-3.84 2.69-6.57z" fill="#4285F4"/><path d="M9 18c2.43 0 4.47-.8 5.96-2.23l-2.9-2.24c-.8.54-1.84.87-3.06.87-2.35 0-4.34-1.58-5.05-3.71H.92v2.32C2.4 15.97 5.46 18 9 18z" fill="#34A853"/><path d="M3.95 10.69a5.409 5.409 0 0 1 0-3.38V4.99H.92a8.997 8.997 0 0 0 0 8.02l3.03-2.32z" fill="#FBBC05"/><path d="M9 3.58c1.32 0 2.5.45 3.44 1.35L15 2.4C13.46.99 11.42 0 9 0 5.46 0 2.4 2.03.92 4.99l3.03 2.32c.71-2.13 2.7-3.73 5.05-3.73z" fill="#EA4335"/></svg>
+                    Continuer avec Google
+                </button>
+
+                <button id="btn-register" class="btn-secondary" style="background:none; color:var(--primary-dark); font-size:0.9rem; text-decoration:underline; cursor:pointer; margin-top: 5px;">Pas de compte ? S'inscrire</button>
+            </div>
+        </section>
+
+        <section id="tasks-page" style="display:none;">
+            <div class="header-action header-centered" style="padding: 10px 15px; gap: 15px;">
+                <button id="sub-btn-active-tasks" class="sub-menu-tab active" onclick="switchTaskSubView('active')">Mes Tâches</button>
+                <button id="sub-btn-archived-tasks" class="sub-menu-tab" onclick="switchTaskSubView('archive')">Archives</button>
+            </div>
+
+            <div id="tasks-action-bar" class="action-bar-left" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px;">
+                <button id="add-task-btn" class="btn-add-bubble btn-validated-click">+ Ajouter une tâche</button>
+                
+                <select id="task-sort-filter" onchange="renderTasks()" style="padding: 10px; font-size: 0.85rem; border-radius: 20px; font-weight: bold; cursor: pointer; max-width: 160px;">
+                    <option value="chrono">⏳ Tri Chronologique</option>
+                    <option value="creation">✨ Tri par Ajout</option>
+                </select>
+            </div>
+
+            <div id="task-list"></div>
+        </section>
+
+        <section id="todo-page" style="display:none;">
+            <div class="calendar-nav">
+                <button id="btn-daily" class="bubble active" onclick="setTodoMode('daily')">Journalier</button>
+                <button id="btn-weekly" class="bubble" onclick="setTodoMode('weekly')">Hebdo</button>
+            </div>
+            <h3 id="todo-today-date" style="text-align: center; margin-bottom: 20px;"></h3>
+            <div id="todo-content"></div>
+        </section>
+
+        <section id="calendar-page" style="display:none;">
+            <div class="calendar-nav">
+                <button id="btn-year" class="bubble" onclick="setViewState('year')">Année</button>
+                <button id="btn-month" class="bubble" onclick="setViewState('month')">Mois</button>
+                <button id="btn-day" class="bubble active" onclick="setViewState('day')">Jours</button>
+            </div>
+            <div id="calendar-title" class="calendar-title" style="text-align:center; margin-bottom:15px;"></div>
+            <div id="calendar-content"></div>
+        </section>
+
+        <section id="profile-page" style="display:none;">
+            <div class="header-action header-centered">
+                <h2>Mon Profil</h2>
+            </div>
+            <div class="profile-card">
+                <label>Mon Surnom / Prénom</label>
+                <input type="text" id="profile-nickname" placeholder="Ex: WeriXx, Julie...">
+                <button id="btn-save-nickname" class="btn-primary btn-validated-click" style="padding: 10px 15px; font-size: 0.9rem;">Enregistrer le surnom</button>
+                
+                <hr style="opacity: 0.1; margin: 10px 0;">
+                <p id="profile-user-email" style="font-size: 0.85rem; opacity: 0.6; text-align:center; margin-bottom:10px;"></p>
+                <button id="btn-logout" class="btn-secondary" style="background:var(--danger); color:white;">Se déconnecter</button>
+            </div>
+
+            <div class="header-action header-centered" style="margin-top: 30px;">
+                <h2>Thèmes</h2>
+            </div>
+            <div class="theme-selector">
+                <div class="theme-option pink" onclick="changeTheme('pink')">Bonbon</div>
+                <div class="theme-option dark" onclick="changeTheme('dark')">Sombre</div>
+                <div class="theme-option ocean" onclick="changeTheme('ocean')">Océan</div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast-notification" class="toast-hidden"></div>
+
+    <div id="welcome-modal" class="modal modal-center" style="z-index: 10001;">
+        <div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;">
+            <h3 id="welcome-message-text" style="color: var(--primary-dark); text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3>
+            <div id="today-summary-zone"></div>
+            <button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn-secondary btn-validated-click" style="margin-top: 15px; width: 100%;">C'est parti !</button>
+        </div>
+    </div>
+
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Nouvelle Tâche</h3>
+            <label>Nom de la tâche</label>
+            <input type="text" id="task-name" placeholder="Ex: Aller courir...">
+            
+            <div style="display: flex; gap: 15px; width: 100%;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+                    <label>Date</label>
+                    <input type="date" id="task-date">
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+                    <label>Heure</label>
+                    <input type="time" id="task-time">
+                </div>
+            </div>
+            
+            <label>Rappels de notification (Cliquez pour activer)</label>
+            <div class="reminder-badges-container">
+                <div class="reminder-badge" data-value="5">5 min avant</div>
+                <div class="reminder-badge" data-value="15">15 min avant</div>
+                <div class="reminder-badge" data-value="60">1h avant</div>
+            </div>
+
+            <label>Importance</label>
+            <select id="task-importance">
+                <option value="high">Haute</option>
+                <option value="medium">Moyenne</option>
+                <option value="low">Faible</option>
+            </select>
+            <div class="modal-buttons">
+                <button id="save-task" class="btn-primary btn-validated-click">Enregistrer</button>
+                <button id="close-modal" class="btn-secondary">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="todo-modal" class="modal">
         <div class="modal-content">
             <h3 id="todo-modal-title">To-Do List</h3>
             
@@ -26,3 +180,19 @@
             </div>
         </div>
     </div>
+
+    <div id="calendar-day-modal" class="modal modal-center">
+        <div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto;">
+            <h3 id="cal-modal-date-title" style="color: var(--primary); text-align: center; margin-bottom: 5px;"></h3>
+            <div id="cal-modal-tasks-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;"></div>
+            <button onclick="document.getElementById('calendar-day-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    
+    <script src="script.js"></script>
+</body>
+</html>
