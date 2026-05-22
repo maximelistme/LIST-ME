@@ -233,3 +233,45 @@ select option { background: var(--card-bg); color: var(--text-color); }
     margin-bottom: 2px;
     display: inline-block;
 }
+/* --- BULLES ET SÉPARATEUR DE TÂCHES TERMINÉES --- */
+.task-card.completed-bubble {
+    border-left: 5px solid #d3d3d3 !important;
+    background: rgba(0, 0, 0, 0.03) !important;
+    box-shadow: none !important;
+}
+
+.badge-finished {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: var(--success);
+    margin-bottom: 2px;
+    display: inline-block;
+}
+
+.task-section-separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 25px 10px 15px 10px;
+}
+
+.task-section-separator::before,
+.task-section-separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px dashed var(--primary);
+    opacity: 0.25;
+}
+
+.task-section-separator:not(:empty)::before { margin-right: .75em; }
+.task-section-separator:not(:empty)::after { margin-left: .75em; }
+
+.task-section-separator span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--primary);
+    opacity: 0.6;
+    padding: 0 5px;
+}
