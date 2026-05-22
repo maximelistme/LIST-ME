@@ -450,31 +450,26 @@ function renderTodo() {
 function openTodoModal(time, isWeekly, dayNum = 1) { 
     editingTodoId = null; 
     
-    const timeInput = document.getElementById('todo-time');
-    const nameInput = document.getElementById('todo-task-name');
-    const titleInput = document.getElementById('todo-modal-title');
+    document.getElementById('todo-time').value = time; 
+    document.getElementById('todo-task-name').value = ''; 
+    document.getElementById('todo-modal-title').innerText = "Ajouter à la To-Do List"; 
+    
     const selectorBlock = document.getElementById('todo-day-selector-block');
-    const daySelect = document.getElementById('todo-day-select');
-    const saveBtn = document.getElementById('save-todo');
-
-    if (timeInput) timeInput.value = time; 
-    if (nameInput) nameInput.value = ''; 
-    if (titleInput) titleInput.innerText = "Ajouter à la To-Do List"; 
+    if(isWeekly) { 
+        document.getElementById('todo-day-select').value = dayNum; 
+        if(selectorBlock) selectorBlock.style.display = 'flex';
+    } else {
+        if(selectorBlock) selectorBlock.style.display = 'none';
+    } 
     
-    if (selectorBlock) {
-        if (isWeekly) { 
-            if (daySelect) daySelect.value = dayNum; 
-            selectorBlock.style.display = 'flex'; 
-        } else { 
-            selectorBlock.style.display = 'none'; 
-        } 
-    }
+    document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly); 
     
-    if (saveBtn) saveBtn.setAttribute('data-weekly-mode', isWeekly); 
-    
-    const modal = document.getElementById('todo-modal');
-    if (modal) modal.style.display = 'flex'; 
+    // Le fix magique : force l'ouverture au cycle suivant pour éviter le conflit de clic
+    setTimeout(() => {
+        document.getElementById('todo-modal').style.display = 'flex'; 
+    }, 10);
 }
+
 function editTodoItem(id, name, time, isWeekly, dayNum = 1) { editingTodoId = id; document.getElementById('todo-time').value = time; document.getElementById('todo-task-name').value = name; document.getElementById('todo-modal-title').innerText = "Modifier la To-Do List"; if(isWeekly) document.getElementById('todo-day-select').value = dayNum; document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly); document.getElementById('todo-modal').style.display = 'flex'; }
 
 function toggleTodo(id, currentStatus) { db.collection("dailyTodo").doc(id).update({ completed: !currentStatus }); }
@@ -504,4 +499,9 @@ document.getElementById('add-task-btn').onclick = () => { editingId = null; docu
 document.getElementById('close-modal').onclick = () => document.getElementById('task-modal').style.display = 'none';
 document.getElementById('close-todo-modal').onclick = () => document.getElementById('todo-modal').style.display = 'none';
 
-window.onclick = (e) => { if(e.target.className.includes('modal')) { document.getElementById('task-modal').style.display = 'none'; document.getElementById('todo-modal').style.display = 'none'; document.getElementById('calendar-day-modal').style.display = 'none'; document.getElementById('welcome-modal').style.display = 'none'; } };
+// Fermeture propre des modals en cliquant à côté
+window.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+        e.target.style.display = 'none';
+    }
+});
