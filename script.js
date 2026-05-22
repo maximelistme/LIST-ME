@@ -302,6 +302,7 @@ function editTask(id) {
     }
 }
 
+// --- ACTION ENREGISTRER UNE TÂCHE STANDARD ---
 document.getElementById('save-task').onclick = () => {
     const n = document.getElementById('task-name').value; const d = document.getElementById('task-date').value;
     const time = document.getElementById('task-time').value; const imp = document.getElementById('task-importance').value;
@@ -326,7 +327,7 @@ document.getElementById('btn-register').onclick = () => {
 document.getElementById('btn-google').onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => { showToast("Connexion Google réussie ! 🚀"); }).catch((err) => { showToast("Erreur Google : " + err.message); }); };
 document.getElementById('btn-logout').onclick = () => { auth.signOut().then(() => { showToast("Déconnexion réussie."); }); };
 
-// --- ONTLET : CALENDRIER ---
+// --- ONGLETS : CALENDRIER ---
 function setViewState(s) { viewState = s; renderCalendar(); }
 function renderCalendar() {
     const c = document.getElementById('calendar-content'); const t = document.getElementById('calendar-title'); c.innerHTML = '';
@@ -454,6 +455,7 @@ function toggleWeeklyTodo(id, currentStatus) { db.collection("weeklyTodo").doc(i
 function deleteWeeklyTodo(id) { db.collection("weeklyTodo").doc(id).delete(); }
 function deleteDailyTodo(id) { db.collection("dailyTodo").doc(id).delete(); }
 
+// --- ACTION ENREGISTRER DANS LA TO-DO LIST ---
 document.getElementById('save-todo').onclick = () => {
     const n = document.getElementById('todo-task-name').value; const t = document.getElementById('todo-time').value;
     const isWeekly = document.getElementById('save-todo').getAttribute('data-weekly-mode') === 'true';
@@ -467,31 +469,6 @@ document.getElementById('save-todo').onclick = () => {
             else { db.collection("dailyTodo").add({ name: n, time: t, date: todayStr, completed: false, userId: currentUser.uid }); }
         }
         document.getElementById('todo-modal').style.display = 'none'; document.getElementById('todo-task-name').value = '';
-    }
-};
-
-// --- SÉCURITÉ ENREGISTREMENT TO-DO LIST ---
-document.getElementById('save-todo').onclick = () => {
-    const n = document.getElementById('todo-task-name').value; 
-    const t = document.getElementById('todo-time').value;
-    const isWeekly = document.getElementById('save-todo').getAttribute('data-weekly-mode') === 'true';
-    
-    if(n && t && currentUser) { 
-        if(editingTodoId) {
-            let collection = isWeekly ? "weeklyTodo" : "dailyTodo"; 
-            let updateData = { name: n, time: t };
-            if(isWeekly) updateData.dayOfWeek = document.getElementById('todo-day-select').value;
-            db.collection(collection).doc(editingTodoId).update(updateData).then(() => { showToast("Activité modifiée ! ✎"); });
-            editingTodoId = null;
-        } else {
-            if(isWeekly) { 
-                db.collection("weeklyTodo").add({ name: n, time: t, dayOfWeek: document.getElementById('todo-day-select').value, completed: false, userId: currentUser.uid }).then(() => { showToast("Activité hebdo ajoutée ! 🗓️"); }); 
-            } else { 
-                db.collection("dailyTodo").add({ name: n, time: t, date: todayStr, completed: false, userId: currentUser.uid }).then(() => { showToast("Activité ajoutée ! ✨"); }); 
-            }
-        }
-        document.getElementById('todo-modal').style.display = 'none'; 
-        document.getElementById('todo-task-name').value = '';
     }
 };
 
