@@ -239,18 +239,40 @@ function renderTasks() {
         const sortMode = document.getElementById('task-sort-filter').value;
         let imminentTasks = []; let standardTasks = []; let completedTodayTasks = [];
 
-        filteredList.forEach(t => {
-            if(t.completed) { completedTodayTasks.push(t); return; }
-            if(t.date === todayStr && t.time) {
-                const [tHour, tMin] = t.time.split(':').map(Number);
-                const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0);
-                const remainingMinutes = (taskTimeObj - now) / 60000;
-                if(remainingMinutes > 0 && remainingMinutes <= 60) {
-                    t.isImminent = true; t.minutesLeft = Math.round(remainingMinutes); imminentTasks.push(t); return;
-                }
-            }
-            t.isImminent = false; standardTasks.push(t);
-        });
+       filteredList.forEach(t => {
+        const d = document.createElement('div');
+        
+        // SI LA TÂCHE EST COMPLÉTÉE : On génère le design "Bulle Finis !"
+        if (t.completed) {
+            d.className = `task-card completed-bubble`;
+            d.innerHTML = `
+                <div style="flex:1; display:flex; flex-direction:column; gap:2px;" onclick="toggleTaskCheck('${t.id}', ${t.completed})">
+                    <span class="badge-finished">✨ Fini !</span>
+                    <strong style="text-decoration:line-through; opacity:0.5;">${t.name}</strong>
+                    <small style="opacity:0.5;">📅 ${t.date} ${t.time ? '⏰ ' + t.time : ''}</small>
+                </div>
+                <div class="task-actions">
+                    <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
+                </div>`;
+        } 
+        // SI LA TÂCHE EST EN COURS : On garde ton design de base avec l'importance et l'imminent
+        else {
+            d.className = `task-card ${t.importance} ${t.isImminent ? 'is-imminent' : ''}`;
+            let remindersText = "Aucun"; if(t.reminders && t.reminders.length > 0) { remindersText = t.reminders.map(r => `${r} min avant`).join(', '); }
+            d.innerHTML = `
+                <div style="flex:1" onclick="toggleTaskCheck('${t.id}', ${t.completed})">
+                    <strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong><br>
+                    <small>📅 ${t.date} ${t.time ? '⏰ ' + t.time : ''}</small>
+                    ${t.isImminent ? `<br><small class="time-alert">⚠️ ÉCHÉANCE PROCHE : Reste ${t.minutesLeft} min !</small>` : `<br><small style="color:var(--primary-dark);">🔔 Rappels : ${remindersText}</small>`}
+                </div>
+                <div class="task-actions">
+                    ${taskSubView === 'active' ? `<button onclick="editTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.3rem; cursor:pointer;">✎</button>` : ''}
+                    <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
+                </div>`;
+        }
+        
+        c.appendChild(d);
+    });
 
         const chronoSort = (a, b) => { if (a.date !== b.date) return a.date.localeCompare(b.date); if (!a.time) return -1; if (!b.time) return 1; return a.time.localeCompare(b.time); };
         const creationSort = (a, b) => b.createdAt - a.createdAt;
