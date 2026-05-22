@@ -205,8 +205,6 @@ function startRealtimeSync(userId) {
     unsubscribeWeekly = db.collection("weeklyTodo").where("userId", "==", userId).onSnapshot((snapshot) => { weeklyTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; weeklyTodo.push(data); }); renderTodo(); });
 }
 
-function stopRealtimeSync() { if (unsubscribeTasks) unsubscribeTasks(); if (unsubscribeDaily) unsubscribeDaily(); if (unsubscribeWeekly) unsubscribeWeekly(); tasks = []; dailyTodo = []; weeklyTodo = []; }
-
 // --- POP-UP BIENVENUE ---
 function triggerWelcomeModal() {
     const wModal = document.getElementById('welcome-modal'); const msgText = document.getElementById('welcome-message-text'); const summaryZone = document.getElementById('today-summary-zone');
@@ -220,6 +218,8 @@ function triggerWelcomeModal() {
     }
     wModal.style.display = 'flex';
 }
+
+function stopRealtimeSync() { if (unsubscribeTasks) unsubscribeTasks(); if (unsubscribeDaily) unsubscribeDaily(); if (unsubscribeWeekly) unsubscribeWeekly(); tasks = []; dailyTodo = []; weeklyTodo = []; }
 
 // --- ONGLET : MES TÂCHES ---
 function renderTasks() {
@@ -268,18 +268,36 @@ function renderTasks() {
     }
 
     filteredList.forEach(t => {
-        const d = document.createElement('div'); d.className = `task-card ${t.importance} ${t.completed ? 'completed' : ''} ${t.isImminent ? 'is-imminent' : ''}`;
-        let remindersText = "Aucun"; if(t.reminders && t.reminders.length > 0) { remindersText = t.reminders.map(r => `${r} min avant`).join(', '); }
-        d.innerHTML = `
-            <div style="flex:1" onclick="toggleTaskCheck('${t.id}', ${t.completed})">
-                <strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong><br>
-                <small>📅 ${t.date} ${t.time ? '⏰ ' + t.time : ''}</small>
-                ${t.isImminent ? `<br><small class="time-alert">⚠️ ÉCHÉANCE PROCHE : Reste ${t.minutesLeft} min !</small>` : `<br><small style="color:var(--primary-dark);">🔔 Rappels : ${remindersText}</small>`}
-            </div>
-            <div class="task-actions">
-                ${taskSubView === 'active' ? `<button onclick="editTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.3rem; cursor:pointer;">✎</button>` : ''}
-                <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
-            </div>`;
+        const d = document.createElement('div');
+        
+        // MODIFICATION POUR TA DEMANDE : Si la tâche est finie, on utilise le style spécial bulle
+        if (t.completed) {
+            d.className = `task-card completed-bubble`;
+            d.innerHTML = `
+                <div style="flex:1; display:flex; flex-direction:column; gap:2px;" onclick="toggleTaskCheck('${t.id}', ${t.completed})">
+                    <span class="badge-finished">✨ Fini !</span>
+                    <strong style="text-decoration:line-through; opacity:0.5;">${t.name}</strong>
+                    <small style="opacity:0.5;">📅 ${t.date} ${t.time ? '⏰ ' + t.time : ''}</small>
+                </div>
+                <div class="task-actions">
+                    <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
+                </div>`;
+        } 
+        // Sinon, on garde ton affichage habituel pour les tâches actives
+        else {
+            d.className = `task-card ${t.importance} ${t.isImminent ? 'is-imminent' : ''}`;
+            let remindersText = "Aucun"; if(t.reminders && t.reminders.length > 0) { remindersText = t.reminders.map(r => `${r} min avant`).join(', '); }
+            d.innerHTML = `
+                <div style="flex:1" onclick="toggleTaskCheck('${t.id}', ${t.completed})">
+                    <strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong><br>
+                    <small>📅 ${t.date} ${t.time ? '⏰ ' + t.time : ''}</small>
+                    ${t.isImminent ? `<br><small class="time-alert">⚠️ ÉCHÉANCE PROCHE : Reste ${t.minutesLeft} min !</small>` : `<br><small style="color:var(--primary-dark);">🔔 Rappels : ${remindersText}</small>`}
+                </div>
+                <div class="task-actions">
+                    ${taskSubView === 'active' ? `<button onclick="editTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.3rem; cursor:pointer;">✎</button>` : ''}
+                    <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
+                </div>`;
+        }
         c.appendChild(d);
     });
 }
@@ -466,7 +484,7 @@ document.getElementById('save-todo').onclick = () => {
             let updateData = { name: n, time: t };
             if(isWeekly) updateData.dayOfWeek = document.getElementById('todo-day-select').value;
             db.collection(collection).doc(editingTodoId).update(updateData).then(() => {
-                showToast("Activité modifiée ! ✎");
+                showToast("Activité modified ! ✎");
             });
             editingTodoId = null;
         } else {
