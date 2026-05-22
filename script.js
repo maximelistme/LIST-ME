@@ -267,10 +267,20 @@ function renderTasks() {
         c.innerHTML = `<p style="text-align:center; opacity:0.4; font-style:italic; margin-top:30px;">${taskSubView==='active'?'Aucune tâche active !':'Vos archives sont vides'}</p>`; return;
     }
 
+    let separatorDrawn = false;
+
     filteredList.forEach(t => {
+        // Injection de la ligne de séparation avant la première tâche finie
+        if (t.completed && taskSubView === "active" && !separatorDrawn) {
+            const separator = document.createElement('div');
+            separator.className = 'task-section-separator';
+            separator.innerHTML = '<span>Tâches terminées</span>';
+            c.appendChild(separator);
+            separatorDrawn = true;
+        }
+
         const d = document.createElement('div');
         
-        // MODIFICATION POUR TA DEMANDE : Si la tâche est finie, on utilise le style spécial bulle
         if (t.completed) {
             d.className = `task-card completed-bubble`;
             d.innerHTML = `
@@ -282,9 +292,7 @@ function renderTasks() {
                 <div class="task-actions">
                     <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
                 </div>`;
-        } 
-        // Sinon, on garde ton affichage habituel pour les tâches actives
-        else {
+        } else {
             d.className = `task-card ${t.importance} ${t.isImminent ? 'is-imminent' : ''}`;
             let remindersText = "Aucun"; if(t.reminders && t.reminders.length > 0) { remindersText = t.reminders.map(r => `${r} min avant`).join(', '); }
             d.innerHTML = `
@@ -437,9 +445,9 @@ function renderTodo() {
     } else {
         document.getElementById('todo-today-date').innerText = "Planification Hebdomadaire";
         c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container');
-        const weeklyOrder = [1, 2, 3, 4, 5, 6, 0];
+        const presidentialOrder = [1, 2, 3, 4, 5, 6, 0];
         
-        weeklyOrder.forEach(dayNum => {
+        presidentialOrder.forEach(dayNum => {
             const dayTasks = weeklyTodo.filter(it => parseInt(it.dayOfWeek) === dayNum); dayTasks.sort((a,b) => a.time.localeCompare(b.time));
             const dayCard = document.createElement('div'); dayCard.className = 'weekly-day-card';
             dayCard.innerHTML = `
@@ -484,7 +492,7 @@ document.getElementById('save-todo').onclick = () => {
             let updateData = { name: n, time: t };
             if(isWeekly) updateData.dayOfWeek = document.getElementById('todo-day-select').value;
             db.collection(collection).doc(editingTodoId).update(updateData).then(() => {
-                showToast("Activité modified ! ✎");
+                showToast("Activité modifiée ! ✎");
             });
             editingTodoId = null;
         } else {
