@@ -470,6 +470,31 @@ document.getElementById('save-todo').onclick = () => {
     }
 };
 
+// --- SÉCURITÉ ENREGISTREMENT TO-DO LIST ---
+document.getElementById('save-todo').onclick = () => {
+    const n = document.getElementById('todo-task-name').value; 
+    const t = document.getElementById('todo-time').value;
+    const isWeekly = document.getElementById('save-todo').getAttribute('data-weekly-mode') === 'true';
+    
+    if(n && t && currentUser) { 
+        if(editingTodoId) {
+            let collection = isWeekly ? "weeklyTodo" : "dailyTodo"; 
+            let updateData = { name: n, time: t };
+            if(isWeekly) updateData.dayOfWeek = document.getElementById('todo-day-select').value;
+            db.collection(collection).doc(editingTodoId).update(updateData).then(() => { showToast("Activité modifiée ! ✎"); });
+            editingTodoId = null;
+        } else {
+            if(isWeekly) { 
+                db.collection("weeklyTodo").add({ name: n, time: t, dayOfWeek: document.getElementById('todo-day-select').value, completed: false, userId: currentUser.uid }).then(() => { showToast("Activité hebdo ajoutée ! 🗓️"); }); 
+            } else { 
+                db.collection("dailyTodo").add({ name: n, time: t, date: todayStr, completed: false, userId: currentUser.uid }).then(() => { showToast("Activité ajoutée ! ✨"); }); 
+            }
+        }
+        document.getElementById('todo-modal').style.display = 'none'; 
+        document.getElementById('todo-task-name').value = '';
+    }
+};
+
 // --- INITIALISATION GENERALE ---
 document.getElementById('add-task-btn').onclick = () => { editingId = null; document.getElementById('task-name').value = ""; document.getElementById('task-time').value = ""; setSelectedRemindersToBadges([]); document.getElementById('task-date').value = todayStr; document.getElementById('modal-title').innerText = "Nouvelle Tâche"; document.getElementById('task-modal').style.display = 'flex'; };
 document.getElementById('close-modal').onclick = () => document.getElementById('task-modal').style.display = 'none';
