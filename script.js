@@ -152,7 +152,7 @@ function sendNotification(title, body) { if ("Notification" in window && Notific
 
 // --- BADGES DE RAPPEL ---
 document.querySelectorAll('.reminder-badge').forEach(badge => { badge.onclick = () => { badge.classList.toggle('active'); }; });
-function getSelectedRemindersFromBadges() { let activeReminders = []; document.querySelectorAll('.reminder-badge.active').forEach(badge => { activeReminders.push(badge.getAttribute('data-value')); }); return activeReminders; }
+function sendNotification(title, body) { if ("Notification" in window && Notification.permission === "granted") { new Notification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png" }); } }
 function setSelectedRemindersToBadges(remindersArray) { document.querySelectorAll('.reminder-badge').forEach(badge => { const val = badge.getAttribute('data-value'); if(remindersArray && remindersArray.includes(val)) { badge.classList.add('active'); } else { badge.classList.remove('active'); } }); }
 
 // --- SURVEILLANCE DE L'ÉTAT DE CONNEXION ---
