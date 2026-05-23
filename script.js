@@ -54,6 +54,7 @@ function changeTheme(t) {
     localStorage.setItem('listme_theme', t); 
 }
 
+// --- ONGLET : MES TÂCHES ---
 function showPage(p) {
     document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
     const target = document.getElementById(`${p}-page`);
@@ -68,7 +69,6 @@ function showPage(p) {
     if(p === 'tasks') renderTasks();
 }
 
-// --- MODIFICATION ICI : switchTaskSubView affiche/masque la barre de recherche ---
 function switchTaskSubView(view) {
     taskSubView = view;
     document.querySelectorAll('.sub-menu-tab').forEach(b => b.classList.remove('active'));
@@ -78,11 +78,11 @@ function switchTaskSubView(view) {
     if(view === 'active') {
         document.getElementById('sub-btn-active-tasks').classList.add('active');
         if(actionBar) actionBar.style.display = 'flex';
-        if(archiveSearch) archiveSearch.style.display = 'none'; // Masqué dans "Mes Tâches"
+        if(archiveSearch) archiveSearch.style.display = 'none';
     } else {
         document.getElementById('sub-btn-archived-tasks').classList.add('active');
         if(actionBar) actionBar.style.display = 'none';
-        if(archiveSearch) archiveSearch.style.display = 'flex'; // Affiché dans "Archives"
+        if(archiveSearch) archiveSearch.style.display = 'flex';
     }
     renderTasks();
 }
@@ -148,21 +148,18 @@ let lastCheckedMinute = "";
 setInterval(runNotificationEngine, 30000);
 
 function requestNotificationPermission() { if ("Notification" in window) { Notification.requestPermission(); } }
+
 function sendNotification(title, body) {
     if ("Notification" in window && Notification.permission === "granted") {
-        // Si un Service Worker est actif et contrôle la page (Mobile)
         if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({
-                type: 'SHOW_NOTIFICATION',
-                title: title,
-                body: body
+            navigator.serviceWorker.ready.then(registration => {
+                registration.showNotification(title, {
+                    body: body,
+                    icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png"
+                });
             });
         } else {
-            // Version de secours (PC / Navigateur classique)
-            new Notification(title, { 
-                body: body, 
-                icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png" 
-            });
+            new Notification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png" });
         }
     }
 }
@@ -257,7 +254,6 @@ function renderTasks() {
 
     let filteredList = (taskSubView === "active") ? activeList : archiveList;
 
-    // --- MODIFICATION ICI : Prise en compte de la recherche par date dans les archives ---
     if (taskSubView === "archive") {
         const dateFilterValue = document.getElementById('archive-date-filter').value;
         if (dateFilterValue) {
@@ -300,7 +296,6 @@ function renderTasks() {
     let separatorDrawn = false;
 
     filteredList.forEach(t => {
-        // Injection de la ligne de séparation avant la première tâche finie
         if (t.completed && taskSubView === "active" && !separatorDrawn) {
             const separator = document.createElement('div');
             separator.className = 'task-section-separator';
@@ -325,6 +320,8 @@ function renderTasks() {
         } else {
             d.className = `task-card ${t.importance} ${t.isImminent ? 'is-imminent' : ''}`;
             let remindersText = "Aucun"; if(t.reminders && t.reminders.length > 0) { remindersText = t.reminders.map(r => `${r} min avant`).join(', '); }
+            
+            // INTÉGRATION DU BOUTON DE DUPLICATION (📑) ICI :
             d.innerHTML = `
                 <div style="flex:1" onclick="toggleTaskCheck('${t.id}', ${t.completed})">
                     <strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong><br>
@@ -332,10 +329,10 @@ function renderTasks() {
                     ${t.isImminent ? `<br><small class="time-alert">⚠️ ÉCHÉANCE PROCHE : Reste ${t.minutesLeft} min !</small>` : `<br><small style="color:var(--primary-dark);">🔔 Rappels : ${remindersText}</small>`}
                 </div>
                 <div class="task-actions">
-                  ${taskSubView === 'active' ? `<button onclick="duplicateTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; margin-right:5px;">📑</button>` : ''}
-                  ${taskSubView === 'active' ? `<button onclick="editTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.3rem; cursor:pointer;">✎</button>` : ''}
-                  <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
-                </div>
+                    ${taskSubView === 'active' ? `<button onclick="duplicateTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; margin-right:5px;">📑</button>` : ''}
+                    ${taskSubView === 'active' ? `<button onclick="editTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.3rem; cursor:pointer;">✎</button>` : ''}
+                    <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
+                </div>`;
         }
         c.appendChild(d);
     });
@@ -511,7 +508,7 @@ function toggleWeeklyTodo(id, currentStatus) { db.collection("weeklyTodo").doc(i
 function deleteWeeklyTodo(id) { db.collection("weeklyTodo").doc(id).delete(); }
 function deleteDailyTodo(id) { db.collection("dailyTodo").doc(id).delete(); }
 
-// --- ACTION ENREGISTRER DANS LA TO-DO LIST (CORRIGÉE CHIRURGICALEMENT) ---
+// --- ACTION ENREGISTRER DANS LA TO-DO LIST ---
 document.getElementById('save-todo').onclick = () => {
     const n = document.getElementById('todo-task-name').value.trim(); 
     const t = document.getElementById('todo-time').value;
@@ -542,11 +539,17 @@ document.getElementById('save-todo').onclick = () => {
     }
 };
 
+// --- INITIALISATION GENERALE ---
+document.getElementById('add-task-btn').onclick = () => { editingId = null; document.getElementById('task-name').value = ""; document.getElementById('task-time').value = ""; setSelectedRemindersToBadges([]); document.getElementById('task-date').value = todayStr; document.getElementById('modal-title').innerText = "Nouvelle Tâche"; document.getElementById('task-modal').style.display = 'flex'; };
+document.getElementById('close-modal').onclick = () => document.getElementById('task-modal').style.display = 'none';
+document.getElementById('close-todo-modal').onclick = () => document.getElementById('todo-modal').style.display = 'none';
+
+window.onclick = (e) => { if(e.target.className.includes('modal')) { document.getElementById('task-modal').style.display = 'none'; document.getElementById('todo-modal').style.display = 'none'; document.getElementById('calendar-day-modal').style.display = 'none'; document.getElementById('welcome-modal').style.display = 'none'; } };
+
 // --- LOGIQUE DE PRE-REMPLISSAGE POUR DUPLICATION ---
 function duplicateTask(id) {
     const task = tasks.find(t => t.id === id);
     if(task) {
-        // On passe l'ID à editingId pour modifier la tâche existante (pas de doublon dans le feed)
         editingId = id; 
         
         document.getElementById('task-name').value = task.name;
@@ -555,20 +558,12 @@ function duplicateTask(id) {
         document.getElementById('task-importance').value = task.importance;
         setSelectedRemindersToBadges(task.reminders || []);
         
-        // On change le titre pour savoir qu'on duplique
         document.getElementById('modal-title').innerText = "Dupliquer dans le calendrier";
         document.getElementById('task-modal').style.display = 'flex';
     }
 }
 
-// --- INITIALISATION GENERALE ---
-document.getElementById('add-task-btn').onclick = () => { editingId = null; document.getElementById('task-name').value = ""; document.getElementById('task-time').value = ""; setSelectedRemindersToBadges([]); document.getElementById('task-date').value = todayStr; document.getElementById('modal-title').innerText = "Nouvelle Tâche"; document.getElementById('task-modal').style.display = 'flex'; };
-document.getElementById('close-modal').onclick = () => document.getElementById('task-modal').style.display = 'none';
-document.getElementById('close-todo-modal').onclick = () => document.getElementById('todo-modal').style.display = 'none';
-
-window.onclick = (e) => { if(e.target.className.includes('modal')) { document.getElementById('task-modal').style.display = 'none'; document.getElementById('todo-modal').style.display = 'none'; document.getElementById('calendar-day-modal').style.display = 'none'; document.getElementById('welcome-modal').style.display = 'none'; } };
-
-// --- ENREGISTREMENT DU SERVICE WORKER POUR LES NOTIFICATIONS MOBILES ---
+// --- ENREGISTRER DU SERVICE WORKER POUR LES NOTIFICATIONS MOBILES ---
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
