@@ -150,17 +150,19 @@ setInterval(runNotificationEngine, 30000);
 function requestNotificationPermission() { if ("Notification" in window) { Notification.requestPermission(); } }
 function sendNotification(title, body) {
     if ("Notification" in window && Notification.permission === "granted") {
-        // Si on est sur mobile avec le Service Worker actif
+        // Si un Service Worker est actif et contrôle la page (Mobile)
         if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.ready.then(registration => {
-                registration.showNotification(title, {
-                    body: body,
-                    icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png"
-                });
+            navigator.serviceWorker.controller.postMessage({
+                type: 'SHOW_NOTIFICATION',
+                title: title,
+                body: body
             });
         } else {
-            // Version classique pour PC
-            new Notification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png" });
+            // Version de secours (PC / Navigateur classique)
+            new Notification(title, { 
+                body: body, 
+                icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png" 
+            });
         }
     }
 }
