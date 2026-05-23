@@ -530,3 +530,16 @@ document.getElementById('close-modal').onclick = () => document.getElementById('
 document.getElementById('close-todo-modal').onclick = () => document.getElementById('todo-modal').style.display = 'none';
 
 window.onclick = (e) => { if(e.target.className.includes('modal')) { document.getElementById('task-modal').style.display = 'none'; document.getElementById('todo-modal').style.display = 'none'; document.getElementById('calendar-day-modal').style.display = 'none'; document.getElementById('welcome-modal').style.display = 'none'; } };
+
+// --- ENREGISTREMENT DU SERVICE WORKER POUR LES NOTIFICATIONS MOBILES ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then(registration => {
+                console.log('Service Worker enregistré avec succès !', registration.scope);
+            })
+            .catch(err => {
+                console.log('Échec de l\'enregistrement du Service Worker :', err);
+            });
+    });
+}
