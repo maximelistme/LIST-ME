@@ -68,16 +68,21 @@ function showPage(p) {
     if(p === 'tasks') renderTasks();
 }
 
+// --- MODIFICATION ICI : switchTaskSubView affiche/masque la barre de recherche ---
 function switchTaskSubView(view) {
     taskSubView = view;
     document.querySelectorAll('.sub-menu-tab').forEach(b => b.classList.remove('active'));
     const actionBar = document.getElementById('tasks-action-bar');
+    const archiveSearch = document.getElementById('archive-search-bar');
+    
     if(view === 'active') {
         document.getElementById('sub-btn-active-tasks').classList.add('active');
         if(actionBar) actionBar.style.display = 'flex';
+        if(archiveSearch) archiveSearch.style.display = 'none'; // Masqué dans "Mes Tâches"
     } else {
         document.getElementById('sub-btn-archived-tasks').classList.add('active');
         if(actionBar) actionBar.style.display = 'none';
+        if(archiveSearch) archiveSearch.style.display = 'flex'; // Affiché dans "Archives"
     }
     renderTasks();
 }
@@ -235,6 +240,14 @@ function renderTasks() {
 
     let filteredList = (taskSubView === "active") ? activeList : archiveList;
 
+    // --- MODIFICATION ICI : Prise en compte de la recherche par date dans les archives ---
+    if (taskSubView === "archive") {
+        const dateFilterValue = document.getElementById('archive-date-filter').value;
+        if (dateFilterValue) {
+            filteredList = filteredList.filter(t => t.date === dateFilterValue);
+        }
+    }
+
     if (taskSubView === "active") {
         const sortMode = document.getElementById('task-sort-filter').value;
         let imminentTasks = []; let standardTasks = []; let completedTodayTasks = [];
@@ -264,7 +277,7 @@ function renderTasks() {
     }
 
     if(filteredList.length === 0) {
-        c.innerHTML = `<p style="text-align:center; opacity:0.4; font-style:italic; margin-top:30px;">${taskSubView==='active'?'Aucune tâche active !':'Vos archives sont vides'}</p>`; return;
+        c.innerHTML = `<p style="text-align:center; opacity:0.4; font-style:italic; margin-top:30px;">${taskSubView==='active'?'Aucune tâche active !':'Aucune archive ne correspond'}</p>`; return;
     }
 
     let separatorDrawn = false;
