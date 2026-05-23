@@ -169,6 +169,12 @@ document.querySelectorAll('.reminder-badge').forEach(badge => { badge.onclick = 
 function getSelectedRemindersFromBadges() { let activeReminders = []; document.querySelectorAll('.reminder-badge.active').forEach(badge => { activeReminders.push(badge.getAttribute('data-value')); }); return activeReminders; }
 function setSelectedRemindersToBadges(remindersArray) { document.querySelectorAll('.reminder-badge').forEach(badge => { const val = badge.getAttribute('data-value'); if(remindersArray && remindersArray.includes(val)) { badge.classList.add('active'); } else { badge.classList.remove('active'); } }); }
 
+// --- BADGES DE DUPLICATION MULTI-JOURS (SEMAINE TYPE) ---
+document.querySelectorAll('.day-badge').forEach(badge => { badge.onclick = () => { badge.classList.toggle('active'); }; });
+function getSelectedDuplicateDays() { let activeDays = []; document.querySelectorAll('.day-badge.active').forEach(badge => { activeDays.push(badge.getAttribute('data-day')); }); return activeDays; }
+function setSelectedDuplicateDays(daysArray) { document.querySelectorAll('.day-badge').forEach(badge => { const val = badge.getAttribute('data-day'); if(daysArray && daysArray.includes(val)) { badge.classList.add('active'); } else { badge.classList.remove('active'); } }); }
+function clearDuplicateDaysBadges() { document.querySelectorAll('.day-badge').forEach(badge => { badge.classList.remove('active'); }); }
+
 // --- SURVEILLANCE DE L'ÉTAT DE CONNEXION ---
 auth.onAuthStateChanged((user) => {
     if (user) {
@@ -306,6 +312,9 @@ function renderTasks() {
 
         const d = document.createElement('div');
         
+        // Effet de superposition visuelle s'il s'agit d'une tâche de Semaine Type dupliquée
+        const isDuplicatedVisual = (t.duplicateDays && t.duplicateDays.length > 0) ? '<span class="badge-duplicated" style="margin-left:5px; font-size:0.75rem; vertical-align:middle; background:var(--primary); color:white; padding:2px 6px; border-radius:10px; font-weight:bold;">📑 Dupliqué</span>' : '';
+
         if (t.completed) {
             d.className = `task-card completed-bubble`;
             d.innerHTML = `
@@ -321,10 +330,9 @@ function renderTasks() {
             d.className = `task-card ${t.importance} ${t.isImminent ? 'is-imminent' : ''}`;
             let remindersText = "Aucun"; if(t.reminders && t.reminders.length > 0) { remindersText = t.reminders.map(r => `${r} min avant`).join(', '); }
             
-            // INTÉGRATION DU BOUTON DE DUPLICATION (📑) ICI :
             d.innerHTML = `
                 <div style="flex:1" onclick="toggleTaskCheck('${t.id}', ${t.completed})">
-                    <strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong><br>
+                    <strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong> ${isDuplicatedVisual}<br>
                     <small>📅 ${t.date} ${t.time ? '⏰ ' + t.time : ''}</small>
                     ${t.isImminent ? `<br><small class="time-alert">⚠️ ÉCHÉANCE PROCHE : Reste ${t.minutesLeft} min !</small>` : `<br><small style="color:var(--primary-dark);">🔔 Rappels : ${remindersText}</small>`}
                 </div>
@@ -352,6 +360,7 @@ function editTask(id) {
         editingId = id;
         document.getElementById('task-name').value = task.name; document.getElementById('task-date').value = task.date; document.getElementById('task-time').value = task.time || "";
         setSelectedRemindersToBadges(task.reminders || []); document.getElementById('task-importance').value = task.importance;
+        setSelectedDuplicateDays(task.duplicateDays || []);
         document.getElementById('modal-title').innerText = "Modifier la tâche"; document.getElementById('task-modal').style.display = 'flex';
     }
 }
@@ -360,9 +369,11 @@ document.getElementById('save-task').onclick = () => {
     const n = document.getElementById('task-name').value; const d = document.getElementById('task-date').value;
     const time = document.getElementById('task-time').value; const imp = document.getElementById('task-importance').value;
     const reminders = getSelectedRemindersFromBadges(); 
+    const duplicateDays = getSelectedDuplicateDays();
+    
     if(n && d && currentUser) {
-        let taskData = { name: n, date: d, time: time, reminders: reminders, importance: imp };
-        if(editingId) { db.collection("tasks").doc(editingId).update(taskData); editingId = null; showToast("Tâche modifiée ! ✎"); } 
+        let taskData = { name: n, date: d, time: time, reminders: reminders, importance: imp, duplicateDays: duplicateDays };
+        if(editingId) { db.collection("tasks").doc(editingId).update(taskData); editingId = null; showToast("Tâche mise à jour ! ✎"); } 
         else { taskData.completed = false; taskData.userId = currentUser.uid; taskData.createdAt = Date.now(); db.collection("tasks").add(taskData); showToast("Tâche ajoutée ! ✨"); }
         document.getElementById('task-modal').style.display = 'none';
     }
@@ -406,7 +417,14 @@ function renderCalendar() {
             const div = document.createElement('div'); div.className = 'day-card';
             if(ds === todayStr) div.classList.add('is-today');
 
-            const dt = tasks.filter(tk => tk.date === ds);
+            // Calculateur intelligent : On filtre si le jour correspond à la date fixe OU au jour de la semaine type dupliqué
+            const targetDayOfWeek = new Date(selectedYear, selectedMonth, i).getDay().toString();
+            const dt = tasks.filter(tk => {
+                const isExactDate = tk.date === ds;
+                const isDuplicatedDay = tk.duplicateDays && tk.duplicateDays.includes(targetDayOfWeek);
+                return isExactDate || isDuplicatedDay;
+            });
+
             if(dt.length > 0) {
                 const imps = dt.map(tk => tk.importance);
                 if(imps.includes('high')) div.classList.add('has-high'); else if(imps.includes('medium')) div.classList.add('has-medium'); else div.classList.add('has-low');
@@ -503,44 +521,8 @@ function renderTodo() {
 function openTodoModal(time, isWeekly, dayNum = 1) { editingTodoId = null; document.getElementById('todo-time').value = time; document.getElementById('todo-task-name').value = ''; document.getElementById('todo-modal-title').innerText = "Ajouter à la To-Do List"; if(isWeekly) { document.getElementById('todo-day-select').value = dayNum; } document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly); document.getElementById('todo-modal').style.display = 'flex'; }
 function editTodoItem(id, name, time, isWeekly, dayNum = 1) { editingTodoId = id; document.getElementById('todo-time').value = time; document.getElementById('todo-task-name').value = name; document.getElementById('todo-modal-title').innerText = "Modifier la To-Do List"; if(isWeekly) document.getElementById('todo-day-select').value = dayNum; document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeekly); document.getElementById('todo-modal').style.display = 'flex'; }
 
-function toggleTodo(id, currentStatus) { db.collection("dailyTodo").doc(id).update({ completed: !currentStatus }); }
-function toggleWeeklyTodo(id, currentStatus) { db.collection("weeklyTodo").doc(id).update({ completed: !currentStatus }); }
-function deleteWeeklyTodo(id) { db.collection("weeklyTodo").doc(id).delete(); }
-function deleteDailyTodo(id) { db.collection("dailyTodo").doc(id).delete(); }
-
-// --- ACTION ENREGISTRER DANS LA TO-DO LIST ---
-document.getElementById('save-todo').onclick = () => {
-    const n = document.getElementById('todo-task-name').value.trim(); 
-    const t = document.getElementById('todo-time').value;
-    const isWeekly = document.getElementById('save-todo').getAttribute('data-weekly-mode') === 'true';
-    
-    if(n && t && currentUser) { 
-        if(editingTodoId) {
-            let collection = isWeekly ? "weeklyTodo" : "dailyTodo"; 
-            let updateData = { name: n, time: t };
-            if(isWeekly) updateData.dayOfWeek = document.getElementById('todo-day-select').value;
-            db.collection(collection).doc(editingTodoId).update(updateData).then(() => {
-                showToast("Activité modifiée ! ✎");
-            });
-            editingTodoId = null;
-        } else {
-            if(isWeekly) { 
-                db.collection("weeklyTodo").add({ name: n, time: t, dayOfWeek: document.getElementById('todo-day-select').value, completed: false, userId: currentUser.uid }).then(() => {
-                    showToast("Activité hebdomadaire ajoutée ! 🗓️");
-                }); 
-            } else { 
-                db.collection("dailyTodo").add({ name: n, time: t, date: todayStr, completed: false, userId: currentUser.uid }).then(() => {
-                    showToast("Activité ajoutée ! ✨");
-                }); 
-            }
-        }
-        document.getElementById('todo-modal').style.display = 'none'; 
-        document.getElementById('todo-task-name').value = '';
-    }
-};
-
 // --- INITIALISATION GENERALE ---
-document.getElementById('add-task-btn').onclick = () => { editingId = null; document.getElementById('task-name').value = ""; document.getElementById('task-time').value = ""; setSelectedRemindersToBadges([]); document.getElementById('task-date').value = todayStr; document.getElementById('modal-title').innerText = "Nouvelle Tâche"; document.getElementById('task-modal').style.display = 'flex'; };
+document.getElementById('add-task-btn').onclick = () => { editingId = null; document.getElementById('task-name').value = ""; document.getElementById('task-time').value = ""; setSelectedRemindersToBadges([]); clearDuplicateDaysBadges(); document.getElementById('task-date').value = todayStr; document.getElementById('modal-title').innerText = "Nouvelle Tâche"; document.getElementById('task-modal').style.display = 'flex'; };
 document.getElementById('close-modal').onclick = () => document.getElementById('task-modal').style.display = 'none';
 document.getElementById('close-todo-modal').onclick = () => document.getElementById('todo-modal').style.display = 'none';
 
@@ -557,6 +539,7 @@ function duplicateTask(id) {
         document.getElementById('task-date').value = task.date;
         document.getElementById('task-importance').value = task.importance;
         setSelectedRemindersToBadges(task.reminders || []);
+        setSelectedDuplicateDays(task.duplicateDays || []);
         
         document.getElementById('modal-title').innerText = "Dupliquer dans le calendrier";
         document.getElementById('task-modal').style.display = 'flex';
