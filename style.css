@@ -143,6 +143,13 @@ body.theme-ocean .task-card.is-imminent { background: linear-gradient(135deg, #2
 }
 .reminder-badge.active { background: var(--primary) !important; color: white !important; border-color: var(--primary-dark) !important; box-shadow: 0 3px 10px rgba(0, 206, 209, 0.3); }
 
+/* STYLE DES BADGES MULTI-DATES DE DUPLICATION (SEMAINE TYPE) */
+.day-badge {
+    padding: 6px 12px; border-radius: 15px; background: rgba(128,128,128,0.1); font-size: 0.85rem; font-weight: bold;
+    cursor: pointer; transition: all 0.2s ease; text-align: center; user-select: none; -webkit-user-select: none;
+}
+.day-badge.active { background-color: var(--primary) !important; color: white !important; box-shadow: 0 3px 8px rgba(0, 206, 209, 0.25); }
+
 /* AGENDA COHÉRENT */
 .weekly-day-card { margin-bottom: 15px; padding: 15px 20px; border-left: 5px solid var(--primary); transition: background 0.3s; }
 .weekly-day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
@@ -174,7 +181,7 @@ body.theme-ocean .task-card.is-imminent { background: linear-gradient(135deg, #2
 
 /* MODALS */
 .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: flex-end; }
-.modal-content { width: 100%; padding: 30px; border-radius: 30px 30px 0 0; display: flex; flex-direction: column; gap: 15px; }
+.modal-content { width: 100%; padding: 30px; border-radius: 30px 30px 0 0; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; max-height: 90vh; }
 input, select { padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; }
 select option { background: var(--card-bg); color: var(--text-color); }
 
@@ -205,12 +212,12 @@ select option { background: var(--card-bg); color: var(--text-color); }
     text-align: center;
     white-space: nowrap;
 }
-/* Classes d'activation gérées par le JavaScript */
 #toast-notification.toast-show {
     transform: translateX(-50%) translateY(0);
     opacity: 1;
 }
-/* --- METS CE BLOC TOUT À LA FIN DE TON STYLE.CSS D'ORIGINE --- */
+
+/* --- TO-DO COMPLÉTÉ --- */
 .weekly-item span.todo-completed {
     text-decoration: line-through !important;
     opacity: 0.4 !important;
@@ -218,22 +225,8 @@ select option { background: var(--card-bg); color: var(--text-color); }
 .weekly-item span.todo-completed b {
     text-decoration: line-through !important;
 }
-/* --- BULLE DES TÂCHES TERMINÉES --- */
-.task-card.completed-bubble {
-    border-left: 5px solid #d3d3d3 !important; /* Barre grise neutre */
-    background: rgba(0, 0, 0, 0.03) !important; /* Fond très légèrement grisé */
-    box-shadow: none !important; /* Supprime l'ombre pour montrer qu'elle est archivée */
-}
 
-/* Le petit texte "Fini !" en haut de la bulle */
-.badge-finished {
-    font-size: 0.75rem;
-    font-weight: bold;
-    color: var(--success); /* Reprend la couleur verte de ton thème */
-    margin-bottom: 2px;
-    display: inline-block;
-}
-/* --- BULLES ET SÉPARATEUR DE TÂCHES TERMINÉES --- */
+/* --- BULLE DES TÂCHES TERMINÉES --- */
 .task-card.completed-bubble {
     border-left: 5px solid #d3d3d3 !important;
     background: rgba(0, 0, 0, 0.03) !important;
@@ -276,13 +269,9 @@ select option { background: var(--card-bg); color: var(--text-color); }
     padding: 0 5px;
 }
 
-/* --- EFFET ITALIQUE POUR LA TO-DO LIST COCHÉE --- */
+/* --- EFFET ITALIQUE --- */
 .weekly-item span.todo-completed, 
-span.todo-completed {
-    font-style: italic !important;
-}
-
-/* --- EFFET ITALIQUE POUR LES TÂCHES FINIES (ONGLET TÂCHES) --- */
+span.todo-completed,
 .completed-bubble strong {
     font-style: italic !important;
 }
