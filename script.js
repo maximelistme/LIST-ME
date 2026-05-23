@@ -68,6 +68,7 @@ function showPage(p) {
     if(p === 'tasks') renderTasks();
 }
 
+// --- MODIFICATION ICI : switchTaskSubView gère l'affichage de la barre de recherche ---
 function switchTaskSubView(view) {
     taskSubView = view;
     document.querySelectorAll('.sub-menu-tab').forEach(b => b.classList.remove('active'));
@@ -77,11 +78,11 @@ function switchTaskSubView(view) {
     if(view === 'active') {
         document.getElementById('sub-btn-active-tasks').classList.add('active');
         if(actionBar) actionBar.style.display = 'flex';
-        if(archiveSearch) archiveSearch.style.display = 'none';
+        if(archiveSearch) archiveSearch.style.display = 'none'; // Masqué dans "En cours"
     } else {
         document.getElementById('sub-btn-archived-tasks').classList.add('active');
         if(actionBar) actionBar.style.display = 'none';
-        if(archiveSearch) archiveSearch.style.display = 'flex';
+        if(archiveSearch) archiveSearch.style.display = 'flex'; // Affiché dans "Archives"
     }
     renderTasks();
 }
@@ -239,7 +240,7 @@ function renderTasks() {
 
     let filteredList = (taskSubView === "active") ? activeList : archiveList;
 
-    // --- FILTRE DE RECHERCHE PAR DATE POUR LES ARCHIVES ---
+    // --- MODIFICATION ICI : Prise en compte du filtre par date sur les archives ---
     if (taskSubView === "archive") {
         const dateFilterValue = document.getElementById('archive-date-filter').value;
         if (dateFilterValue) {
