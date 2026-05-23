@@ -275,3 +275,8 @@ select option { background: var(--card-bg); color: var(--text-color); }
     opacity: 0.6;
     padding: 0 5px;
 }
+
+/* --- EFFET ITALIQUE POUR LA TO-DO LIST COCHÉE --- */
+.todo-completed {
+    font-style: italic !important;
+}
