@@ -1,0 +1,10 @@
+// Service Worker minimal pour autoriser les notifications sur mobile
+self.addEventListener('push', function(event) {
+    const data = event.data ? event.data.json() : { title: 'Rappel LIST\'ME', body: 'Tu as une tâche à faire !' };
+    event.waitUntil(
+        self.registration.showNotification(data.title, {
+            body: data.body,
+            icon: 'https://cdn-icons-png.flaticon.com/512/906/906334.png'
+        })
+    );
+});
