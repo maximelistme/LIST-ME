@@ -277,6 +277,7 @@ select option { background: var(--card-bg); color: var(--text-color); }
 }
 
 /* --- EFFET ITALIQUE POUR LA TO-DO LIST COCHÉE --- */
-.todo-completed {
+.weekly-item span.todo-completed, 
+span.todo-completed {
     font-style: italic !important;
 }
