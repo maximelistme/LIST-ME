@@ -28,11 +28,13 @@ let currentTheme = localStorage.getItem('listme_theme') || 'pink';
 let viewState = 'day'; 
 let todoMode = 'daily';
 let editingId = null;
+let selectedDuplicateDates = []; // Stockage temporaire des dates cibles de duplication
+
 let editingTodoId = null; 
 let selectedYear = new Date().getFullYear();
 let selectedMonth = new Date().getMonth();
 
-const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Sensptembre", "Octobre", "Novembre", "Décembre"];
 const dayInitials = ["D", "L", "M", "M", "J", "V", "S"];
 const dayNamesFr = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const todayStr = new Date().toISOString().split('T')[0];
@@ -54,12 +56,56 @@ function changeTheme(t) {
     localStorage.setItem('listme_theme', t); 
 }
 
-// --- UTILITAIRE DE RÉACTIVATION DES CHAMPS ---
+// --- UTILITAIRE DE RÉACTIVATION ET NETTOYAGE DES CHAMPS ---
 function unlockModalFields() {
     document.getElementById('task-name').disabled = false;
     document.getElementById('task-importance').disabled = false;
-    document.querySelectorAll('.reminder-badge').forEach(b => b.style.pointerEvents = 'auto');
+    document.getElementById('date-input-label').innerText = "Date";
+    
+    const badges = document.querySelectorAll('.reminder-badge');
+    badges.forEach(b => {
+        b.style.pointerEvents = 'auto';
+        b.classList.remove('disabled-frozen');
+    });
+    selectedDuplicateDates = [];
+    document.getElementById('duplicate-dates-tags').innerHTML = "";
 }
+
+// GESTIONNAIRE DE BADGES DE DATES POUR LA DUPLICATION
+function renderDuplicateDateTags() {
+    const container = document.getElementById('duplicate-dates-tags');
+    container.innerHTML = "";
+    selectedDuplicateDates.forEach((dateStr, index) => {
+        // Formate la date en FR lisible (ex: 25/05/2026)
+        const [y, m, d] = dateStr.split('-');
+        const formattedDate = `${d}/${m}/${y}`;
+        
+        const tag = document.createElement('div');
+        tag.className = 'date-tag-bubble';
+        tag.style.cssText = "background:var(--primary); color:white; padding:5px 12px; border-radius:15px; font-size:0.8rem; font-weight:bold; display:flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.1);";
+        tag.innerHTML = `${formattedDate} <span onclick="removeDuplicateDate(${index})" style="cursor:pointer; font-size:1rem; line-height:1;">×</span>`;
+        container.appendChild(tag);
+    });
+}
+
+function removeDuplicateDate(index) {
+    selectedDuplicateDates.splice(index, 1);
+    renderDuplicateDateTags();
+}
+
+// Écouteur sur l'input date pour capturer les clics multiples en mode Duplication
+document.getElementById('task-date').onchange = (e) => {
+    // Si on est en mode duplication, on intercepte la date choisie
+    if (document.getElementById('modal-title').innerText === "Dupliquer dans le calendrier") {
+        const dateVal = e.target.value;
+        if (dateVal && !selectedDuplicateDates.includes(dateVal)) {
+            selectedDuplicateDates.push(dateVal);
+            renderDuplicateDateTags();
+        }
+        // On remet l'input visible à blanc pour permettre de re-sélectionner le même jour ou un autre
+        e.target.value = "";
+    }
+};
 
 // --- ONGLET : MES TÂCHES ---
 function showPage(p) {
@@ -172,7 +218,7 @@ function sendNotification(title, body) {
 }
 
 // --- BADGES DE RAPPEL ---
-document.querySelectorAll('.reminder-badge').forEach(badge => { badge.onclick = () => { badge.classList.toggle('active'); }; });
+document.querySelectorAll('.reminder-badge').forEach(badge => { badge.onclick = () => { if(!badge.classList.contains('disabled-frozen')) { badge.classList.toggle('active'); } }; });
 function getSelectedRemindersFromBadges() { let activeReminders = []; document.querySelectorAll('.reminder-badge.active').forEach(badge => { activeReminders.push(badge.getAttribute('data-value')); }); return activeReminders; }
 function setSelectedRemindersToBadges(remindersArray) { document.querySelectorAll('.reminder-badge').forEach(badge => { const val = badge.getAttribute('data-value'); if(remindersArray && remindersArray.includes(val)) { badge.classList.add('active'); } else { badge.classList.remove('active'); } }); }
 
@@ -363,14 +409,45 @@ function editTask(id) {
     }
 }
 
+// ACTION ENREGISTRER ADAPTÉE AU MULTI-DATES
 document.getElementById('save-task').onclick = () => {
-    const n = document.getElementById('task-name').value; const d = document.getElementById('task-date').value;
-    const time = document.getElementById('task-time').value; const imp = document.getElementById('task-importance').value;
+    const n = document.getElementById('task-name').value; 
+    const singleDate = document.getElementById('task-date').value;
+    const time = document.getElementById('task-time').value; 
+    const imp = document.getElementById('task-importance').value;
     const reminders = getSelectedRemindersFromBadges(); 
-    if(n && d && currentUser) {
-        let taskData = { name: n, date: d, time: time, reminders: reminders, importance: imp };
-        if(editingId) { db.collection("tasks").doc(editingId).update(taskData); editingId = null; showToast("Tâche modifiée ! ✎"); } 
-        else { taskData.completed = false; taskData.userId = currentUser.uid; taskData.createdAt = Date.now(); db.collection("tasks").add(taskData); showToast("Tâche enregistrée ! ✨"); }
+    
+    if(n && currentUser) {
+        // Mode modification classique d'une tâche
+        if(editingId && singleDate) { 
+            let taskData = { name: n, date: singleDate, time: time, reminders: reminders, importance: imp };
+            db.collection("tasks").doc(editingId).update(taskData); 
+            editingId = null; 
+            showToast("Tâche modifiée ! ✎"); 
+        } 
+        // Mode Duplication Ponctuelle : On enregistre chaque date du tableau indifféremment
+        else if (selectedDuplicateDates.length > 0) {
+            selectedDuplicateDates.forEach(dateCible => {
+                let taskData = { 
+                    name: n, 
+                    date: dateCible, 
+                    time: time, 
+                    reminders: reminders, 
+                    importance: imp, 
+                    completed: false, 
+                    userId: currentUser.uid, 
+                    createdAt: Date.now() 
+                };
+                db.collection("tasks").add(taskData);
+            });
+            showToast(`${selectedDuplicateDates.length} tâches dupliquées avec succès ! ✨`);
+        }
+        // Mode Ajout classique d'une seule tâche standard
+        else if (singleDate) {
+            let taskData = { name: n, date: singleDate, time: time, reminders: reminders, importance: imp, completed: false, userId: currentUser.uid, createdAt: Date.now() };
+            db.collection("tasks").add(taskData); 
+            showToast("Tâche enregistrée ! ✨"); 
+        }
         
         unlockModalFields();
         document.getElementById('task-modal').style.display = 'none';
@@ -569,17 +646,24 @@ function duplicateTask(id) {
     const task = tasks.find(t => t.id === id);
     if(task) {
         editingId = null; 
+        unlockModalFields(); // Reset pré-chargement
         
         document.getElementById('task-name').value = task.name;
         document.getElementById('task-time').value = task.time || "";
-        document.getElementById('task-date').value = task.date;
+        document.getElementById('task-date').value = ""; // On laisse vide pour forcer à accumuler les nouvelles dates
         document.getElementById('task-importance').value = task.importance;
         setSelectedRemindersToBadges(task.reminders || []);
         
         // AJUSTEMENT : On fige les infos d'origine pour empêcher l'édition
         document.getElementById('task-name').disabled = true;
         document.getElementById('task-importance').disabled = true;
-        document.querySelectorAll('.reminder-badge').forEach(b => b.style.pointerEvents = 'none');
+        document.getElementById('date-input-label').innerText = "Sélectionner une ou plusieurs date(s)";
+        
+        // On gèle visuellement les badges de rappels en leur injectant notre classe CSS spécifique
+        document.querySelectorAll('.reminder-badge').forEach(b => {
+            b.style.pointerEvents = 'none';
+            b.classList.add('disabled-frozen');
+        });
         
         document.getElementById('modal-title').innerText = "Dupliquer dans le calendrier";
         document.getElementById('task-modal').style.display = 'flex';
