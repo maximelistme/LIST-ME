@@ -128,7 +128,7 @@
             
             <div style="display: flex; gap: 15px; width: 100%;">
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
-                    <label>Date</label>
+                    <label id="date-input-label">Date</label>
                     <input type="date" id="task-date">
                 </div>
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
@@ -136,6 +136,8 @@
                     <input type="time" id="task-time">
                 </div>
             </div>
+
+            <div id="duplicate-dates-tags" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: -5px;"></div>
             
             <label>Rappels de notification (Cliquez pour activer)</label>
             <div class="reminder-badges-container">
