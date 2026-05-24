@@ -104,6 +104,192 @@ document.getElementById('task-date').onchange = (e) => {
 };
 
 // --- ONGLET : MES TÂCHES ---
+function showPage(p) {
+    document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
+    const target = document.getElementById(`${p}-page`);
+    if (target) target.style.display = 'block';
+    
+    document.querySelectorAll('.nav-bubble').forEach(btn => btn.classList.remove('active'));
+    const currentNavBtn = document.getElementById(`nav-btn-${p}`);
+    if (currentNavBtn) currentNavBtn.classList.add('active');
+    
+    if(p === 'calendar') renderCalendar();
+    if(p === 'todo') renderTodo();
+    if(p === 'tasks') renderTasks();
+}
+
+function switchTaskSubView(view) {
+    taskSubView = view;
+    document.querySelectorAll('.sub-menu-tab').forEach(b => b.classList.remove('active'));
+    const actionBar = document.getElementById('tasks-action-bar');
+    const archiveSearch = document.getElementById('archive-search-bar');
+    
+    if(view === 'active') {
+        document.getElementById('sub-btn-active-tasks').classList.add('active');
+        if(actionBar) actionBar.style.display = 'flex';
+        if(archiveSearch) archiveSearch.style.display = 'none';
+    } else {
+        document.getElementById('sub-btn-archived-tasks').classList.add('active');
+        if(actionBar) actionBar.style.display = 'none';
+        if(archiveSearch) archiveSearch.style.display = 'flex';
+    }
+    renderTasks();
+}
+
+// --- MOTEUR DE VÉRIFICATION EN CONTINU ---
+function runNotificationEngine() {
+    const now = new Date();
+    if(document.getElementById('tasks-page').style.display === 'block') { renderTasks(); }
+
+    const todayString = now.toISOString().split('T')[0];
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    const dayOfWeek = now.getDay();
+
+    if (dayOfWeek === 0 && hour === 18 && minute === 0) {
+        const key = `recap-${todayString}`;
+        let heavyNotificationsSent = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
+        if (!heavyNotificationsSent[key]) {
+            const activeTasksCount = tasks.filter(t => !t.completed).length;
+            sendNotification("📋 LIST'ME : Récap de ta semaine", activeTasksCount > 0 ? `Tu as ${activeTasksCount} tâches prévues cette semaine.` : "Aucune tâche critique de planifiée.");
+            heavyNotificationsSent[key] = true;
+            localStorage.setItem('listme_sent_notifs', JSON.stringify(heavyNotificationsSent));
+        }
+    }
+
+    tasks.forEach(t => {
+        if (t.completed || !t.date) return;
+        const taskDateObj = new Date(t.date);
+        const diffTime = taskDateObj - now;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1 && hour === 20 && minute === 0) {
+            const key = `veille-${t.id}`;
+            let heavyNotificationsSent = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
+            if (!heavyNotificationsSent[key]) {
+                sendNotification("⏰ Rappel : C'est pour demain !", `Ne pas oublier : "${t.name}" prévu demain.`);
+                heavyNotificationsSent[key] = true;
+                localStorage.setItem('listme_sent_notifs', JSON.stringify(heavyNotificationsSent));
+            }
+        }
+
+        if (t.time && t.reminders && t.reminders.length > 0) {
+            const [tHour, tMin] = t.time.split(':').map(Number);
+            const taskDateTime = new Date(t.date);
+            taskDateTime.setHours(tHour, tMin, 0, 0);
+            const minutesRemaining = Math.round((taskDateTime - now) / 60000);
+
+            t.reminders.forEach(reminderMinutes => {
+                if (minutesRemaining === Number(reminderMinutes)) {
+                    const key = `custom-${t.id}-${reminderMinutes}`;
+                    let heavyNotificationsSent = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
+                    if (!heavyNotificationsSent[key]) {
+                        sendNotification(`🔔 Rappel : ${t.name}`, `Commence dans ${reminderMinutes} minutes.`);
+                        heavyNotificationsSent[key] = true;
+                        localStorage.setItem('listme_sent_notifs', JSON.stringify(heavyNotificationsSent));
+                    }
+                }
+            });
+        }
+    });
+}
+let lastCheckedMinute = "";
+setInterval(runNotificationEngine, 30000);
+
+function requestNotificationPermission() { if ("Notification" in window) { Notification.requestPermission(); } }
+
+function sendNotification(title, body) {
+    if ("Notification" in window && Notification.permission === "granted") {
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(registration => {
+                registration.showNotification(title, {
+                    body: body,
+                    icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png"
+                });
+            });
+        } else {
+            new Notification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png" });
+        }
+    }
+}
+
+// --- BADGES DE RAPPEL ---
+document.querySelectorAll('.reminder-badge').forEach(badge => { badge.onclick = () => { if(!badge.classList.contains('disabled-frozen')) { badge.classList.toggle('active'); } }; });
+function getSelectedRemindersFromBadges() { let activeReminders = []; document.querySelectorAll('.reminder-badge.active').forEach(badge => { activeReminders.push(badge.getAttribute('data-value')); }); return activeReminders; }
+function setSelectedRemindersToBadges(remindersArray) { document.querySelectorAll('.reminder-badge').forEach(badge => { const val = badge.getAttribute('data-value'); if(remindersArray && remindersArray.includes(val)) { badge.classList.add('active'); } else { badge.classList.remove('active'); } }); }
+
+// --- SURVEILLANCE DE L'ÉTAT DE CONNEXION ---
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        currentUser = user;
+        document.getElementById('main-nav').style.display = 'flex';
+        document.getElementById('profile-user-email').innerText = user.email;
+        requestNotificationPermission();
+        
+        db.collection("users").doc(user.uid).get().then((doc) => {
+            if (doc.exists && doc.data().nickname) {
+                userNickname = doc.data().nickname;
+                document.getElementById('profile-nickname').value = userNickname;
+            } else {
+                userNickname = ""; 
+            }
+            startRealtimeSync(user.uid); 
+            showPage('tasks');
+        }).catch(() => { startRealtimeSync(user.uid); showPage('tasks'); });
+    } else {
+        currentUser = null; userNickname = ""; hasShownWelcomeThisSession = false;
+        document.getElementById('main-nav').style.display = 'none';
+        stopRealtimeSync();
+        document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
+        document.getElementById('auth-page').style.display = 'block';
+    }
+});
+
+document.getElementById('btn-save-nickname').onclick = () => {
+    const nick = document.getElementById('profile-nickname').value.trim();
+    if (nick && currentUser) {
+        db.collection("users").doc(currentUser.uid).set({ nickname: nick }, { merge: true }).then(() => {
+            userNickname = nick; 
+            showToast("Surnom enregistré avec succès ! ✨");
+        });
+    }
+};
+
+// --- SYNCHRONISATION PRIVÉE FIREBASE ---
+function startRealtimeSync(userId) {
+    unsubscribeTasks = db.collection("tasks").where("userId", "==", userId)
+        .onSnapshot((snapshot) => {
+            tasks = []; 
+            snapshot.forEach((doc) => { 
+                let data = doc.data(); data.id = doc.id; 
+                if (!data.createdAt) { data.createdAt = 0; } else if (data.createdAt.seconds) { data.createdAt = data.createdAt.seconds * 1000; }
+                tasks.push(data); 
+            });
+            renderTasks(); 
+            if (!hasShownWelcomeThisSession) { triggerWelcomeModal(); hasShownWelcomeThisSession = true; }
+            if(viewState === 'day') renderCalendar();
+        });
+    unsubscribeDaily = db.collection("dailyTodo").where("userId", "==", userId).onSnapshot((snapshot) => { dailyTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; dailyTodo.push(data); }); renderTodo(); });
+    unsubscribeWeekly = db.collection("weeklyTodo").where("userId", "==", userId).onSnapshot((snapshot) => { weeklyTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; weeklyTodo.push(data); }); renderTodo(); });
+}
+
+// --- POP-UP BIENVENUE ---
+function triggerWelcomeModal() {
+    const wModal = document.getElementById('welcome-modal'); const msgText = document.getElementById('welcome-message-text'); const summaryZone = document.getElementById('today-summary-zone');
+    if(!wModal) return;
+    let nameToDisplay = userNickname ? userNickname : "toi"; msgText.innerText = `Welcome back, ${nameToDisplay} ! 👋`;
+    let todayTasks = tasks.filter(t => t.date === todayStr && !t.completed); summaryZone.innerHTML = '';
+    if(todayTasks.length === 0) { summaryZone.innerHTML = `<p style="font-size: 0.95rem; font-style: italic; opacity: 0.8; margin-top: 10px; text-align:center;">Aucune tâche urgente au programme pour aujourd'hui ! ✨</p>`; } 
+    else {
+        summaryZone.innerHTML = `<p style="font-size: 0.95rem; font-weight: bold; margin-bottom: 12px; color: var(--primary-dark);">Voici tes tâches de la journée :</p>`;
+        todayTasks.forEach(t => { summaryZone.innerHTML += `<div class="welcome-summary-item">📌 <b>${t.time ? t.time : 'Pas d\'heure'}</b> - ${t.name} <span style="float: right; font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 8px; background: rgba(128,128,128,0.1); color: var(--${t.importance === 'high'?'danger':t.importance==='medium'?'warning':'success'});">${t.importance === 'high' ? 'Haute' : t.importance === 'medium' ? 'Moyenne' : 'Faible'}</span></div>`; });
+    }
+    wModal.style.display = 'flex';
+}
+
+function stopRealtimeSync() { if (unsubscribeTasks) unsubscribeTasks(); if (unsubscribeDaily) unsubscribeDaily(); if (unsubscribeWeekly) unsubscribeWeekly(); tasks = []; dailyTodo = []; weeklyTodo = []; }
+
+// --- ONGLET : MES TÂCHES ---
 function renderTasks() {
     const c = document.getElementById('task-list'); if (!c) return; c.innerHTML = '';
     const now = new Date();
@@ -167,7 +353,6 @@ function renderTasks() {
             separatorDrawn = true;
         }
 
-        // ELEMENT DE SUPERPOSITION : Ajout de la classe visuelle s'il y a des dates cibles
         const isMultiDate = (t.duplicateDays && t.duplicateDays.length > 0);
         const cardStyleClass = isMultiDate ? 'task-card stacked-task' : 'task-card';
 
@@ -204,20 +389,6 @@ function renderTasks() {
     });
 }
 
-function showPage(p) {
-    document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
-    const target = document.getElementById(`${p}-page`);
-    if (target) target.style.display = 'block';
-    
-    document.querySelectorAll('.nav-bubble').forEach(btn => btn.classList.remove('active'));
-    const currentNavBtn = document.getElementById(`nav-btn-${p}`);
-    if (currentNavBtn) currentNavBtn.classList.add('active');
-    
-    if(p === 'calendar') renderCalendar();
-    if(p === 'todo') renderTodo();
-    if(p === 'tasks') renderTasks();
-}
-
 function toggleTaskCheck(id, currentStatus) { 
     let updateData = { completed: !currentStatus };
     if(!currentStatus) { updateData.completedAtStr = todayStr; } else { updateData.completedAtStr = firebase.firestore.FieldValue.delete(); }
@@ -237,7 +408,6 @@ function editTask(id) {
     }
 }
 
-// ENREGISTREMENT SÉCURISÉ UNI-CIBLE SUR LA TÂCHE PARENTE
 document.getElementById('save-task').onclick = () => {
     const n = document.getElementById('task-name').value; 
     const singleDate = document.getElementById('task-date').value;
@@ -246,7 +416,6 @@ document.getElementById('save-task').onclick = () => {
     const reminders = getSelectedRemindersFromBadges(); 
     
     if(n && currentUser) {
-        // En mode duplication, on stocke la liste dans l'ID d'édition actif
         if(document.getElementById('modal-title').innerText === "Dupliquer dans le calendrier" && editingId) {
             db.collection("tasks").doc(editingId).update({
                 time: time,
@@ -284,7 +453,7 @@ document.getElementById('btn-register').onclick = () => {
 document.getElementById('btn-google').onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => { showToast("Connexion Google réussie ! 🚀"); }).catch((err) => { showToast("Erreur Google : " + err.message); }); };
 document.getElementById('btn-logout').onclick = () => { auth.signOut().then(() => { showToast("Déconnexion réussie."); }); };
 
-// --- ONGLET : CALENDRIER MULTI-DATES INTELLIGENT ---
+// --- ONGLET : CALENDRIER MULTI-DATES ---
 function setViewState(s) { viewState = s; renderCalendar(); }
 function renderCalendar() {
     const c = document.getElementById('calendar-content'); const t = document.getElementById('calendar-title'); c.innerHTML = '';
@@ -310,7 +479,6 @@ function renderCalendar() {
             const div = document.createElement('div'); div.className = 'day-card';
             if(ds === todayStr) div.classList.add('is-today');
 
-            // Filtrage : On affiche la tâche si le jour est sa date fixe OU s'il fait partie de sa liste de duplication ponctuelle
             const dt = tasks.filter(tk => tk.date === ds || (tk.duplicateDays && tk.duplicateDays.includes(ds)));
             if(dt.length > 0) {
                 const imps = dt.map(tk => tk.importance);
@@ -415,36 +583,6 @@ function toggleWeeklyTodo(id, currentStatus) { db.collection("weeklyTodo").doc(i
 function deleteWeeklyTodo(id) { db.collection("weeklyTodo").doc(id).delete(); }
 function deleteDailyTodo(id) { db.collection("dailyTodo").doc(id).delete(); }
 
-document.getElementById('save-todo').onclick = () => {
-    const n = document.getElementById('todo-task-name').value.trim(); 
-    const t = document.getElementById('todo-time').value;
-    const isWeekly = document.getElementById('save-todo').getAttribute('data-weekly-mode') === 'true';
-    
-    if(n && t && currentUser) { 
-        if(editingTodoId) {
-            let collection = isWeekly ? "weeklyTodo" : "dailyTodo"; 
-            let updateData = { name: n, time: t };
-            if(isWeekly) updateData.dayOfWeek = document.getElementById('todo-day-select').value;
-            db.collection(collection).doc(editingTodoId).update(updateData).then(() => {
-                showToast("Activité modifiée ! ✎");
-            });
-            editingTodoId = null;
-        } else {
-            if(isWeekly) { 
-                db.collection("weeklyTodo").add({ name: n, time: t, dayOfWeek: document.getElementById('todo-day-select').value, completed: false, userId: currentUser.uid }).then(() => {
-                    showToast("Activité hebdomadaire ajoutée ! 🗓️");
-                }); 
-            } else { 
-                db.collection("dailyTodo").add({ name: n, time: t, date: todayStr, completed: false, userId: currentUser.uid }).then(() => {
-                    showToast("Activité ajoutée ! ✨");
-                }); 
-            }
-        }
-        document.getElementById('todo-modal').style.display = 'none'; 
-        document.getElementById('todo-task-name').value = '';
-    }
-};
-
 // --- INITIALISATION GENERALE ---
 document.getElementById('add-task-btn').onclick = () => { 
     editingId = null; 
@@ -465,7 +603,7 @@ window.onclick = (e) => { if(e.target.className.includes('modal')) { unlockModal
 function duplicateTask(id) {
     const task = tasks.find(t => t.id === id);
     if(task) {
-        editingId = id; // On stocke l'ID pour lier les futures dates à la même tâche
+        editingId = id; 
         unlockModalFields(); 
         
         document.getElementById('task-name').value = task.name;
@@ -474,7 +612,6 @@ function duplicateTask(id) {
         document.getElementById('task-importance').value = task.importance;
         setSelectedRemindersToBadges(task.reminders || []);
         
-        // AJUSTEMENT : On recharge les anciennes dates déjà mémorisées s'il y en a
         selectedDuplicateDates = task.duplicateDays ? [...task.duplicateDays] : [];
         renderDuplicateDateTags();
         
