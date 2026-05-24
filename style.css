@@ -106,6 +106,7 @@ body.theme-ocean .sub-menu-tab.active { color: var(--primary); }
     justify-content: space-between; 
     align-items: center; 
     transition: all 0.3s ease;
+    position: relative;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
@@ -114,6 +115,15 @@ body.theme-ocean .sub-menu-tab.active { color: var(--primary); }
 .task-card.high { border-left-color: var(--danger); }
 .task-card.medium { border-left-color: var(--warning); }
 .task-card.low { border-left-color: var(--success); }
+
+/* --- EFFET VISUEL DE SUPERPOSITION TÂCHE DUPLIQUÉE --- */
+.task-card.stacked-task {
+    box-shadow: 
+        0 4px 0 -2px var(--card-bg), 4px 4px 0 -2px rgba(0,0,0,0.15),
+        0 8px 0 -4px var(--card-bg), 8px 8px 0 -4px rgba(0,0,0,0.1),
+        0 4px 15px rgba(0,0,0,0.1) !important;
+    margin-bottom: 22px; /* Donne un peu d'espace pour la fausse carte en dessous */
+}
 
 /* MODE TÂCHE IMMINENTE (VIOLET) */
 .task-card.is-imminent {
@@ -276,7 +286,6 @@ input:disabled, select:disabled {
     background-color: rgba(128, 128, 128, 0.08) !important;
 }
 
-/* EFFET DE TRANSPARENCE SUR LES BADGES DE RAPPELLS GELÉS */
 .reminder-badge.disabled-frozen {
     opacity: 0.45 !important;
     cursor: not-allowed !important;
