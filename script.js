@@ -1,6 +1,6 @@
 // --- CONFIGURATION FIREBASE PROD ---
 const firebaseConfig = {
-  apiKey: "AIzaSyAVkfPEZnPWLrS1smnau0J6k3ZE1wGX-4",
+  apiKey: "AIzaSyAVkf6PEZnPWLrS1smnau0J6k3ZE1wGX-4",
   authDomain: "listme-2620d.firebaseapp.com",
   projectId: "listme-2620d",
   storageBucket: "listme-2620d.firebasestorage.app",
@@ -356,7 +356,7 @@ function editTask(id) {
     const task = tasks.find(t => t.id === id);
     if(task) {
         editingId = id;
-        unlockModalFields(); // Sécurité d'accès
+        unlockModalFields();
         document.getElementById('task-name').value = task.name; document.getElementById('task-date').value = task.date; document.getElementById('task-time').value = task.time || "";
         setSelectedRemindersToBadges(task.reminders || []); document.getElementById('task-importance').value = task.importance;
         document.getElementById('modal-title').innerText = "Modifier la tâche"; document.getElementById('task-modal').style.display = 'flex';
@@ -372,7 +372,7 @@ document.getElementById('save-task').onclick = () => {
         if(editingId) { db.collection("tasks").doc(editingId).update(taskData); editingId = null; showToast("Tâche modifiée ! ✎"); } 
         else { taskData.completed = false; taskData.userId = currentUser.uid; taskData.createdAt = Date.now(); db.collection("tasks").add(taskData); showToast("Tâche enregistrée ! ✨"); }
         
-        unlockModalFields(); // Réactivation post-enregistrement
+        unlockModalFields();
         document.getElementById('task-modal').style.display = 'none';
     }
 };
