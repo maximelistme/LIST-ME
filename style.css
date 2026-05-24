@@ -217,12 +217,12 @@ body.theme-ocean .task-card.is-imminent { background: linear-gradient(135deg, #2
 .theme-option.dark { background: #1a1a1a; border: 1px solid #333; }
 .theme-option.ocean { background: #1a2a3a; }
 
-/* --- DÉTECTION INTELLIGENTE DU CONTOUR DU THÈME SÉLECTIONNÉ --- */
+/* --- DÉTECTION INTELLIGENTE DU CONTOUR DU THÈME SÉLECTIONNÉ (AJUSTÉ SANS ESPACE) --- */
 body.theme-pink .theme-option.pink,
 body.theme-dark .theme-option.dark,
 body.theme-ocean .theme-option.ocean {
-    outline: 3px solid #00CED1 !important;
-    outline-offset: 3px;
+    /* Utilisation d'une ombre portée interne (inset) pour coller au bouton sans changer sa taille */
+    box-shadow: inset 0 0 0 4px #00CED1 !important;
 }
 
 /* MODALS */
