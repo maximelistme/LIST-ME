@@ -116,13 +116,47 @@ body.theme-ocean .sub-menu-tab.active { color: var(--primary); }
 .task-card.medium { border-left-color: var(--warning); }
 .task-card.low { border-left-color: var(--success); }
 
-/* --- EFFET VISUEL DE SUPERPOSITION TÂCHE DUPLIQUÉE --- */
+/* --- EFFET VISUEL DE SUPERPOSITION HAUTE LISIBILITÉ (PILE DE CARTES) --- */
 .task-card.stacked-task {
-    box-shadow: 
-        0 4px 0 -2px var(--card-bg), 4px 4px 0 -2px rgba(0,0,0,0.15),
-        0 8px 0 -4px var(--card-bg), 8px 8px 0 -4px rgba(0,0,0,0.1),
-        0 4px 15px rgba(0,0,0,0.1) !important;
-    margin-bottom: 22px; /* Donne un peu d'espace pour la fausse carte en dessous */
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
+    margin-bottom: 25px !important;
+}
+
+.task-card.stacked-task::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    bottom: -5px;
+    left: 4px;
+    right: 4px;
+    height: 100%;
+    background: var(--card-bg);
+    border-radius: 20px;
+    border: 1px solid rgba(128, 128, 128, 0.15);
+    border-left: inherit; /* Reprend la tranche de couleur (Rouge, Jaune, Vert) de la carte mère */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transform: rotate(1deg);
+    opacity: 0.85;
+    transition: all 0.3s ease;
+}
+
+.task-card.stacked-task::after {
+    content: '';
+    position: absolute;
+    z-index: -2;
+    bottom: -10px;
+    left: 10px;
+    right: 10px;
+    height: 100%;
+    background: var(--card-bg);
+    border-radius: 20px;
+    border: 1px solid rgba(128, 128, 128, 0.1);
+    border-left: inherit;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    transform: rotate(-1.5deg);
+    opacity: 0.6;
+    transition: all 0.3s ease;
 }
 
 /* MODE TÂCHE IMMINENTE (VIOLET) */
