@@ -1,5 +1,8 @@
-/* --- CONFIGURATION & POLICE --- */
-@font-face { font-family: 'Mogra'; src: url('mogra.ttf') format('truetype'); }
+/* --- CONFIGURATION & POLICE LOCALE --- */
+@font-face { 
+    font-family: 'Mogra'; 
+    src: url('mogra.ttf') format('truetype');
+}
 
 :root {
     --primary: #00CED1; --primary-dark: #008B8B;
@@ -266,9 +269,17 @@ span.todo-completed,
     font-style: italic !important;
 }
 
-/* --- STYLE POUR LES CHAMPS FIGÉS EN DUPLICATION --- */
+/* --- STYLE DES CHAMPS FIGÉS EN DUPLICATION --- */
 input:disabled, select:disabled {
     opacity: 0.55;
     cursor: not-allowed;
     background-color: rgba(128, 128, 128, 0.08) !important;
+}
+
+/* EFFET DE TRANSPARENCE SUR LES BADGES DE RAPPELLS GELÉS */
+.reminder-badge.disabled-frozen {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+    border: 1px dashed rgba(128,128,128,0.4) !important;
 }
