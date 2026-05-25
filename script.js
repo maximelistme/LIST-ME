@@ -60,6 +60,7 @@ function changeTheme(t) {
 function unlockModalFields() {
     document.getElementById('task-name').disabled = false;
     document.getElementById('task-importance').disabled = false;
+    document.getElementById('task-time').disabled = false; // CORRECTION : On débloque l'heure pour les tâches normales
     document.getElementById('date-input-label').innerText = "Date";
     
     const badges = document.querySelectorAll('.reminder-badge');
@@ -615,8 +616,10 @@ function duplicateTask(id) {
         selectedDuplicateDates = task.duplicateDays ? [...task.duplicateDays] : [];
         renderDuplicateDateTags();
         
+        // CORRECTION UNIQUE : Verrouillage complet des métadonnées fixes + l'Heure
         document.getElementById('task-name').disabled = true;
         document.getElementById('task-importance').disabled = true;
+        document.getElementById('task-time').disabled = true; 
         document.getElementById('date-input-label').innerText = "Sélectionner une ou plusieurs date(s)";
         
         document.querySelectorAll('.reminder-badge').forEach(b => {
