@@ -18,7 +18,7 @@ const auth = firebase.auth();
 let tasks = [];
 let dailyTodo = [];
 let weeklyTodo = [];
-let routineTodo = []; // AJOUTÉ : La liste de stockage pour ta Semaine Type Matrix
+let routineTodo = []; // La liste de stockage pour ta Semaine Type Matrix
 let currentUser = null; 
 let userNickname = ""; 
 let hasShownWelcomeThisSession = false; 
@@ -61,7 +61,7 @@ function changeTheme(t) {
 function unlockModalFields() {
     document.getElementById('task-name').disabled = false;
     document.getElementById('task-importance').disabled = false;
-    document.getElementById('task-time').disabled = false; // CORRECTION : On débloque l'heure pour les tâches normales
+    document.getElementById('task-time').disabled = false;
     document.getElementById('date-input-label').innerText = "Date";
     
     const badges = document.querySelectorAll('.reminder-badge');
@@ -274,7 +274,7 @@ function startRealtimeSync(userId) {
     unsubscribeDaily = db.collection("dailyTodo").where("userId", "==", userId).onSnapshot((snapshot) => { dailyTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; dailyTodo.push(data); }); renderTodo(); });
     unsubscribeWeekly = db.collection("weeklyTodo").where("userId", "==", userId).onSnapshot((snapshot) => { weeklyTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; weeklyTodo.push(data); }); renderTodo(); });
     
-    // Écoute de la nouvelle collection Semaine Type
+    // Écoute en temps réel de ta nouvelle collection Matrix Semaine Type
     db.collection("routineTodo").where("userId", "==", userId).onSnapshot((snapshot) => { 
         routineTodo = []; 
         snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; routineTodo.push(data); }); 
@@ -296,7 +296,7 @@ function triggerWelcomeModal() {
     wModal.style.display = 'flex';
 }
 
-function stopRealtimeSync() { if (unsubscribeTasks) unsubscribeTasks(); if (unsubscribeDaily) unsubscribeDaily(); if (unsubscribeWeekly) unsubscribeWeekly(); tasks = []; dailyTodo = []; weeklyTodo = []; }
+function stopRealtimeSync() { if (unsubscribeTasks) unsubscribeTasks(); if (unsubscribeDaily) unsubscribeDaily(); if (unsubscribeWeekly) unsubscribeWeekly(); tasks = []; dailyTodo = []; weeklyTodo = []; routineTodo = []; }
 
 // --- ONGLET : MES TÂCHES ---
 function renderTasks() {
@@ -514,7 +514,7 @@ function openCalendarDayModal(day, monthName, year, dayTasks, currentFullDate) {
     document.getElementById('calendar-day-modal').style.display = 'flex';
 }
 
-// --- ONGLET : TO-DO LIST ---
+// --- ONGLET : TO-DO LIST & AUTOMATIONS ---
 function setTodoMode(m) { todoMode = m; renderTodo(); }
 function renderTodo() {
     const c = document.getElementById('todo-content'); if (!c) return;
@@ -534,7 +534,6 @@ function renderTodo() {
             let weeklyItems = weeklyTodo.filter(it => parseInt(it.dayOfWeek) === currentDayOfWeek && parseInt(it.time.split(':')[0]) === h);
             let routineItems = routineTodo.filter(it => parseInt(it.dayOfWeek) === currentDayOfWeek && parseInt(it.time.split(':')[0]) === h);
             
-            // Fusion des tâches ponctuelles, hebdomadaires et de la semaine type pour la journée
             let combinedItems = [...items, ...weeklyItems, ...routineItems]; 
             combinedItems.sort((a,b) => a.time.localeCompare(b.time));
 
@@ -586,7 +585,6 @@ function renderTodo() {
             let dayTasks = weeklyTodo.filter(it => parseInt(it.dayOfWeek) === dayNum);
             let dayRoutine = routineTodo.filter(it => parseInt(it.dayOfWeek) === dayNum);
             
-            // L'hebdo affiche ses propres tâches et hérite aussi visuellement de la semaine type
             let combinedTasks = [...dayTasks, ...dayRoutine];
             combinedTasks.sort((a,b) => a.time.localeCompare(b.time));
             
@@ -617,7 +615,6 @@ function renderTodo() {
             wc.appendChild(dayCard);
         });
     } else if (todoMode === 'routine') {
-        // RENDU DE LA SEMAINE TYPE MATRIX (MÊME DESIGN ET ERGONOMIQUES)
         document.getElementById('todo-today-date').innerText = "Configuration de la Semaine Type ⚙️";
         c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container');
         const presidentialOrder = [1, 2, 3, 4, 5, 6, 0];
