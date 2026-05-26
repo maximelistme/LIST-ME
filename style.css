@@ -355,3 +355,12 @@ input:disabled, select:disabled {
     box-shadow: none !important;
     border: 1px dashed rgba(128,128,128,0.4) !important;
 }
+
+/* --- CORRECTION DU DÉCALAGE (SAUT) DU TITRE TO-DO --- */
+#todo-today-date {
+    min-height: 35px; /* Hauteur fixe pour absorber la taille de l'émoji */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
