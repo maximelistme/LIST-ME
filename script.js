@@ -637,11 +637,10 @@ function renderTodo() {
             dayTasks.sort((a,b) => a.time.localeCompare(b.time));
             
             const dayCard = document.createElement('div'); dayCard.className = 'weekly-day-card';
-            dayCard.style.borderLeftColor = 'var(--primary-dark)';
             dayCard.innerHTML = `
                 <div class="weekly-day-header">
-                    <span class="weekly-day-title" style="color:var(--primary-dark);">${dayNamesFr[dayNum]}</span>
-                    <button onclick="openTodoModal('12:00', true, ${dayNum}, true)" style="background:var(--primary-dark); border:none; color:white; border-radius:50%; width:25px; height:25px; font-weight:bold; cursor:pointer;">+</button>
+                   <span class="weekly-day-title">${dayNamesFr[dayNum]}</span>
+                   <button onclick="openTodoModal('12:00', true, ${dayNum}, true)" style="background:var(--primary); border:none; color:white; border-radius:50%; width:25px; height:25px; font-weight:bold; cursor:pointer;">+</button>
                 </div>
                 <div class="weekly-subtasks">
                     ${dayTasks.map(it => `
@@ -650,7 +649,7 @@ function renderTodo() {
                                 <b>${it.time}</b> : ${it.name}
                             </span>
                             <div>
-                                <button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, true)" style="background:none; border:none; color:var(--primary-dark); cursor:pointer; margin-right:5px;">✎</button>
+                                <button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, true)" style="background:none; border:none; color:var(--primary); cursor:pointer; margin-right:5px;">✎</button>
                                 <button onclick="deleteRoutineTodo('${it.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;">×</button>
                             </div>
                         </div>`).join('') || '<span style="opacity:0.3; font-style:italic; font-size:0.85rem;">Aucune tâche type définie</span>'}
