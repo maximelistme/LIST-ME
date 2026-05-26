@@ -636,11 +636,12 @@ function renderTodo() {
             const dayTasks = routineTodo.filter(it => parseInt(it.dayOfWeek) === dayNum); 
             dayTasks.sort((a,b) => a.time.localeCompare(b.time));
             
+            // CORRECTION : L'élément est créé de manière identique au bloc 'weekly', sans style forcé
             const dayCard = document.createElement('div'); dayCard.className = 'weekly-day-card';
             dayCard.innerHTML = `
                 <div class="weekly-day-header">
-                   <span class="weekly-day-title">${dayNamesFr[dayNum]}</span>
-                   <button onclick="openTodoModal('12:00', true, ${dayNum}, true)" style="background:var(--primary); border:none; color:white; border-radius:50%; width:25px; height:25px; font-weight:bold; cursor:pointer;">+</button>
+                    <span class="weekly-day-title">${dayNamesFr[dayNum]}</span>
+                    <button onclick="openTodoModal('12:00', true, ${dayNum}, true)" style="background:var(--primary); border:none; color:white; border-radius:50%; width:25px; height:25px; font-weight:bold; cursor:pointer;">+</button>
                 </div>
                 <div class="weekly-subtasks">
                     ${dayTasks.map(it => `
