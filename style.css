@@ -84,25 +84,44 @@ body.theme-ocean .sub-menu-tab.active { color: var(--primary); }
 
 .welcome-summary-item { font-size: 0.95rem; padding: 10px 0; opacity: 0.95; text-align: left; border-bottom: 1px dashed rgba(128, 128, 128, 0.15); }
 
-/* NAV INTERNE (Harmonisée sur la Navbar Principale) */
-.calendar-nav { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; }
+/* --- NAV INTERNE (Aligné sur le style épuré de "Mes Tâches") --- */
+.calendar-nav { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+    gap: 15px; 
+    margin-bottom: 20px; 
+    padding: 10px 15px;
+    border-radius: 25px; 
+    background: rgba(255, 255, 255, 0.15); 
+    backdrop-filter: blur(8px); 
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
 
 .bubble { 
-    background: var(--primary); 
-    opacity: 0.65; 
-    border: none; padding: 10px 20px; border-radius: 30px; 
-    color: white; box-shadow: none; cursor: pointer;
-    font-size: 0.9rem; transition: all 0.2s ease;
+    background: none; 
+    border: none; 
+    color: var(--text-color); 
+    font-size: 1.1rem;
+    padding: 6px 14px; 
+    cursor: pointer; 
+    opacity: 0.4; 
+    transition: all 0.2s; 
+    box-shadow: none;
     -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
 }
 
 .bubble.active { 
-    background: white !important; 
+    background: none !important; 
+    opacity: 1 !important; 
     color: var(--primary-dark) !important; 
-    opacity: 1; 
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important; 
-    font-weight: bold;
+    font-size: 1.2rem; 
+    box-shadow: none !important; 
+    font-weight: normal;
 }
+
+body.theme-dark .bubble.active { color: var(--primary) !important; }
+body.theme-ocean .bubble.active { color: var(--primary) !important; }
 
 /* CARTES PRINCIPALES */
 .task-card, .profile-card, .schedule-container, .grid-item, .day-card, .modal-content, .weekly-day-card { background: var(--card-bg) !important; color: var(--text-color); border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -198,7 +217,7 @@ body.theme-ocean .task-card.is-imminent { background: linear-gradient(135deg, #2
 }
 .reminder-badge.active { background: var(--primary) !important; color: white !important; border-color: var(--primary-dark) !important; box-shadow: 0 3px 10px rgba(0, 206, 209, 0.3); }
 
-/* AGENDA COHÉRENT & SEMAINE TYPE (Optimisé) */
+/* AGENDA COHÉRENT & SEMAINE TYPE */
 .weekly-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 10px 0; }
 .weekly-day-card { margin-bottom: 15px; padding: 15px 20px; border-left: 5px solid var(--primary); transition: background 0.3s; display: flex; flex-direction: column; gap: 12px; }
 .weekly-day-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(128, 128, 128, 0.1); padding-bottom: 8px; margin-bottom: 0; }
