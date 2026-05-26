@@ -554,7 +554,7 @@ function renderTodo() {
             hourCard.innerHTML = `
                 <div class="weekly-day-header">
                     <span class="weekly-day-title">${currentHourStr}</span>
-                    <button onclick="openTodoModal('${h.toString().padStart(2,'0')}:00', false, 0, false)" style="background:var(--primary); border:none; color:white; border-radius:50%; width:25px; height:25px; font-weight:bold; cursor:pointer;">+</button>
+                    <button onclick="openTodoModal('${h.toString().padStart(2,'0')}:00', false, 0, false)" class="weekly-add-btn">+</button>
                 </div>
                 <div class="weekly-subtasks">
                     ${combinedItems.map(it => {
@@ -577,15 +577,15 @@ function renderTodo() {
                         
                         return `
                             <div class="weekly-item">
-                                <span onclick="event.stopPropagation(); ${checkFunc}" style="cursor:pointer;" class="${it.completed ? 'todo-completed' : ''}">
+                                <span onclick="event.stopPropagation(); ${checkFunc}" style="cursor:pointer;" class="weekly-item-text ${it.completed ? 'todo-completed' : ''}">
                                     <b>${it.time}</b> : ${it.name}${labelSuffix}
                                 </span>
-                                <div>
-                                    <button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', ${(isWeekly || isRoutine)}, ${(isWeekly || isRoutine) ? it.dayOfWeek : 0}, ${isRoutine})" style="background:none; border:none; color:var(--primary); cursor:pointer; margin-right:5px;">✎</button>
-                                    <button onclick="${delFunc}" style="background:none; border:none; color:var(--danger); cursor:pointer;">×</button>
+                                <div class="weekly-item-actions">
+                                    <button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', ${(isWeekly || isRoutine)}, ${(isWeekly || isRoutine) ? it.dayOfWeek : 0}, ${isRoutine})" style="color:var(--primary);">✎</button>
+                                    <button onclick="${delFunc}" style="color:var(--danger);">×</button>
                                 </div>
                             </div>`;
-                    }).join('') || '<span style="opacity:0.3; font-style:italic; font-size:0.85rem;">Aucun événement</span>'}
+                    }).join('') || '<span class="empty-subtasks-msg">Aucun événement</span>'}
                 </div>`;
             wc.appendChild(hourCard);
         }
@@ -605,7 +605,7 @@ function renderTodo() {
             dayCard.innerHTML = `
                 <div class="weekly-day-header">
                     <span class="weekly-day-title">${dayNamesFr[dayNum]}</span>
-                    <button onclick="openTodoModal('12:00', true, ${dayNum}, false)" style="background:var(--primary); border:none; color:white; border-radius:50%; width:25px; height:25px; font-weight:bold; cursor:pointer;">+</button>
+                    <button onclick="openTodoModal('12:00', true, ${dayNum}, false)" class="weekly-add-btn">+</button>
                 </div>
                 <div class="weekly-subtasks">
                     ${combinedTasks.map(it => {
@@ -615,15 +615,15 @@ function renderTodo() {
                         
                         return `
                         <div class="weekly-item">
-                            <span onclick="${checkFunc}" style="cursor:pointer;" class="${it.completed ? 'todo-completed' : ''}">
+                            <span onclick="${checkFunc}" style="cursor:pointer;" class="weekly-item-text ${it.completed ? 'todo-completed' : ''}">
                                 <b>${it.time}</b> : ${it.name} ${isRoutine ? '<small style="opacity:0.5; color:var(--primary-dark);">(Type ⚙️)</small>':''}
                             </span>
-                            <div>
-                                <button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, ${isRoutine})" style="background:none; border:none; color:var(--primary); cursor:pointer; margin-right:5px;">✎</button>
-                                <button onclick="${delFunc}" style="background:none; border:none; color:var(--danger); cursor:pointer;">×</button>
+                            <div class="weekly-item-actions">
+                                <button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, ${isRoutine})" style="color:var(--primary);">✎</button>
+                                <button onclick="${delFunc}" style="color:var(--danger);">×</button>
                             </div>
                         </div>`;
-                    }).join('') || '<span style="opacity:0.3; font-style:italic; font-size:0.85rem;">Aucune activité planifiée</span>'}
+                    }).join('') || '<span class="empty-subtasks-msg">Aucune activité planifiée</span>'}
                 </div>`;
             wc.appendChild(dayCard);
         });
@@ -636,24 +636,23 @@ function renderTodo() {
             const dayTasks = routineTodo.filter(it => parseInt(it.dayOfWeek) === dayNum); 
             dayTasks.sort((a,b) => a.time.localeCompare(b.time));
             
-            // CORRECTION : L'élément est créé de manière identique au bloc 'weekly', sans style forcé
             const dayCard = document.createElement('div'); dayCard.className = 'weekly-day-card';
             dayCard.innerHTML = `
                 <div class="weekly-day-header">
                     <span class="weekly-day-title">${dayNamesFr[dayNum]}</span>
-                    <button onclick="openTodoModal('12:00', true, ${dayNum}, true)" style="background:var(--primary); border:none; color:white; border-radius:50%; width:25px; height:25px; font-weight:bold; cursor:pointer;">+</button>
+                    <button onclick="openTodoModal('12:00', true, ${dayNum}, true)" class="weekly-add-btn">+</button>
                 </div>
                 <div class="weekly-subtasks">
                     ${dayTasks.map(it => `
                         <div class="weekly-item">
-                            <span style="opacity:0.8;">
+                            <span class="weekly-item-text">
                                 <b>${it.time}</b> : ${it.name}
                             </span>
-                            <div>
-                                <button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, true)" style="background:none; border:none; color:var(--primary); cursor:pointer; margin-right:5px;">✎</button>
-                                <button onclick="deleteRoutineTodo('${it.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;">×</button>
+                            <div class="weekly-item-actions">
+                                <button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, true)" style="color:var(--primary);">✎</button>
+                                <button onclick="deleteRoutineTodo('${it.id}')" style="color:var(--danger);">×</button>
                             </div>
-                        </div>`).join('') || '<span style="opacity:0.3; font-style:italic; font-size:0.85rem;">Aucune tâche type définie</span>'}
+                        </div>`).join('') || '<span class="empty-subtasks-msg">Aucune tâche type définie</span>'}
                 </div>`;
             wc.appendChild(dayCard);
         });
