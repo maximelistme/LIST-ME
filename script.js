@@ -29,7 +29,6 @@ let currentTheme = localStorage.getItem('listme_theme') || 'pink';
 let viewState = 'day'; 
 let todoMode = 'daily';
 let editingId = null;
-let selectedDuplicateDates = []; 
 
 let editingTodoId = null; 
 let selectedYear = new Date().getFullYear();
@@ -70,41 +69,11 @@ function unlockModalFields() {
         b.style.pointerEvents = 'auto';
         b.classList.remove('disabled-frozen');
     });
-    selectedDuplicateDates = [];
-    document.getElementById('duplicate-dates-tags').innerHTML = "";
+    
+    // Nettoyage de l'ancienne balise de tags si elle existe encore dans le HTML
+    const duplicateTags = document.getElementById('duplicate-dates-tags');
+    if(duplicateTags) duplicateTags.innerHTML = "";
 }
-
-// GESTIONNAIRE DE BADGES DE DATES
-function renderDuplicateDateTags() {
-    const container = document.getElementById('duplicate-dates-tags');
-    container.innerHTML = "";
-    selectedDuplicateDates.forEach((dateStr, index) => {
-        const [y, m, d] = dateStr.split('-');
-        const formattedDate = `${d}/${m}/${y}`;
-        
-        const tag = document.createElement('div');
-        tag.className = 'date-tag-bubble';
-        tag.style.cssText = "background:var(--primary); color:white; padding:5px 12px; border-radius:15px; font-size:0.8rem; font-weight:bold; display:flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.1);";
-        tag.innerHTML = `${formattedDate} <span onclick="removeDuplicateDate(${index})" style="cursor:pointer; font-size:1rem; line-height:1;">×</span>`;
-        container.appendChild(tag);
-    });
-}
-
-function removeDuplicateDate(index) {
-    selectedDuplicateDates.splice(index, 1);
-    renderDuplicateDateTags();
-}
-
-document.getElementById('task-date').onchange = (e) => {
-    if (document.getElementById('modal-title').innerText === "Dupliquer dans le calendrier") {
-        const dateVal = e.target.value;
-        if (dateVal && !selectedDuplicateDates.includes(dateVal)) {
-            selectedDuplicateDates.push(dateVal);
-            renderDuplicateDateTags();
-        }
-        e.target.value = "";
-    }
-};
 
 // --- ONGLET : NAVIGATION PRINCIPALE ---
 function showPage(p) {
@@ -149,40 +118,43 @@ function processMidnightAutoArchive() {
     let operations = [];
     
     tasks.forEach(t => {
-        if (t.completed) return; // Déjà archivé
+        if (t.completed) return; 
         
-        let isMultiDate = (t.duplicateDays && t.duplicateDays.length > 0);
+        let ghosts = Array.isArray(t.duplicateDays) ? t.duplicateDays : [];
+        ghosts = ghosts.map(g => typeof g === 'string' ? {date: g, time: t.time} : g); // Sécurité rétrocompatibilité
         
-        if (isMultiDate) {
-            let allDates = [t.date, ...t.duplicateDays].sort();
-            let pastDates = allDates.filter(d => d < today);
-            let remainingDates = allDates.filter(d => d >= today);
+        if (ghosts.length > 0) {
+            let allOccurrences = [{date: t.date, time: t.time || ""}, ...ghosts];
+            allOccurrences.sort((a, b) => {
+                if (a.date !== b.date) return a.date.localeCompare(b.date);
+                return (a.time || "").localeCompare(b.time || "");
+            });
+            
+            let pastDates = allOccurrences.filter(o => o.date < today);
+            let remainingDates = allOccurrences.filter(o => o.date >= today);
             
             if (pastDates.length > 0) {
-                // Créer une archive pour chaque date passée
-                pastDates.forEach(pastDate => {
+                pastDates.forEach(pastOcc => {
                     operations.push(
                         db.collection("tasks").add({
-                            name: t.name, date: pastDate, time: t.time || "", reminders: t.reminders || [],
-                            importance: t.importance, completed: true, completedAtStr: pastDate, 
+                            name: t.name, date: pastOcc.date, time: pastOcc.time, reminders: t.reminders || [],
+                            importance: t.importance, completed: true, completedAtStr: pastOcc.date, 
                             userId: t.userId, createdAt: t.createdAt || Date.now(), duplicateDays: []
                         })
                     );
                 });
                 
                 if (remainingDates.length > 0) {
-                    // Avancer la tâche à la date suivante
-                    let nextMainDate = remainingDates.shift();
+                    let nextMain = remainingDates.shift();
                     operations.push(
-                        db.collection("tasks").doc(t.id).update({ date: nextMainDate, duplicateDays: remainingDates })
+                        db.collection("tasks").doc(t.id).update({ date: nextMain.date, time: nextMain.time, duplicateDays: remainingDates })
                     );
                 } else {
-                    // Supprimer la tâche mère si toutes ses dates sont passées et archivées
                     operations.push(db.collection("tasks").doc(t.id).delete());
                 }
             }
         } else {
-            // Tâche simple : Archivage auto si la date est passée
+            // Tâche simple
             if (t.date < today) {
                 operations.push(
                     db.collection("tasks").doc(t.id).update({ completed: true, completedAtStr: t.date })
@@ -201,7 +173,6 @@ function runNotificationEngine() {
     const now = new Date();
     todayStr = now.toISOString().split('T')[0];
 
-    // Auto-archivage exact au passage de minuit
     if (todayStr !== lastCheckedDayStr) {
         lastCheckedDayStr = todayStr;
         processMidnightAutoArchive();
@@ -320,7 +291,7 @@ document.getElementById('btn-save-nickname').onclick = () => {
 let initialSyncDone = false;
 
 function startRealtimeSync(userId) {
-    initialSyncDone = false; // Reset au démarrage
+    initialSyncDone = false; 
     
     unsubscribeTasks = db.collection("tasks").where("userId", "==", userId)
         .onSnapshot((snapshot) => {
@@ -331,7 +302,6 @@ function startRealtimeSync(userId) {
                 tasks.push(data); 
             });
 
-            // Lancement de l'archivage auto sécurisé 1 seule fois au démarrage
             if (!initialSyncDone && tasks.length > 0) {
                 initialSyncDone = true;
                 setTimeout(processMidnightAutoArchive, 1500); 
@@ -368,6 +338,60 @@ function stopRealtimeSync() {
     tasks = []; dailyTodo = []; weeklyTodo = []; routineTodo = []; 
 }
 
+// --- MINI-MODAL GHOST (GÉNÉRÉ DYNAMIQUEMENT) ---
+function openGhostModal(id) {
+    const task = tasks.find(t => t.id === id);
+    if(!task || !task.duplicateDays) return;
+    
+    let modal = document.getElementById('ghost-modal');
+    if(!modal) {
+        modal = document.createElement('div');
+        modal.id = 'ghost-modal';
+        modal.className = 'modal modal-center';
+        modal.style.zIndex = "10005"; // Au dessus du reste
+        modal.innerHTML = `
+            <div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto; padding: 20px;">
+                <h3 style="color: var(--primary); text-align: center; margin-bottom: 15px;">🗓️ Dates Prévues</h3>
+                <div id="ghost-modal-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                <button onclick="document.getElementById('ghost-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
+            </div>`;
+        document.body.appendChild(modal);
+    }
+    
+    const list = document.getElementById('ghost-modal-list');
+    list.innerHTML = "";
+    
+    let ghosts = task.duplicateDays.map(g => typeof g === 'string' ? {date: g, time: task.time} : g);
+    ghosts.sort((a,b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return (a.time || "").localeCompare(b.time || "");
+    });
+    
+    ghosts.forEach((g, index) => {
+        const dFr = g.date.split('-').reverse().join('/');
+        list.innerHTML += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(128,128,128,0.08); border-radius:12px;">
+                <span style="font-size: 0.95rem;">📅 <b>${dFr}</b> ${g.time ? `<span style="opacity:0.6; margin:0 5px;">|</span> ⏰ <b>${g.time}</b>` : ''}</span>
+                <button onclick="removeGhostDate('${task.id}', ${index})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:1.5rem; display:flex; align-items:center; line-height:1; padding:0 5px;">×</button>
+            </div>`;
+    });
+    
+    modal.style.display = 'flex';
+}
+
+function removeGhostDate(taskId, ghostIndex) {
+    const task = tasks.find(t => t.id === taskId);
+    if(task && task.duplicateDays) {
+        let ghosts = task.duplicateDays.map(g => typeof g === 'string' ? {date: g, time: task.time} : g);
+        ghosts.splice(ghostIndex, 1);
+        db.collection("tasks").doc(taskId).update({ duplicateDays: ghosts }).then(() => {
+            showToast("Date supprimée ! 🗑️");
+            openGhostModal(taskId); // Rafraîchit la fenêtre dynamique
+            if(ghosts.length === 0) document.getElementById('ghost-modal').style.display='none';
+        });
+    }
+}
+
 // --- ONGLET : MES TÂCHES ---
 function renderTasks() {
     const c = document.getElementById('task-list'); if (!c) return; c.innerHTML = '';
@@ -392,17 +416,9 @@ function renderTasks() {
         let imminentTasks = []; let standardTasks = []; let completedTodayTasks = [];
 
         filteredList.forEach(t => {
-            // Affichage dynamique : On montre la date active pertinente
-            t.currentDisplayDate = t.date;
-            if (!t.completed && t.duplicateDays && t.duplicateDays.length > 0) {
-                let allDates = [t.date, ...t.duplicateDays].sort();
-                let futureDates = allDates.filter(d => d >= todayStr);
-                t.currentDisplayDate = futureDates.length > 0 ? futureDates[0] : allDates[allDates.length - 1];
-            }
-
             if(t.completed) { completedTodayTasks.push(t); return; }
             
-            if(t.currentDisplayDate === todayStr && t.time) {
+            if(t.date === todayStr && t.time) {
                 const [tHour, tMin] = t.time.split(':').map(Number);
                 const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0);
                 const remainingMinutes = (taskTimeObj - now) / 60000;
@@ -414,9 +430,7 @@ function renderTasks() {
         });
 
         const chronoSort = (a, b) => { 
-            let dateA = a.currentDisplayDate || a.date;
-            let dateB = b.currentDisplayDate || b.date;
-            if (dateA !== dateB) return dateA.localeCompare(dateB); 
+            if (a.date !== b.date) return a.date.localeCompare(b.date); 
             if (!a.time) return -1; if (!b.time) return 1; return a.time.localeCompare(b.time); 
         };
         const creationSort = (a, b) => b.createdAt - a.createdAt;
@@ -444,19 +458,25 @@ function renderTasks() {
             separatorDrawn = true;
         }
 
-        const isMultiDate = (!t.completed && t.duplicateDays && t.duplicateDays.length > 0);
+        let ghosts = Array.isArray(t.duplicateDays) ? t.duplicateDays : [];
+        const isMultiDate = (!t.completed && ghosts.length > 0);
         const cardStyleClass = isMultiDate ? 'task-card stacked-task' : 'task-card';
-        const displayDateStr = t.currentDisplayDate || t.date;
         
-        // --- NOUVEAU : Formatage en DD/MM/YYYY pour l'affichage ---
-        const displayDateFR = displayDateStr ? displayDateStr.split('-').reverse().join('/') : '';
+        // Formatage français
+        const displayDateFR = t.date ? t.date.split('-').reverse().join('/') : '';
+        
+        // Repère visuel (Tâche fantôme)
+        let ghostHtml = "";
+        if (isMultiDate) {
+            ghostHtml = `<span onclick="event.stopPropagation(); openGhostModal('${t.id}')" style="display:inline-block; margin-top:8px; font-size:0.75rem; color:var(--primary); background:rgba(0,206,209,0.1); padding:4px 10px; border-radius:12px; cursor:pointer; font-weight:bold;">🗓️ + ${ghosts.length} date(s) prévue(s)</span>`;
+        }
 
         const d = document.createElement('div');
         
         if (t.completed) {
             d.className = `task-card completed-bubble`;
             d.innerHTML = `
-                <div style="flex:1; display:flex; flex-direction:column; gap:2px;" onclick="toggleTaskCheck('${t.id}', ${t.completed}, '${displayDateStr}')">
+                <div style="flex:1; display:flex; flex-direction:column; gap:2px;" onclick="toggleTaskCheck('${t.id}', ${t.completed})">
                     <span class="badge-finished">✨ Fini !</span>
                     <strong style="text-decoration:line-through; opacity:0.5;">${t.name}</strong>
                     <small style="opacity:0.5;">📅 ${displayDateFR} ${t.time ? '⏰ ' + t.time : ''}</small>
@@ -469,10 +489,11 @@ function renderTasks() {
             let remindersText = "Aucun"; if(t.reminders && t.reminders.length > 0) { remindersText = t.reminders.map(r => `${r} min avant`).join(', '); }
             
             d.innerHTML = `
-                <div style="flex:1" onclick="toggleTaskCheck('${t.id}', ${t.completed}, '${displayDateStr}')">
+                <div style="flex:1" onclick="toggleTaskCheck('${t.id}', ${t.completed})">
                     <strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong><br>
                     <small>📅 ${displayDateFR} ${t.time ? '⏰ ' + t.time : ''}</small>
                     ${t.isImminent ? `<br><small class="time-alert">⚠️ ÉCHÉANCE PROCHE : Reste ${t.minutesLeft} min !</small>` : `<br><small style="color:var(--primary-dark);">🔔 Rappels : ${remindersText}</small>`}
+                    <br>${ghostHtml}
                 </div>
                 <div class="task-actions">
                     ${taskSubView === 'active' ? `<button onclick="duplicateTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; margin-right:5px;">📑</button>` : ''}
@@ -484,38 +505,38 @@ function renderTasks() {
     });
 }
 
-// --- COCHER / DÉCOCHER UNE TÂCHE SÉCURISÉ ---
-function toggleTaskCheck(id, currentStatus, specificDate) { 
+// --- COCHER / DÉCOCHER UNE TÂCHE ---
+function toggleTaskCheck(id, currentStatus) { 
     const task = tasks.find(t => t.id === id);
     if(!task) return;
 
     if(!currentStatus) {
-        // Validation manuelle
-        let isMultiDate = (task.duplicateDays && task.duplicateDays.length > 0);
+        let ghosts = Array.isArray(task.duplicateDays) ? task.duplicateDays : [];
+        ghosts = ghosts.map(g => typeof g === 'string' ? {date: g, time: task.time} : g);
 
-        if (isMultiDate && specificDate) {
-            let allDates = [task.date, ...task.duplicateDays].sort();
-            let remainingDates = allDates.filter(d => d !== specificDate);
+        if (ghosts.length > 0) {
+            // 1. Archive l'instance du jour
+            db.collection("tasks").add({
+                name: task.name, date: task.date, time: task.time || "",
+                reminders: task.reminders || [], importance: task.importance,
+                completed: true, completedAtStr: todayStr, userId: task.userId,
+                createdAt: task.createdAt || Date.now(), duplicateDays: []
+            });
 
-            if (remainingDates.length > 0) {
-                // 1. Crée la copie terminée et archivée pour la date cochée
-                db.collection("tasks").add({
-                    name: task.name, date: specificDate, time: task.time || "",
-                    reminders: task.reminders || [], importance: task.importance,
-                    completed: true, completedAtStr: todayStr, userId: task.userId,
-                    createdAt: task.createdAt || Date.now(), duplicateDays: []
-                });
-
-                // 2. Fait avancer la carte principale à la date suivante
-                let nextMainDate = remainingDates.shift();
-                db.collection("tasks").doc(id).update({
-                    date: nextMainDate, duplicateDays: remainingDates
-                });
-                showToast("Instance terminée et archivée ! ✨");
-                return; 
-            }
+            // 2. Extrait le prochain fantôme chronologique pour le promouvoir
+            ghosts.sort((a, b) => {
+                if (a.date !== b.date) return a.date.localeCompare(b.date);
+                return (a.time || "").localeCompare(b.time || "");
+            });
+            let nextMain = ghosts.shift();
+            
+            db.collection("tasks").doc(id).update({
+                date: nextMain.date, time: nextMain.time || "", duplicateDays: ghosts
+            });
+            showToast("Instance terminée et archivée ! ✨");
+        } else {
+            db.collection("tasks").doc(id).update({ completed: true, completedAtStr: todayStr }); 
         }
-        db.collection("tasks").doc(id).update({ completed: true, completedAtStr: todayStr }); 
     } else {
         db.collection("tasks").doc(id).update({ completed: false, completedAtStr: firebase.firestore.FieldValue.delete() }); 
     }
@@ -549,13 +570,37 @@ document.getElementById('save-task').onclick = () => {
     const reminders = getSelectedRemindersFromBadges(); 
     
     if(n && currentUser) {
-        if(document.getElementById('modal-title').innerText === "Dupliquer dans le calendrier" && editingId) {
-            db.collection("tasks").doc(editingId).update({
-                time: time,
-                duplicateDays: selectedDuplicateDates
-            });
-            editingId = null;
-            showToast("Planification de duplication enregistrée ! ✨");
+        if(document.getElementById('modal-title').innerText === "Dupliquer la tâche" && editingId) {
+            const task = tasks.find(t => t.id === editingId);
+            if (task && singleDate) {
+                // Compilation de toutes les dates (actuelle + fantômes + la nouvelle)
+                let allOccurrences = [{date: task.date, time: task.time || ""}];
+                let currentGhosts = Array.isArray(task.duplicateDays) ? task.duplicateDays : [];
+                
+                currentGhosts.forEach(g => {
+                    allOccurrences.push(typeof g === 'string' ? {date: g, time: task.time} : g);
+                });
+                
+                allOccurrences.push({date: singleDate, time: time});
+                
+                // Tri chronologique global
+                allOccurrences.sort((a, b) => {
+                    if (a.date !== b.date) return a.date.localeCompare(b.date);
+                    return (a.time || "").localeCompare(b.time || "");
+                });
+                
+                // Le plus proche devient la tâche principale, les autres deviennent les fantômes
+                let nextMain = allOccurrences.shift();
+                
+                db.collection("tasks").doc(editingId).update({
+                    date: nextMain.date,
+                    time: nextMain.time || "",
+                    duplicateDays: allOccurrences
+                });
+                
+                editingId = null;
+                showToast("Date planifiée avec succès ! 🗓️");
+            }
         }
         else if(editingId && singleDate) { 
             let taskData = { name: n, date: singleDate, time: time, reminders: reminders, importance: imp };
@@ -612,7 +657,18 @@ function renderCalendar() {
             const div = document.createElement('div'); div.className = 'day-card';
             if(ds === todayStr) div.classList.add('is-today');
 
-            const dt = tasks.filter(tk => tk.date === ds || (tk.duplicateDays && tk.duplicateDays.includes(ds)));
+            // Intégration des fantômes au calendrier
+            const dt = tasks.filter(tk => {
+                if (tk.date === ds) return true;
+                if (tk.duplicateDays) {
+                    return tk.duplicateDays.some(g => {
+                        let gDate = typeof g === 'string' ? g : g.date;
+                        return gDate === ds;
+                    });
+                }
+                return false;
+            });
+            
             if(dt.length > 0) {
                 const imps = dt.map(tk => tk.importance);
                 if(imps.includes('high')) div.classList.add('has-high'); else if(imps.includes('medium')) div.classList.add('has-medium'); else div.classList.add('has-low');
@@ -630,9 +686,19 @@ function openCalendarDayModal(day, monthName, year, dayTasks, currentFullDate) {
     if(dayTasks.length === 0) { container.innerHTML = '<p style="text-align:center; opacity:0.5; font-style:italic;">Aucune tâche</p>'; } 
     else {
         dayTasks.forEach(t => {
-            const isCopy = t.date !== currentFullDate ? ' <small style="opacity:0.6; font-size:0.75rem;">(Dupliqué 📑)</small>' : '';
+            let specificTime = t.time;
+            let isCopy = false;
+            
+            // Si c'est une tâche fantôme, on récupère son heure propre
+            if (t.date !== currentFullDate) {
+                isCopy = true;
+                let ghost = t.duplicateDays.find(g => (typeof g === 'string' ? g : g.date) === currentFullDate);
+                if (ghost && ghost.time) specificTime = ghost.time;
+            }
+            
+            const isCopyTag = isCopy ? ' <small style="opacity:0.6; font-size:0.75rem;">(Prévu 🗓️)</small>' : '';
             container.innerHTML += `
-                <div style="padding: 12px; border-radius: 12px; border-left: 6px solid var(--${t.importance === 'high'?'danger':t.importance==='medium'?'warning':'success'}); background: rgba(128,128,128,0.05); text-align:left;"><strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong>${isCopy}${t.time ? `<span style="float:right; font-size:0.85rem; opacity:0.7;">⏰ ${t.time}</span>`:''}</div>`; 
+                <div style="padding: 12px; border-radius: 12px; border-left: 6px solid var(--${t.importance === 'high'?'danger':t.importance==='medium'?'warning':'success'}); background: rgba(128,128,128,0.05); text-align:left;"><strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong>${isCopyTag}${specificTime ? `<span style="float:right; font-size:0.85rem; opacity:0.7;">⏰ ${specificTime}</span>`:''}</div>`; 
         });
     }
     document.getElementById('calendar-day-modal').style.display = 'flex';
@@ -859,9 +925,18 @@ document.getElementById('add-task-btn').onclick = () => {
 document.getElementById('close-modal').onclick = () => { unlockModalFields(); document.getElementById('task-modal').style.display = 'none'; };
 document.getElementById('close-todo-modal').onclick = () => document.getElementById('todo-modal').style.display = 'none';
 
-window.onclick = (e) => { if(e.target.className.includes('modal')) { unlockModalFields(); document.getElementById('task-modal').style.display = 'none'; document.getElementById('todo-modal').style.display = 'none'; document.getElementById('calendar-day-modal').style.display = 'none'; document.getElementById('welcome-modal').style.display = 'none'; } };
+window.onclick = (e) => { 
+    if(e.target.className.includes('modal')) { 
+        unlockModalFields(); 
+        document.getElementById('task-modal').style.display = 'none'; 
+        document.getElementById('todo-modal').style.display = 'none'; 
+        document.getElementById('calendar-day-modal').style.display = 'none'; 
+        document.getElementById('welcome-modal').style.display = 'none'; 
+        if(document.getElementById('ghost-modal')) document.getElementById('ghost-modal').style.display = 'none';
+    } 
+};
 
-// --- LOGIQUE DE PRE-REMPLISSAGE ET MEMOIRE DU MULTI-DATES ---
+// --- LOGIQUE DE DUPLICATION DANS LA SÉRIE ---
 function duplicateTask(id) {
     const task = tasks.find(t => t.id === id);
     if(task) {
@@ -869,25 +944,21 @@ function duplicateTask(id) {
         unlockModalFields(); 
         
         document.getElementById('task-name').value = task.name;
-        document.getElementById('task-time').value = task.time || "";
-        document.getElementById('task-date').value = ""; 
+        document.getElementById('task-date').value = ""; // Vide pour choisir la nouvelle date
+        document.getElementById('task-time').value = ""; // Vide pour choisir la nouvelle heure
         document.getElementById('task-importance').value = task.importance;
         setSelectedRemindersToBadges(task.reminders || []);
         
-        selectedDuplicateDates = task.duplicateDays ? [...task.duplicateDays] : [];
-        renderDuplicateDateTags();
-        
         document.getElementById('task-name').disabled = true;
         document.getElementById('task-importance').disabled = true;
-        document.getElementById('task-time').disabled = true; 
-        document.getElementById('date-input-label').innerText = "Sélectionner une ou plusieurs date(s)";
+        document.getElementById('date-input-label').innerText = "Nouvelle Date Prévue";
         
         document.querySelectorAll('.reminder-badge').forEach(b => {
             b.style.pointerEvents = 'none';
             b.classList.add('disabled-frozen');
         });
         
-        document.getElementById('modal-title').innerText = "Dupliquer dans le calendrier";
+        document.getElementById('modal-title').innerText = "Dupliquer la tâche";
         document.getElementById('task-modal').style.display = 'flex';
     }
 }
