@@ -49,9 +49,12 @@
                 <button id="sub-btn-archived-tasks" class="sub-menu-tab" onclick="switchTaskSubView('archive')">Archives</button>
             </div>
 
-            <div id="archive-search-bar" style="display: none; justify-content: space-between; align-items: center; width: 100%; gap: 10px; margin-bottom: 10px;">
-                <input type="date" id="archive-date-filter" onchange="renderTasks()" style="padding: 10px; font-size: 0.85rem; border-radius: 20px; font-weight: bold; flex: 1; margin: 0;">
-                <button onclick="document.getElementById('archive-date-filter').value = ''; renderTasks();" class="btn-secondary" style="padding: 10px 15px; border-radius: 20px; font-size: 0.85rem; margin: 0; width: auto; font-weight: bold;">Effacer</button>
+            <!-- NOUVEAU FILTRE D'ARCHIVES PAR ORDRE CHRONOLOGIQUE -->
+            <div id="archive-search-bar" class="action-bar-left" style="display: none; justify-content: flex-end; align-items: center; width: 100%; margin-bottom: 15px;">
+                <select id="archive-sort-filter" onchange="renderTasks()" style="padding: 10px 15px; font-size: 0.85rem; border-radius: 20px; font-weight: bold; cursor: pointer; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color);">
+                    <option value="desc">⬇️ Plus récentes</option>
+                    <option value="asc">⬆️ Plus anciennes</option>
+                </select>
             </div>
             
             <div id="tasks-action-bar" class="action-bar-left" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px;">
@@ -121,13 +124,18 @@
         </div>
     </div>
 
-    <div id="task-modal" class="modal">
-        <div class="modal-content">
-            <h3 id="modal-title">Nouvelle Tâche</h3>
+    <!-- MODAL DE TÂCHE DÉSORMAIS CENTRÉ ET AVEC DESCRIPTIF -->
+    <div id="task-modal" class="modal modal-center">
+        <div class="modal-content content-center">
+            <h3 id="modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">Nouvelle Tâche</h3>
+            
             <label>Nom de la tâche</label>
             <input type="text" id="task-name" placeholder="Ex: Aller courir...">
             
-            <div style="display: flex; gap: 15px; width: 100%;">
+            <label style="margin-top: 5px;">Descriptif (Optionnel)</label>
+            <textarea id="task-desc" placeholder="Détails, notes, adresse..." style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; min-height: 80px; resize: vertical; font-family: inherit; margin-bottom: 5px;"></textarea>
+            
+            <div style="display: flex; gap: 15px; width: 100%; margin-top: 5px;">
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
                     <label id="date-input-label">Date</label>
                     <input type="date" id="task-date">
@@ -140,29 +148,30 @@
 
             <div id="duplicate-dates-tags" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: -5px;"></div>
             
-            <label>Rappels de notification (Cliquez pour activer)</label>
+            <label style="margin-top: 5px;">Rappels de notification</label>
             <div class="reminder-badges-container">
-                <div class="reminder-badge" data-value="5">5 min avant</div>
-                <div class="reminder-badge" data-value="15">15 min avant</div>
-                <div class="reminder-badge" data-value="60">1h avant</div>
+                <div class="reminder-badge" data-value="5">5 min</div>
+                <div class="reminder-badge" data-value="15">15 min</div>
+                <div class="reminder-badge" data-value="60">1h</div>
             </div>
 
-            <label>Importance</label>
+            <label style="margin-top: 5px;">Importance</label>
             <select id="task-importance">
                 <option value="high">Haute</option>
                 <option value="medium">Moyenne</option>
                 <option value="low">Faible</option>
             </select>
-            <div class="modal-buttons">
-                <button id="save-task" class="btn-primary btn-validated-click">Enregistrer</button>
-                <button id="close-modal" class="btn-secondary">Annuler</button>
+            <div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;">
+                <button id="save-task" class="btn-primary btn-validated-click" style="flex:1;">Enregistrer</button>
+                <button id="close-modal" class="btn-secondary" style="flex:1;">Annuler</button>
             </div>
         </div>
     </div>
 
-    <div id="todo-modal" class="modal">
-        <div class="modal-content">
-            <h3 id="todo-modal-title">To-Do List</h3>
+    <!-- MODAL TO-DO DÉSORMAIS CENTRÉ -->
+    <div id="todo-modal" class="modal modal-center">
+        <div class="modal-content content-center">
+            <h3 id="todo-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">To-Do List</h3>
             <div id="todo-day-selector-block" style="display:none; flex-direction:column; gap:5px;">
                 <label>Jour de la semaine</label>
                 <select id="todo-day-select">
@@ -175,9 +184,9 @@
                     <option value="0">Dimanche</option>
                 </select>
             </div>
-            <label>Heure</label>
+            <label style="margin-top: 5px;">Heure</label>
             <input type="time" id="todo-time">
-            <label>Activité</label>
+            <label style="margin-top: 5px;">Activité</label>
             <input type="text" id="todo-task-name" placeholder="Tâche...">
             <div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;">
                 <button id="save-todo" class="btn-primary btn-validated-click" style="flex:1;">Ajouter</button>
