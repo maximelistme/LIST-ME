@@ -165,19 +165,18 @@ function processMidnightAutoArchive() {
     Promise.all(operations).then(() => { isArchiving = false; }).catch(() => { isArchiving = false; });
 }
 
-// --- MOTEUR DE VÉRIFICATION EN CONTINU ---
+// --- MOTEUR DE VÉRIFICATION EN CONTINU (+ CLÔTURE AUTO À 30 MIN) ---
 let lastCheckedDayStr = new Date().toISOString().split('T')[0];
 
 function runNotificationEngine() {
     const now = new Date();
     todayStr = now.toISOString().split('T')[0];
 
+    // Vérif minuit
     if (todayStr !== lastCheckedDayStr) {
         lastCheckedDayStr = todayStr;
         processMidnightAutoArchive();
     }
-
-    if(document.getElementById('tasks-page').style.display === 'block') { renderTasks(); }
 
     const hour = now.getHours();
     const minute = now.getMinutes();
@@ -195,13 +194,47 @@ function runNotificationEngine() {
     }
 
     tasks.forEach(t => {
-        if (t.completed || !t.date) return;
-        const taskDateObj = new Date(t.date);
+        if (t.completed) return;
+
+        // Calcul exact de la date et l'heure active de la carte (inclut les fantômes)
+        let displayDate = t.date;
+        let displayTime = t.time;
+
+        if (t.duplicateDays && t.duplicateDays.length > 0) {
+            let allOcc = [{date: t.date, time: t.time || ""}];
+            t.duplicateDays.forEach(g => {
+                if (typeof g === 'string') allOcc.push({date: g, time: t.time || ""});
+                else allOcc.push(g);
+            });
+            allOcc.sort((a,b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.time.localeCompare(b.time));
+            let futureOcc = allOcc.filter(o => o.date >= todayStr);
+            let currentOcc = futureOcc.length > 0 ? futureOcc[0] : allOcc[allOcc.length - 1];
+            displayDate = currentOcc.date;
+            displayTime = currentOcc.time;
+        }
+
+        // --- NOUVEAU : Auto-Clôture +30 minutes ---
+        if (displayDate === todayStr && displayTime) {
+            const [tHour, tMin] = displayTime.split(':').map(Number);
+            const taskTimeObj = new Date();
+            taskTimeObj.setHours(tHour, tMin, 0, 0);
+            
+            const diffMinutes = (now - taskTimeObj) / 60000;
+            
+            if (diffMinutes >= 30) {
+                // Termine automatiquement la tâche
+                toggleTaskCheck(t.id, false, displayDate);
+                return; // Stoppe la suite pour cette tâche
+            }
+        }
+
+        // --- Notifications standards (basées sur le fantôme actuel s'il y a) ---
+        const taskDateObj = new Date(displayDate);
         const diffTime = taskDateObj - now;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays === 1 && hour === 20 && minute === 0) {
-            const key = `veille-${t.id}`;
+            const key = `veille-${t.id}-${displayDate}`;
             let heavyNotificationsSent = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
             if (!heavyNotificationsSent[key]) {
                 sendNotification("⏰ Rappel : C'est pour demain !", `Ne pas oublier : "${t.name}" prévu demain.`);
@@ -210,15 +243,15 @@ function runNotificationEngine() {
             }
         }
 
-        if (t.time && t.reminders && t.reminders.length > 0) {
-            const [tHour, tMin] = t.time.split(':').map(Number);
-            const taskDateTime = new Date(t.date);
+        if (displayTime && t.reminders && t.reminders.length > 0) {
+            const [tHour, tMin] = displayTime.split(':').map(Number);
+            const taskDateTime = new Date(displayDate);
             taskDateTime.setHours(tHour, tMin, 0, 0);
             const minutesRemaining = Math.round((taskDateTime - now) / 60000);
 
             t.reminders.forEach(reminderMinutes => {
                 if (minutesRemaining === Number(reminderMinutes)) {
-                    const key = `custom-${t.id}-${reminderMinutes}`;
+                    const key = `custom-${t.id}-${displayDate}-${reminderMinutes}`;
                     let heavyNotificationsSent = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
                     if (!heavyNotificationsSent[key]) {
                         sendNotification(`🔔 Rappel : ${t.name}`, `Commence dans ${reminderMinutes} minutes.`);
@@ -229,6 +262,8 @@ function runNotificationEngine() {
             });
         }
     });
+
+    if(document.getElementById('tasks-page').style.display === 'block') { renderTasks(); }
 }
 setInterval(runNotificationEngine, 30000);
 
@@ -406,7 +441,6 @@ function renderTasks() {
     let filteredList = (taskSubView === "active") ? activeList : archiveList;
 
     if (taskSubView === "archive") {
-        // NOUVEAU : Tri dynamique des archives
         const archiveSort = document.getElementById('archive-sort-filter').value;
         filteredList.sort((a,b) => {
             const dateA = a.completedAtStr || a.date;
@@ -426,17 +460,28 @@ function renderTasks() {
         let imminentTasks = []; let standardTasks = []; let completedTodayTasks = [];
 
         filteredList.forEach(t => {
+            // Calculer la date et l'heure actives pour l'affichage
             t.currentDisplayDate = t.date;
+            t.currentDisplayTime = t.time;
+            
             if (!t.completed && t.duplicateDays && t.duplicateDays.length > 0) {
-                let allDates = [t.date, ...t.duplicateDays].sort();
-                let futureDates = allDates.filter(d => d >= todayStr);
-                t.currentDisplayDate = futureDates.length > 0 ? futureDates[0] : allDates[allDates.length - 1];
+                let allOcc = [{date: t.date, time: t.time || ""}];
+                t.duplicateDays.forEach(g => {
+                    if (typeof g === 'string') allOcc.push({date: g, time: t.time || ""});
+                    else allOcc.push(g);
+                });
+                allOcc.sort((a,b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.time.localeCompare(b.time));
+                let futureOcc = allOcc.filter(o => o.date >= todayStr);
+                let currentOcc = futureOcc.length > 0 ? futureOcc[0] : allOcc[allOcc.length - 1];
+                
+                t.currentDisplayDate = currentOcc.date;
+                t.currentDisplayTime = currentOcc.time;
             }
 
             if(t.completed) { completedTodayTasks.push(t); return; }
             
-            if(t.currentDisplayDate === todayStr && t.time) {
-                const [tHour, tMin] = t.time.split(':').map(Number);
+            if(t.currentDisplayDate === todayStr && t.currentDisplayTime) {
+                const [tHour, tMin] = t.currentDisplayTime.split(':').map(Number);
                 const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0);
                 const remainingMinutes = (taskTimeObj - now) / 60000;
                 if(remainingMinutes > 0 && remainingMinutes <= 60) {
@@ -450,7 +495,11 @@ function renderTasks() {
             let dateA = a.currentDisplayDate || a.date;
             let dateB = b.currentDisplayDate || b.date;
             if (dateA !== dateB) return dateA.localeCompare(dateB); 
-            if (!a.time) return -1; if (!b.time) return 1; return a.time.localeCompare(b.time); 
+            
+            let timeA = a.currentDisplayTime || "";
+            let timeB = b.currentDisplayTime || "";
+            if (!timeA) return -1; if (!timeB) return 1; 
+            return timeA.localeCompare(timeB); 
         };
         const creationSort = (a, b) => b.createdAt - a.createdAt;
 
@@ -479,12 +528,12 @@ function renderTasks() {
         const isMultiDate = (!t.completed && ghosts.length > 0);
         const cardStyleClass = isMultiDate ? 'task-card stacked-task' : 'task-card';
         
-        // Formatage français garanti
         const displayDateStr = t.currentDisplayDate || t.date;
+        const displayTimeStr = t.currentDisplayTime || t.time || "";
         const displayDateFR = displayDateStr ? displayDateStr.split('-').reverse().join('/') : '';
         
-        // NOUVEAU : Formatage du Descriptif
-        let descHtml = t.desc ? `<div style="font-size: 0.85rem; opacity: 0.7; margin: 6px 0; font-style: italic; white-space: pre-wrap; line-height: 1.3;">📝 ${t.desc}</div>` : '';
+        // --- NOUVEAU : HTML du Descriptif (A droite au milieu, séparateur discret) ---
+        let descHtml = t.desc ? `<div style="flex:1; font-size: 0.85rem; opacity: 0.7; font-style: italic; white-space: pre-wrap; line-height: 1.3; margin-left: 10px; padding-left: 10px; border-left: 1px dashed rgba(128,128,128,0.3); display: flex; align-items: center;">📝 ${t.desc}</div>` : '';
         
         let ghostHtml = "";
         if (isMultiDate) {
@@ -496,11 +545,13 @@ function renderTasks() {
         if (t.completed) {
             d.className = `task-card completed-bubble`;
             d.innerHTML = `
-                <div style="flex:1; display:flex; flex-direction:column; gap:2px;" onclick="toggleTaskCheck('${t.id}', ${t.completed}, '${displayDateStr}')">
-                    <span class="badge-finished">✨ Fini !</span>
-                    <strong style="text-decoration:line-through; opacity:0.5;">${t.name}</strong>
-                    ${descHtml}
-                    <small style="opacity:0.5;">📅 ${displayDateFR} ${t.time ? '⏰ ' + t.time : ''}</small>
+                <div style="flex:1; display:flex; align-items:center;" onclick="toggleTaskCheck('${t.id}', ${t.completed}, '${displayDateStr}')">
+                    <div style="flex:1;">
+                        <span class="badge-finished">✨ Fini !</span><br>
+                        <strong style="text-decoration:line-through; opacity:0.5;">${t.name}</strong>
+                        <small style="display:block; opacity:0.5; margin-top:2px;">📅 ${displayDateFR} ${displayTimeStr ? '⏰ ' + displayTimeStr : ''}</small>
+                    </div>
+                    ${t.desc ? `<div style="flex:1; font-size: 0.85rem; opacity: 0.4; font-style: italic; margin-left: 10px; padding-left: 10px; border-left: 1px dashed rgba(128,128,128,0.2); display: flex; align-items: center; text-decoration:line-through;">📝 ${t.desc}</div>` : ''}
                 </div>
                 <div class="task-actions">
                     <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
@@ -510,12 +561,14 @@ function renderTasks() {
             let remindersText = "Aucun"; if(t.reminders && t.reminders.length > 0) { remindersText = t.reminders.map(r => `${r} min avant`).join(', '); }
             
             d.innerHTML = `
-                <div style="flex:1" onclick="toggleTaskCheck('${t.id}', ${t.completed}, '${displayDateStr}')">
-                    <strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong>
+                <div style="flex:1; display:flex; align-items:center;" onclick="toggleTaskCheck('${t.id}', ${t.completed}, '${displayDateStr}')">
+                    <div style="flex:${t.desc ? '1' : 'auto'};">
+                        <strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.name}</strong>
+                        <small style="display:block; margin-top:2px;">📅 ${displayDateFR} ${displayTimeStr ? '⏰ ' + displayTimeStr : ''}</small>
+                        ${t.isImminent ? `<small class="time-alert" style="display:block; margin-top:2px;">⚠️ ÉCHÉANCE PROCHE : Reste ${t.minutesLeft} min !</small>` : `<small style="color:var(--primary-dark); display:block; margin-top:2px;">🔔 Rappels : ${remindersText}</small>`}
+                        ${ghostHtml}
+                    </div>
                     ${descHtml}
-                    <small style="display:block; margin-top:2px;">📅 ${displayDateFR} ${t.time ? '⏰ ' + t.time : ''}</small>
-                    ${t.isImminent ? `<small class="time-alert" style="display:block; margin-top:2px;">⚠️ ÉCHÉANCE PROCHE : Reste ${t.minutesLeft} min !</small>` : `<small style="color:var(--primary-dark); display:block; margin-top:2px;">🔔 Rappels : ${remindersText}</small>`}
-                    ${ghostHtml}
                 </div>
                 <div class="task-actions">
                     ${taskSubView === 'active' ? `<button onclick="duplicateTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; margin-right:5px;">📑</button>` : ''}
@@ -527,7 +580,7 @@ function renderTasks() {
     });
 }
 
-// --- COCHER / DÉCOCHER UNE TÂCHE ---
+// --- COCHER / DÉCOCHER UNE TÂCHE SÉCURISÉ ---
 function toggleTaskCheck(id, currentStatus, specificDate) { 
     const task = tasks.find(t => t.id === id);
     if(!task) return;
@@ -690,12 +743,17 @@ function renderCalendar() {
                 return false;
             });
             
+            // --- NOUVEAU : Affichage du compteur de tâches dans le calendrier ---
+            let countHtml = "";
             if(dt.length > 0) {
                 const imps = dt.map(tk => tk.importance);
                 if(imps.includes('high')) div.classList.add('has-high'); else if(imps.includes('medium')) div.classList.add('has-medium'); else div.classList.add('has-low');
+                
+                countHtml = `<span style="position:absolute; top:2px; right:4px; font-size:0.65rem; font-weight:bold; color:var(--primary-dark); background:rgba(0, 206, 209, 0.15); border-radius:10px; padding:2px 4px;">+${dt.length}</span>`;
             }
+            
             div.onclick = () => openCalendarDayModal(i, monthNames[selectedMonth], selectedYear, dt, ds);
-            div.innerHTML = `<span style="font-size:0.6rem; opacity:0.5; display:block;">${dayInitials[new Date(selectedYear, selectedMonth, i).getDay()]}</span><b>${i}</b>`;
+            div.innerHTML = `${countHtml}<span style="font-size:0.6rem; opacity:0.5; display:block; margin-top: ${dt.length>0 ? '6px' : '0'};">${dayInitials[new Date(selectedYear, selectedMonth, i).getDay()]}</span><b>${i}</b>`;
             c.appendChild(div);
         }
     }
@@ -930,61 +988,6 @@ document.getElementById('save-todo').onclick = () => {
         document.getElementById('todo-task-name').value = '';
     }
 };
-
-// --- INITIALISATION GENERALE ET BOUTONS ---
-document.getElementById('add-task-btn').onclick = () => { 
-    editingId = null; 
-    unlockModalFields();
-    document.getElementById('task-name').value = ""; 
-    document.getElementById('task-desc').value = ""; 
-    document.getElementById('task-time').value = ""; 
-    setSelectedRemindersToBadges([]); 
-    document.getElementById('task-date').value = todayStr; 
-    document.getElementById('modal-title').innerText = "Nouvelle Tâche"; 
-    document.getElementById('task-modal').style.display = 'flex'; 
-};
-document.getElementById('close-modal').onclick = () => { unlockModalFields(); document.getElementById('task-modal').style.display = 'none'; };
-document.getElementById('close-todo-modal').onclick = () => document.getElementById('todo-modal').style.display = 'none';
-
-window.onclick = (e) => { 
-    if(e.target.className.includes('modal')) { 
-        unlockModalFields(); 
-        document.getElementById('task-modal').style.display = 'none'; 
-        document.getElementById('todo-modal').style.display = 'none'; 
-        document.getElementById('calendar-day-modal').style.display = 'none'; 
-        document.getElementById('welcome-modal').style.display = 'none'; 
-        if(document.getElementById('ghost-modal')) document.getElementById('ghost-modal').style.display = 'none';
-    } 
-};
-
-// --- LOGIQUE DE DUPLICATION DANS LA SÉRIE ---
-function duplicateTask(id) {
-    const task = tasks.find(t => t.id === id);
-    if(task) {
-        editingId = id; 
-        unlockModalFields(); 
-        
-        document.getElementById('task-name').value = task.name;
-        document.getElementById('task-desc').value = task.desc || "";
-        document.getElementById('task-date').value = ""; 
-        document.getElementById('task-time').value = ""; 
-        document.getElementById('task-importance').value = task.importance;
-        setSelectedRemindersToBadges(task.reminders || []);
-        
-        document.getElementById('task-name').disabled = true;
-        document.getElementById('task-desc').disabled = true;
-        document.getElementById('task-importance').disabled = true;
-        document.getElementById('date-input-label').innerText = "Nouvelle Date Prévue";
-        
-        document.querySelectorAll('.reminder-badge').forEach(b => {
-            b.style.pointerEvents = 'none';
-            b.classList.add('disabled-frozen');
-        });
-        
-        document.getElementById('modal-title').innerText = "Dupliquer la tâche";
-        document.getElementById('task-modal').style.display = 'flex';
-    }
-}
 
 // --- ENREGISTREMENT DU SERVICE WORKER ---
 if ('serviceWorker' in navigator) {
