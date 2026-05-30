@@ -272,7 +272,7 @@ function runNotificationEngine() {
     const minute = now.getMinutes();
     const dayOfWeek = now.getDay();
     
-    let todayMD = todayStr.substring(5); // Format MM-DD
+    let todayMD = todayStr.substring(5); 
     let tomorrow = new Date(); tomorrow.setDate(now.getDate() + 1);
     let tomorrowMD = tomorrow.toISOString().split('T')[0].substring(5);
 
@@ -870,7 +870,7 @@ document.getElementById('btn-register').onclick = () => {
 document.getElementById('btn-google').onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => { showToast("Connexion Google réussie ! 🚀"); }).catch((err) => { showToast("Erreur Google : " + err.message); }); };
 document.getElementById('btn-logout').onclick = () => { auth.signOut().then(() => { showToast("Déconnexion réussie."); }); };
 
-// --- ONGLET : CALENDRIER MULTI-DATES ---
+// --- ONGLET : CALENDRIER MULTI-DATES (AVEC BANDEAUX MULTICOLORES) ---
 function setViewState(s) { viewState = s; renderCalendar(); }
 function renderCalendar() {
     const c = document.getElementById('calendar-content'); const t = document.getElementById('calendar-title'); c.innerHTML = '';
@@ -891,15 +891,12 @@ function renderCalendar() {
     } else {
         c.className = 'calendar-grid'; t.innerText = `${monthNames[selectedMonth]} ${selectedYear}`;
         const days = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-        const yearHolidays = getFrenchHolidays(selectedYear); // Calcul des fériés de l'année
+        const yearHolidays = getFrenchHolidays(selectedYear); 
 
         for (let i = 1; i <= days; i++) {
             const ds = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-            const md = `${String(selectedMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`; // Mois et jour (pour anniversaire)
+            const md = `${String(selectedMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`; 
             
-            const div = document.createElement('div'); 
-            
-            // Férié et Anniversaire ?
             const holiday = yearHolidays.find(h => h.date === ds);
             const dayBirthdays = birthdays.filter(b => b.date.endsWith(md));
 
@@ -914,26 +911,50 @@ function renderCalendar() {
                 return false;
             });
             
-            // Application des classes pour la couleur du jour (Priorité visuelle)
-            let eventTypeClass = "";
-            if (dayBirthdays.length > 0) eventTypeClass = "has-birthday";
-            else if (holiday) eventTypeClass = "has-holiday";
-            else if (dt.length > 0) {
+            let dayColors = [];
+            if (dt.length > 0) {
                 const imps = dt.map(tk => tk.importance);
-                if(imps.includes('high')) eventTypeClass = 'has-high';
-                else if(imps.includes('medium')) eventTypeClass = 'has-medium';
-                else eventTypeClass = 'has-low';
+                if(imps.includes('high')) dayColors.push('var(--danger)');
+                if(imps.includes('medium')) dayColors.push('var(--warning)');
+                if(imps.includes('low')) dayColors.push('var(--success)');
+            }
+            if (holiday) dayColors.push('var(--holiday-color)');
+            if (dayBirthdays.length > 0) dayColors.push('var(--birthday-color)');
+            
+            // Suppression des doublons de couleurs
+            dayColors = [...new Set(dayColors)];
+
+            let bottomLineHtml = '';
+            if (dayColors.length > 0) {
+                let bgStyle = "";
+                if (dayColors.length === 1) {
+                    bgStyle = dayColors[0];
+                } else {
+                    let stops = [];
+                    let step = 100 / dayColors.length;
+                    dayColors.forEach((color, idx) => {
+                        stops.push(`${color} ${idx * step}%`, `${color} ${(idx+1) * step}%`);
+                    });
+                    bgStyle = `linear-gradient(to right, ${stops.join(', ')})`;
+                }
+                bottomLineHtml = `<div style="position:absolute; bottom:0; left:0; width:100%; height:6px; background:${bgStyle}; border-radius: 0 0 10px 10px;"></div>`;
             }
 
-            div.className = `day-card ${eventTypeClass} ${ds === todayStr ? 'is-today' : ''}`;
+            const div = document.createElement('div'); 
+            div.className = `day-card ${ds === todayStr ? 'is-today' : ''}`;
             
             let countHtml = "";
             if(dt.length > 0) {
-                countHtml = `<span style="position:absolute; top:2px; right:4px; font-size:0.65rem; font-weight:bold; color:var(--primary-dark); background:rgba(0, 206, 209, 0.15); border-radius:10px; padding:2px 4px;">+${dt.length}</span>`;
+                countHtml = `<span style="position:absolute; top:4px; right:4px; font-size:0.65rem; font-weight:bold; color:var(--primary-dark); background:rgba(0, 206, 209, 0.15); border-radius:10px; padding:2px 5px;">+${dt.length}</span>`;
             }
             
             div.onclick = () => openCalendarDayModal(i, monthNames[selectedMonth], selectedYear, dt, ds, holiday, dayBirthdays);
-            div.innerHTML = `${countHtml}<span style="font-size:0.6rem; opacity:0.5; display:block; margin-top: ${dt.length>0 ? '6px' : '0'};">${dayInitials[new Date(selectedYear, selectedMonth, i).getDay()]}</span><b>${i}</b>`;
+            div.innerHTML = `
+                ${countHtml}
+                <span style="font-size:0.6rem; opacity:0.5; display:block; margin-top: ${dt.length>0 ? '10px' : '4px'};">${dayInitials[new Date(selectedYear, selectedMonth, i).getDay()]}</span>
+                <b>${i}</b>
+                ${bottomLineHtml}
+            `;
             c.appendChild(div);
         }
     }
@@ -943,7 +964,6 @@ function openCalendarDayModal(day, monthName, year, dayTasks, currentFullDate, h
     document.getElementById('cal-modal-date-title').innerText = `${day} ${monthName} ${year}`;
     const container = document.getElementById('cal-modal-tasks-container'); container.innerHTML = '';
     
-    // Affichage des Fériés et Anniversaires en haut de la liste
     if (holiday) {
         container.innerHTML += `<div style="padding: 12px; border-radius: 12px; border-left: 6px solid var(--holiday-color); background: rgba(52, 152, 219, 0.05); margin-bottom: 5px;"><strong style="color:var(--holiday-color);">🏖️ ${holiday.name}</strong></div>`;
     }
