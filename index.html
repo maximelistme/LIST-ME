@@ -58,7 +58,6 @@
             
             <div id="tasks-action-bar" class="action-bar-left" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px;">
                 <button id="add-task-btn" class="btn-add-bubble btn-validated-click">+ Ajouter une tâche</button>
-                
                 <select id="task-sort-filter" onchange="renderTasks()" style="padding: 10px; font-size: 0.85rem; border-radius: 20px; font-weight: bold; cursor: pointer; max-width: 160px;">
                     <option value="chrono">⏳ Tri Chronologique</option>
                     <option value="creation">✨ Tri par Ajout</option>
@@ -86,13 +85,13 @@
             </div>
             
             <div style="display:flex; justify-content:center; align-items:center; margin-bottom:15px; position:relative; width: 100%; height: 35px;">
-                <button onclick="openBirthdayModal()" class="btn-add-birthday btn-validated-click" style="position: absolute; left: 15px;">+ 🎂</button>
+                <button id="btn-add-birthday" onclick="openBirthdayModal()" class="btn-add-birthday btn-validated-click" style="position: absolute; left: 15px;">+ 🎂</button>
                 <div id="calendar-title" class="calendar-title" style="margin:0; font-size: 1.5em; text-align:center;"></div>
             </div>
             
             <div id="calendar-content"></div>
             
-            <div class="calendar-legend">
+            <div id="calendar-legend" class="calendar-legend">
                 <span class="legend-item"><span class="legend-dot" style="background:var(--danger)"></span>Haute</span>
                 <span class="legend-item"><span class="legend-dot" style="background:var(--warning)"></span>Moyenne</span>
                 <span class="legend-item"><span class="legend-dot" style="background:var(--success)"></span>Faible</span>
@@ -139,13 +138,10 @@
     <div id="task-modal" class="modal modal-center">
         <div class="modal-content content-center">
             <h3 id="modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">Nouvelle Tâche</h3>
-            
             <label>Nom de la tâche</label>
             <input type="text" id="task-name" placeholder="Ex: Aller courir...">
-            
             <label style="margin-top: 5px;">Descriptif (Optionnel)</label>
             <textarea id="task-desc" placeholder="Détails, notes, adresse..." style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; min-height: 80px; resize: vertical; font-family: inherit; margin-bottom: 5px;"></textarea>
-            
             <div style="display: flex; gap: 15px; width: 100%; margin-top: 5px;">
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
                     <label id="date-input-label">Date</label>
@@ -154,22 +150,19 @@
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
                     <label>Heure</label>
                     <div class="custom-time-container">
-                        <input type="number" id="task-time-h" placeholder="-- " inputmode="numeric" min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('task-time-m').focus(); }" onblur="if(this.value && this.value.length === 1) this.value = '0' + this.value;">
+                        <input type="number" id="task-time-h" placeholder="-- " inputmode="numeric" min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('task-time-m').focus(); }">
                         <span style="font-weight:bold; opacity:0.5;">:</span>
-                        <input type="number" id="task-time-m" placeholder="-- " inputmode="numeric" min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);" onblur="if(this.value && this.value.length === 1) this.value = '0' + this.value;">
+                        <input type="number" id="task-time-m" placeholder="-- " inputmode="numeric" min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);">
                     </div>
                 </div>
             </div>
-
             <div id="duplicate-dates-tags" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: -5px;"></div>
-            
             <label style="margin-top: 5px;">Rappels de notification</label>
             <div class="reminder-badges-container">
                 <div class="reminder-badge" data-value="5">5 min</div>
                 <div class="reminder-badge" data-value="15">15 min</div>
                 <div class="reminder-badge" data-value="60">1h</div>
             </div>
-
             <label style="margin-top: 5px;">Importance</label>
             <select id="task-importance">
                 <option value="high">Haute</option>
@@ -198,14 +191,12 @@
                     <option value="0">Dimanche</option>
                 </select>
             </div>
-            
             <label style="margin-top: 5px;">Heure</label>
             <div class="custom-time-container">
-                <input type="number" id="todo-time-h" placeholder="-- " inputmode="numeric" min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('todo-time-m').focus(); }" onblur="if(this.value && this.value.length === 1) this.value = '0' + this.value;">
+                <input type="number" id="todo-time-h" placeholder="-- " inputmode="numeric" min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('todo-time-m').focus(); }">
                 <span style="font-weight:bold; opacity:0.5;">:</span>
-                <input type="number" id="todo-time-m" placeholder="-- " inputmode="numeric" min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);" onblur="if(this.value && this.value.length === 1) this.value = '0' + this.value;">
+                <input type="number" id="todo-time-m" placeholder="-- " inputmode="numeric" min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);">
             </div>
-
             <label style="margin-top: 5px;">Activité</label>
             <input type="text" id="todo-task-name" placeholder="Tâche...">
             <div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;">
