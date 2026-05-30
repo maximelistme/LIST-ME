@@ -19,11 +19,12 @@ let tasks = [];
 let dailyTodo = [];
 let weeklyTodo = [];
 let routineTodo = [];
+let birthdays = []; // NOUVELLE COLLECTION POUR LES ANNIVERSAIRES
 let currentUser = null; 
 let userNickname = ""; 
 let hasShownWelcomeThisSession = false; 
 let taskSubView = "active"; 
-let unsubscribeTasks, unsubscribeDaily, unsubscribeWeekly, unsubscribeRoutine; 
+let unsubscribeTasks, unsubscribeDaily, unsubscribeWeekly, unsubscribeRoutine, unsubscribeBirthdays; 
 
 let currentTheme = localStorage.getItem('listme_theme') || 'pink';
 let viewState = 'day'; 
@@ -79,6 +80,53 @@ function disableCustomTime(prefix, disable) {
     if(m) m.disabled = disable;
 }
 
+// --- CALCUL DES JOURS FÉRIÉS FRANÇAIS ---
+function getFrenchHolidays(year) {
+    const holidays = [];
+    const addDate = (m, d, name) => {
+        holidays.push({ date: `${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`, name: name });
+    };
+
+    addDate(1, 1, "Jour de l'An");
+    addDate(5, 1, "Fête du Travail");
+    addDate(5, 8, "Victoire 1945");
+    addDate(7, 14, "Fête Nationale");
+    addDate(8, 15, "Assomption");
+    addDate(11, 1, "Toussaint");
+    addDate(11, 11, "Armistice 1918");
+    addDate(12, 25, "Noël");
+
+    // Calcul date de Pâques
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const n0 = (h + l + 7 * m + 114);
+    const n = Math.floor(n0 / 31) - 1;
+    const p = n0 % 31 + 1;
+    
+    let easter = new Date(year, n, p);
+    
+    let lundiPaques = new Date(easter); lundiPaques.setDate(easter.getDate() + 1);
+    addDate(lundiPaques.getMonth() + 1, lundiPaques.getDate(), "Lundi de Pâques");
+    
+    let ascension = new Date(easter); ascension.setDate(easter.getDate() + 39);
+    addDate(ascension.getMonth() + 1, ascension.getDate(), "Ascension");
+    
+    let lundiPentecote = new Date(easter); lundiPentecote.setDate(easter.getDate() + 50);
+    addDate(lundiPentecote.getMonth() + 1, lundiPentecote.getDate(), "Lundi de Pentecôte");
+
+    return holidays;
+}
+
 // --- BULLE DE NOTIFICATION TOAST ---
 function showToast(message) {
     const toast = document.getElementById('toast-notification');
@@ -93,7 +141,7 @@ function changeTheme(t) {
     localStorage.setItem('listme_theme', t); 
 }
 
-// --- UTILITAIRE DE RÉACTIVATION ET NETTOYAGE DES CHAMPS ---
+// --- UTILITAIRE DE RÉACTIVATION ET NETTOYAGE DES CHAMPS SÉCURISÉ ---
 function unlockModalFields() {
     const nameField = document.getElementById('task-name');
     const descField = document.getElementById('task-desc');
@@ -105,7 +153,6 @@ function unlockModalFields() {
     if(impField) impField.disabled = false;
     if(labelField) labelField.innerText = "Date";
     
-    // Déverrouille les nouveaux champs d'heure
     disableCustomTime('task-time', false);
     disableCustomTime('todo-time', false);
     
@@ -209,7 +256,7 @@ function processMidnightAutoArchive() {
     Promise.all(operations).then(() => { isArchiving = false; }).catch(() => { isArchiving = false; });
 }
 
-// --- MOTEUR DE VÉRIFICATION EN CONTINU (+ CLÔTURE AUTO À 30 MIN) ---
+// --- MOTEUR DE VÉRIFICATION EN CONTINU (+ ANNIVERSAIRES) ---
 let lastCheckedDayStr = new Date().toISOString().split('T')[0];
 
 function runNotificationEngine() {
@@ -224,6 +271,51 @@ function runNotificationEngine() {
     const hour = now.getHours();
     const minute = now.getMinutes();
     const dayOfWeek = now.getDay();
+    
+    let todayMD = todayStr.substring(5); // Format MM-DD
+    let tomorrow = new Date(); tomorrow.setDate(now.getDate() + 1);
+    let tomorrowMD = tomorrow.toISOString().split('T')[0].substring(5);
+
+    // Alertes Anniversaires à 09h00
+    if (hour === 9 && minute === 0) {
+        // Jour J
+        let todayBirthdays = birthdays.filter(b => b.date.endsWith(todayMD));
+        todayBirthdays.forEach(b => {
+             let key = `bday-j-${b.id}-${todayStr.substring(0,4)}`;
+             let heavyNotificationsSent = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
+             if (!heavyNotificationsSent[key]) {
+                 sendNotification("🎂 Joyeux Anniversaire !", `C'est l'anniversaire de ${b.name} aujourd'hui !`);
+                 heavyNotificationsSent[key] = true;
+                 localStorage.setItem('listme_sent_notifs', JSON.stringify(heavyNotificationsSent));
+             }
+        });
+
+        // Veille
+        let tomorrowBirthdays = birthdays.filter(b => b.date.endsWith(tomorrowMD));
+        tomorrowBirthdays.forEach(b => {
+             let key = `bday-v-${b.id}-${todayStr.substring(0,4)}`;
+             let heavyNotificationsSent = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
+             if (!heavyNotificationsSent[key]) {
+                 sendNotification("🎁 Bientôt un anniversaire", `C'est l'anniversaire de ${b.name} demain !`);
+                 heavyNotificationsSent[key] = true;
+                 localStorage.setItem('listme_sent_notifs', JSON.stringify(heavyNotificationsSent));
+             }
+        });
+
+        // 1er du mois (Récapitulatif mensuel)
+        if (todayStr.endsWith('-01')) {
+             let thisMonthBirthdays = birthdays.filter(b => b.date.substring(5,7) === todayStr.substring(5,7));
+             if (thisMonthBirthdays.length > 0) {
+                 let key = `bday-m-${todayStr.substring(0,7)}`;
+                 let heavyNotificationsSent = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
+                 if (!heavyNotificationsSent[key]) {
+                     sendNotification("🗓️ Anniversaires du mois", `Il y a ${thisMonthBirthdays.length} anniversaire(s) prévu(s) ce mois-ci.`);
+                     heavyNotificationsSent[key] = true;
+                     localStorage.setItem('listme_sent_notifs', JSON.stringify(heavyNotificationsSent));
+                 }
+             }
+        }
+    }
 
     if (dayOfWeek === 0 && hour === 18 && minute === 0) {
         const key = `recap-${todayStr}`;
@@ -259,9 +351,7 @@ function runNotificationEngine() {
             const [tHour, tMin] = displayTime.split(':').map(Number);
             const taskTimeObj = new Date();
             taskTimeObj.setHours(tHour, tMin, 0, 0);
-            
             const diffMinutes = (now - taskTimeObj) / 60000;
-            
             if (diffMinutes >= 30) {
                 toggleTaskCheck(t.id, false, displayDate);
                 return; 
@@ -388,6 +478,12 @@ function startRealtimeSync(userId) {
     unsubscribeDaily = db.collection("dailyTodo").where("userId", "==", userId).onSnapshot((snapshot) => { dailyTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; dailyTodo.push(data); }); renderTodo(); });
     unsubscribeWeekly = db.collection("weeklyTodo").where("userId", "==", userId).onSnapshot((snapshot) => { weeklyTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; weeklyTodo.push(data); }); renderTodo(); });
     unsubscribeRoutine = db.collection("routineTodo").where("userId", "==", userId).onSnapshot((snapshot) => { routineTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; routineTodo.push(data); }); renderTodo(); });
+    
+    unsubscribeBirthdays = db.collection("birthdays").where("userId", "==", userId).onSnapshot((snapshot) => {
+        birthdays = [];
+        snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; birthdays.push(data); });
+        if(viewState === 'day') renderCalendar();
+    });
 }
 
 function triggerWelcomeModal() {
@@ -408,7 +504,35 @@ function stopRealtimeSync() {
     if (unsubscribeDaily) unsubscribeDaily(); 
     if (unsubscribeWeekly) unsubscribeWeekly(); 
     if (unsubscribeRoutine) unsubscribeRoutine(); 
-    tasks = []; dailyTodo = []; weeklyTodo = []; routineTodo = []; 
+    if (unsubscribeBirthdays) unsubscribeBirthdays();
+    tasks = []; dailyTodo = []; weeklyTodo = []; routineTodo = []; birthdays = [];
+}
+
+// --- AJOUT ANNIVERSAIRES ---
+function openBirthdayModal() {
+    document.getElementById('birthday-name').value = '';
+    document.getElementById('birthday-date').value = '';
+    document.getElementById('birthday-modal').style.display = 'flex';
+}
+
+document.getElementById('save-birthday').onclick = () => {
+    const n = document.getElementById('birthday-name').value.trim();
+    const d = document.getElementById('birthday-date').value;
+    if (n && d && currentUser) {
+        db.collection("birthdays").add({
+            name: n, date: d, userId: currentUser.uid, createdAt: Date.now()
+        }).then(() => {
+            showToast("Anniversaire enregistré ! 🎂");
+            document.getElementById('birthday-modal').style.display = 'none';
+        });
+    }
+};
+
+function deleteBirthday(id) {
+    db.collection("birthdays").doc(id).delete().then(() => {
+        showToast("Anniversaire supprimé !");
+        document.getElementById('calendar-day-modal').style.display = 'none';
+    });
 }
 
 // --- MINI-MODAL GHOST ---
@@ -767,10 +891,17 @@ function renderCalendar() {
     } else {
         c.className = 'calendar-grid'; t.innerText = `${monthNames[selectedMonth]} ${selectedYear}`;
         const days = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        const yearHolidays = getFrenchHolidays(selectedYear); // Calcul des fériés de l'année
+
         for (let i = 1; i <= days; i++) {
             const ds = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-            const div = document.createElement('div'); div.className = 'day-card';
-            if(ds === todayStr) div.classList.add('is-today');
+            const md = `${String(selectedMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`; // Mois et jour (pour anniversaire)
+            
+            const div = document.createElement('div'); 
+            
+            // Férié et Anniversaire ?
+            const holiday = yearHolidays.find(h => h.date === ds);
+            const dayBirthdays = birthdays.filter(b => b.date.endsWith(md));
 
             const dt = tasks.filter(tk => {
                 if (tk.date === ds) return true;
@@ -783,25 +914,52 @@ function renderCalendar() {
                 return false;
             });
             
+            // Application des classes pour la couleur du jour (Priorité visuelle)
+            let eventTypeClass = "";
+            if (dayBirthdays.length > 0) eventTypeClass = "has-birthday";
+            else if (holiday) eventTypeClass = "has-holiday";
+            else if (dt.length > 0) {
+                const imps = dt.map(tk => tk.importance);
+                if(imps.includes('high')) eventTypeClass = 'has-high';
+                else if(imps.includes('medium')) eventTypeClass = 'has-medium';
+                else eventTypeClass = 'has-low';
+            }
+
+            div.className = `day-card ${eventTypeClass} ${ds === todayStr ? 'is-today' : ''}`;
+            
             let countHtml = "";
             if(dt.length > 0) {
-                const imps = dt.map(tk => tk.importance);
-                if(imps.includes('high')) div.classList.add('has-high'); else if(imps.includes('medium')) div.classList.add('has-medium'); else div.classList.add('has-low');
-                
                 countHtml = `<span style="position:absolute; top:2px; right:4px; font-size:0.65rem; font-weight:bold; color:var(--primary-dark); background:rgba(0, 206, 209, 0.15); border-radius:10px; padding:2px 4px;">+${dt.length}</span>`;
             }
             
-            div.onclick = () => openCalendarDayModal(i, monthNames[selectedMonth], selectedYear, dt, ds);
+            div.onclick = () => openCalendarDayModal(i, monthNames[selectedMonth], selectedYear, dt, ds, holiday, dayBirthdays);
             div.innerHTML = `${countHtml}<span style="font-size:0.6rem; opacity:0.5; display:block; margin-top: ${dt.length>0 ? '6px' : '0'};">${dayInitials[new Date(selectedYear, selectedMonth, i).getDay()]}</span><b>${i}</b>`;
             c.appendChild(div);
         }
     }
 }
 
-function openCalendarDayModal(day, monthName, year, dayTasks, currentFullDate) {
+function openCalendarDayModal(day, monthName, year, dayTasks, currentFullDate, holiday, dayBirthdays) {
     document.getElementById('cal-modal-date-title').innerText = `${day} ${monthName} ${year}`;
     const container = document.getElementById('cal-modal-tasks-container'); container.innerHTML = '';
-    if(dayTasks.length === 0) { container.innerHTML = '<p style="text-align:center; opacity:0.5; font-style:italic;">Aucune tâche</p>'; } 
+    
+    // Affichage des Fériés et Anniversaires en haut de la liste
+    if (holiday) {
+        container.innerHTML += `<div style="padding: 12px; border-radius: 12px; border-left: 6px solid var(--holiday-color); background: rgba(52, 152, 219, 0.05); margin-bottom: 5px;"><strong style="color:var(--holiday-color);">🏖️ ${holiday.name}</strong></div>`;
+    }
+    
+    if (dayBirthdays && dayBirthdays.length > 0) {
+        dayBirthdays.forEach(b => {
+             container.innerHTML += `<div style="padding: 12px; border-radius: 12px; border-left: 6px solid var(--birthday-color); background: rgba(232, 67, 147, 0.05); margin-bottom: 5px; display:flex; justify-content:space-between; align-items:center;">
+                <strong style="color:var(--birthday-color);">🎂 Anniv. de ${b.name}</strong>
+                <button onclick="event.stopPropagation(); deleteBirthday('${b.id}')" style="background:none; border:none; color:var(--danger); font-size:1.2rem; cursor:pointer;">×</button>
+             </div>`;
+        });
+    }
+
+    if(dayTasks.length === 0 && !holiday && (!dayBirthdays || dayBirthdays.length === 0)) { 
+        container.innerHTML = '<p style="text-align:center; opacity:0.5; font-style:italic;">Rien de prévu</p>'; 
+    } 
     else {
         dayTasks.forEach(t => {
             let specificTime = t.time;
@@ -1027,21 +1185,6 @@ document.getElementById('save-todo').onclick = () => {
     }
 };
 
-// --- INITIALISATION GENERALE ET BOUTONS ---
-document.getElementById('add-task-btn').onclick = () => { 
-    editingId = null; 
-    unlockModalFields();
-    if(document.getElementById('task-name')) document.getElementById('task-name').value = ""; 
-    if(document.getElementById('task-desc')) document.getElementById('task-desc').value = ""; 
-    setCustomTime('task-time', "");
-    setSelectedRemindersToBadges([]); 
-    if(document.getElementById('task-date')) document.getElementById('task-date').value = todayStr; 
-    document.getElementById('modal-title').innerText = "Nouvelle Tâche"; 
-    document.getElementById('task-modal').style.display = 'flex'; 
-};
-document.getElementById('close-modal').onclick = () => { unlockModalFields(); document.getElementById('task-modal').style.display = 'none'; };
-document.getElementById('close-todo-modal').onclick = () => document.getElementById('todo-modal').style.display = 'none';
-
 // --- CORRECTION CLIC SUR MODAL ---
 window.onclick = (e) => { 
     if(e.target.classList && e.target.classList.contains('modal')) { 
@@ -1051,6 +1194,7 @@ window.onclick = (e) => {
         document.getElementById('calendar-day-modal').style.display = 'none'; 
         document.getElementById('welcome-modal').style.display = 'none'; 
         if(document.getElementById('ghost-modal')) document.getElementById('ghost-modal').style.display = 'none';
+        if(document.getElementById('birthday-modal')) document.getElementById('birthday-modal').style.display = 'none';
     } 
 };
 
