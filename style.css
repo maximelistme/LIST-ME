@@ -8,8 +8,8 @@
     --primary: #00CED1; --primary-dark: #008B8B;
     --danger: #FF4757; --warning: #FFA502; --success: #2ED573;
     --urgent-violet: #8E44AD; --urgent-violet-light: #BB8FCE;
-    --holiday-color: #3498db; /* Bleu Férié */
-    --birthday-color: #e84393; /* Rose Anniversaire */
+    --holiday-color: #3498db; 
+    --birthday-color: #e84393; 
 }
 
 /* THÈMES */
@@ -78,6 +78,26 @@ body.theme-ocean .sub-menu-tab.active { color: var(--primary); }
     background: var(--primary); color: white; border: none;
     padding: 12px 22px; border-radius: 30px; font-size: 0.95rem; font-weight: bold;
     cursor: pointer; box-shadow: 0 4px 12px rgba(0, 206, 209, 0.3);
+}
+
+/* NOUVEAU BOUTON D'AJOUT ANNIVERSAIRE (Grisé/Discret) */
+.btn-add-birthday {
+    background: rgba(128, 128, 128, 0.1); 
+    border: 2px dashed rgba(128, 128, 128, 0.3); 
+    color: var(--text-color); 
+    border-radius: 20px; 
+    padding: 5px 12px; 
+    font-size: 0.9rem; 
+    font-weight: bold;
+    cursor: pointer; 
+    transition: all 0.2s ease;
+    opacity: 0.8;
+}
+.btn-add-birthday:hover, .btn-add-birthday:active {
+    background: var(--birthday-color);
+    color: white;
+    border-color: var(--birthday-color);
+    opacity: 1;
 }
 
 /* ANIMATION TACTILE REBOND SUR SELECTION */
@@ -241,12 +261,8 @@ body.theme-ocean .task-card.is-imminent { background: linear-gradient(135deg, #2
 .grid-item { padding: 20px 5px; text-align: center; cursor: pointer; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
 .grid-item.selected { background: var(--primary) !important; color: white !important; }
 
-.day-card { padding: 10px 2px; min-height: 80px; text-align: center; cursor: pointer; border: 1px solid rgba(128,128,128,0.1); position: relative; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
-.day-card.has-high { border-bottom: 5px solid var(--danger) !important; }
-.day-card.has-medium { border-bottom: 5px solid var(--warning) !important; }
-.day-card.has-low { border-bottom: 5px solid var(--success) !important; }
-.day-card.has-holiday { border-bottom: 5px solid var(--holiday-color) !important; background: rgba(52, 152, 219, 0.05); }
-.day-card.has-birthday { border-bottom: 5px solid var(--birthday-color) !important; background: rgba(232, 67, 147, 0.05); }
+/* OVERFLOW HIDDEN est crucial pour que la barre multicolore ne déborde pas des bords arrondis */
+.day-card { overflow: hidden; padding: 10px 2px; min-height: 80px; text-align: center; cursor: pointer; border: 1px solid rgba(128,128,128,0.1); position: relative; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
 .day-card.is-today { border: 2px solid var(--primary) !important; box-shadow: 0 0 10px rgba(0, 206, 209, 0.4); animation: pulseToday 2s infinite; }
 @keyframes pulseToday { 0% { border-color: var(--primary); } 50% { border-color: var(--primary-dark); box-shadow: 0 0 14px rgba(0, 206, 209, 0.7); } 100% { border-color: var(--primary); } }
 
