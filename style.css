@@ -352,3 +352,14 @@ select option { background: var(--card-bg); color: var(--text-color); }
 /* STYLE DES CHAMPS FIGÉS EN DUPLICATION */
 input:disabled, select:disabled, textarea:disabled { opacity: 0.55; cursor: not-allowed; background-color: rgba(128, 128, 128, 0.08) !important; }
 .reminder-badge.disabled-frozen { opacity: 0.45 !important; cursor: not-allowed !important; box-shadow: none !important; border: 1px dashed rgba(128,128,128,0.4) !important; }
+
+/* --- CORRECTION DU TEXTE LONG POUR NE PLUS BLOQUER LES BOUTONS --- */
+.task-card, .task-card > div {
+    min-width: 0; /* Permet à la flexbox de se rétrécir */
+}
+
+.task-card strong, 
+.task-card div {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
