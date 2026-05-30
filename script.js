@@ -43,6 +43,42 @@ const currentDayOfWeek = new Date().getDay();
 
 document.body.className = `theme-${currentTheme}`;
 
+// --- UTILITAIRES DE TEMPS (DOUBLE SÉLECTEUR MANUEL) ---
+function getCustomTime(prefix) {
+    let h = document.getElementById(prefix + '-h');
+    let m = document.getElementById(prefix + '-m');
+    if(!h || !m) return "";
+    let hVal = h.value.trim();
+    let mVal = m.value.trim();
+    if(hVal) {
+        hVal = hVal.padStart(2, '0');
+        mVal = mVal ? mVal.padStart(2, '0') : "00";
+        return `${hVal}:${mVal}`;
+    }
+    return "";
+}
+
+function setCustomTime(prefix, timeStr) {
+    let h = document.getElementById(prefix + '-h');
+    let m = document.getElementById(prefix + '-m');
+    if(!h || !m) return;
+    if(timeStr) {
+        let p = timeStr.split(':');
+        h.value = p[0];
+        m.value = p[1];
+    } else {
+        h.value = "";
+        m.value = "";
+    }
+}
+
+function disableCustomTime(prefix, disable) {
+    let h = document.getElementById(prefix + '-h');
+    let m = document.getElementById(prefix + '-m');
+    if(h) h.disabled = disable;
+    if(m) m.disabled = disable;
+}
+
 // --- BULLE DE NOTIFICATION TOAST ---
 function showToast(message) {
     const toast = document.getElementById('toast-notification');
@@ -57,19 +93,21 @@ function changeTheme(t) {
     localStorage.setItem('listme_theme', t); 
 }
 
-// --- UTILITAIRE DE RÉACTIVATION ET NETTOYAGE DES CHAMPS SÉCURISÉ ---
+// --- UTILITAIRE DE RÉACTIVATION ET NETTOYAGE DES CHAMPS ---
 function unlockModalFields() {
     const nameField = document.getElementById('task-name');
     const descField = document.getElementById('task-desc');
     const impField = document.getElementById('task-importance');
-    const timeField = document.getElementById('task-time');
     const labelField = document.getElementById('date-input-label');
 
     if(nameField) nameField.disabled = false;
     if(descField) descField.disabled = false;
     if(impField) impField.disabled = false;
-    if(timeField) timeField.disabled = false;
     if(labelField) labelField.innerText = "Date";
+    
+    // Déverrouille les nouveaux champs d'heure
+    disableCustomTime('task-time', false);
+    disableCustomTime('todo-time', false);
     
     const badges = document.querySelectorAll('.reminder-badge');
     badges.forEach(b => {
@@ -178,7 +216,6 @@ function runNotificationEngine() {
     const now = new Date();
     todayStr = now.toISOString().split('T')[0];
 
-    // Vérif minuit
     if (todayStr !== lastCheckedDayStr) {
         lastCheckedDayStr = todayStr;
         processMidnightAutoArchive();
@@ -218,7 +255,6 @@ function runNotificationEngine() {
             displayTime = currentOcc.time;
         }
 
-        // --- NOUVEAU : Auto-Clôture +30 minutes ---
         if (displayDate === todayStr && displayTime) {
             const [tHour, tMin] = displayTime.split(':').map(Number);
             const taskTimeObj = new Date();
@@ -534,7 +570,6 @@ function renderTasks() {
         const displayTimeStr = t.currentDisplayTime || t.time || "";
         const displayDateFR = displayDateStr ? displayDateStr.split('-').reverse().join('/') : '';
         
-        // CORRECTION : Pas d'émoji pour le descriptif
         let descHtml = t.desc ? `<div style="flex:1; font-size: 0.85rem; opacity: 0.7; font-style: italic; white-space: pre-wrap; line-height: 1.3; margin-left: 10px; padding-left: 10px; border-left: 1px dashed rgba(128,128,128,0.3); display: flex; align-items: center;">${t.desc}</div>` : '';
         
         let ghostHtml = "";
@@ -582,7 +617,7 @@ function renderTasks() {
     });
 }
 
-// --- COCHER / DÉCOCHER UNE TÂCHE ---
+// --- COCHER / DÉCOCHER UNE TÂCHE SÉCURISÉ ---
 function toggleTaskCheck(id, currentStatus, specificDate) { 
     const task = tasks.find(t => t.id === id);
     if(!task) return;
@@ -637,7 +672,7 @@ function editTask(id) {
         if(document.getElementById('task-name')) document.getElementById('task-name').value = task.name; 
         if(document.getElementById('task-desc')) document.getElementById('task-desc').value = task.desc || ""; 
         if(document.getElementById('task-date')) document.getElementById('task-date').value = task.date; 
-        if(document.getElementById('task-time')) document.getElementById('task-time').value = task.time || "";
+        setCustomTime('task-time', task.time || "");
         setSelectedRemindersToBadges(task.reminders || []); 
         if(document.getElementById('task-importance')) document.getElementById('task-importance').value = task.importance;
         
@@ -651,7 +686,7 @@ document.getElementById('save-task').onclick = () => {
     const n = document.getElementById('task-name').value.trim(); 
     const dStr = document.getElementById('task-desc').value.trim(); 
     const singleDate = document.getElementById('task-date').value;
-    const time = document.getElementById('task-time').value; 
+    const time = getCustomTime('task-time'); 
     const imp = document.getElementById('task-importance').value;
     const reminders = getSelectedRemindersFromBadges(); 
     
@@ -698,6 +733,18 @@ document.getElementById('save-task').onclick = () => {
         document.getElementById('task-modal').style.display = 'none';
     }
 };
+
+// --- AUTHENTIFICATION BOUTONS ---
+document.getElementById('btn-login').onclick = () => {
+    const email = document.getElementById('auth-email').value; const pass = document.getElementById('auth-pass').value;
+    if(email && pass) auth.signInWithEmailAndPassword(email, pass).then(() => { showToast("Ravi de vous revoir ! 👋"); }).catch(err => showToast("Erreur : " + err.message));
+};
+document.getElementById('btn-register').onclick = () => {
+    const email = document.getElementById('auth-email').value; const pass = document.getElementById('auth-pass').value;
+    if(email && pass) auth.createUserWithEmailAndPassword(email, pass).then(() => showToast("Compte créé avec succès ! 🎉")).catch(err => showToast("Erreur : " + err.message));
+};
+document.getElementById('btn-google').onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => { showToast("Connexion Google réussie ! 🚀"); }).catch((err) => { showToast("Erreur Google : " + err.message); }); };
+document.getElementById('btn-logout').onclick = () => { auth.signOut().then(() => { showToast("Déconnexion réussie."); }); };
 
 // --- ONGLET : CALENDRIER MULTI-DATES ---
 function setViewState(s) { viewState = s; renderCalendar(); }
@@ -908,7 +955,7 @@ function renderTodo() {
 
 function openTodoModal(time, isWeeklyOrRoutine, dayNum = 1, isRoutine = false) { 
     editingTodoId = null; 
-    document.getElementById('todo-time').value = time; 
+    setCustomTime('todo-time', time); 
     document.getElementById('todo-task-name').value = ''; 
     document.getElementById('todo-modal-title').innerText = isRoutine ? "Ajouter à la Semaine Type" : "Ajouter à la To-Do List"; 
     
@@ -926,7 +973,7 @@ function openTodoModal(time, isWeeklyOrRoutine, dayNum = 1, isRoutine = false) {
 
 function editTodoItem(id, name, time, isWeeklyOrRoutine, dayNum = 1, isRoutine = false) { 
     editingTodoId = id; 
-    document.getElementById('todo-time').value = time; 
+    setCustomTime('todo-time', time); 
     document.getElementById('todo-task-name').value = name; 
     document.getElementById('todo-modal-title').innerText = isRoutine ? "Modifier la Semaine Type" : "Modifier la To-Do List"; 
     
@@ -944,7 +991,7 @@ function editTodoItem(id, name, time, isWeeklyOrRoutine, dayNum = 1, isRoutine =
 
 document.getElementById('save-todo').onclick = () => {
     const n = document.getElementById('todo-task-name').value.trim(); 
-    const t = document.getElementById('todo-time').value;
+    const t = getCustomTime('todo-time');
     const isWeekly = document.getElementById('save-todo').getAttribute('data-weekly-mode') === 'true';
     const isRoutine = document.getElementById('save-todo').getAttribute('data-routine-mode') === 'true';
     
@@ -986,7 +1033,7 @@ document.getElementById('add-task-btn').onclick = () => {
     unlockModalFields();
     if(document.getElementById('task-name')) document.getElementById('task-name').value = ""; 
     if(document.getElementById('task-desc')) document.getElementById('task-desc').value = ""; 
-    if(document.getElementById('task-time')) document.getElementById('task-time').value = ""; 
+    setCustomTime('task-time', "");
     setSelectedRemindersToBadges([]); 
     if(document.getElementById('task-date')) document.getElementById('task-date').value = todayStr; 
     document.getElementById('modal-title').innerText = "Nouvelle Tâche"; 
@@ -995,7 +1042,7 @@ document.getElementById('add-task-btn').onclick = () => {
 document.getElementById('close-modal').onclick = () => { unlockModalFields(); document.getElementById('task-modal').style.display = 'none'; };
 document.getElementById('close-todo-modal').onclick = () => document.getElementById('todo-modal').style.display = 'none';
 
-// CORRECTION VISUELLE : window.onclick utilise maintenant match de classe rigoureux
+// --- CORRECTION CLIC SUR MODAL ---
 window.onclick = (e) => { 
     if(e.target.classList && e.target.classList.contains('modal')) { 
         unlockModalFields(); 
@@ -1017,7 +1064,7 @@ function duplicateTask(id) {
         if(document.getElementById('task-name')) document.getElementById('task-name').value = task.name;
         if(document.getElementById('task-desc')) document.getElementById('task-desc').value = task.desc || "";
         if(document.getElementById('task-date')) document.getElementById('task-date').value = ""; 
-        if(document.getElementById('task-time')) document.getElementById('task-time').value = ""; 
+        setCustomTime('task-time', "");
         if(document.getElementById('task-importance')) document.getElementById('task-importance').value = task.importance;
         setSelectedRemindersToBadges(task.reminders || []);
         
