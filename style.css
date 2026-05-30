@@ -391,3 +391,34 @@ input:disabled, select:disabled {
     box-shadow: none !important;
     border: 1px dashed rgba(128,128,128,0.4) !important;
 }
+
+/* --- SÉLECTEUR D'HEURE MANUEL ERGONOMIQUE (SANS ROUE) --- */
+.custom-time-container {
+    display: flex;
+    align-items: center;
+    background: var(--card-bg);
+    border: 1px solid rgba(128,128,128,0.3);
+    border-radius: 10px;
+    padding: 10px 14px;
+    width: 100%;
+}
+
+.custom-time-container input[type="number"] {
+    border: none;
+    background: transparent;
+    padding: 0;
+    width: 40px;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--text-color);
+    outline: none;
+    -moz-appearance: textfield; 
+}
+
+/* Cache les flèches du champ numérique */
+.custom-time-container input[type="number"]::-webkit-outer-spin-button,
+.custom-time-container input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
