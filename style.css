@@ -363,3 +363,39 @@ input:disabled, select:disabled, textarea:disabled { opacity: 0.55; cursor: not-
     word-break: break-word;
     overflow-wrap: anywhere;
 }
+
+/* --- SECTION PARTAGE (PROFIL) --- */
+.share-container {
+    background: rgba(128,128,128,0.05);
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px dashed rgba(128,128,128,0.3);
+}
+.share-code-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--primary);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin: 10px 0;
+}
+.friend-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+.friend-tag {
+    background: rgba(0, 206, 209, 0.15);
+    color: var(--primary-dark);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
