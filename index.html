@@ -8,6 +8,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Mogra&display=swap" rel="stylesheet">
     <title>LIST'ME</title>
     <link rel="stylesheet" href="style.css">
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link href="https://fonts.googleapis.com/css2?family=Mogra&display=swap" rel="stylesheet">
+    <title>LIST'ME</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body class="theme-pink">
 
@@ -106,31 +116,14 @@
                 <h2>Mon Profil</h2>
             </div>
             <div class="profile-card">
-                <label>Mon Surnom / Prénom</label>
-                <input type="text" id="profile-nickname" placeholder="Ex: WeriXx, Julie...">
-                <button id="btn-save-nickname" class="btn-primary btn-validated-click" style="padding: 10px 15px; font-size: 0.9rem;">Enregistrer le surnom</button>
+                <label>Nom profil</label>
+                <input type="text" id="profile-nickname" placeholder="Ex: WeriXx, Julie..." onchange="autoSaveNickname()">
                 
-                <div class="header-action header-centered" style="margin-top: 25px; padding: 10px; margin-bottom: 10px;">
-                    <h2 style="font-size: 1.2rem;">Partage Agenda 🤝</h2>
-                </div>
-                
-                <div class="share-container">
-                    <label>Mon code à donner :</label>
-                    <div class="share-code-box">
-                        <span id="my-share-code">------</span>
-                        <button onclick="copyShareCode()" style="background:none; border:none; color:white; cursor:pointer; font-size:1.2rem;">📋</button>
-                    </div>
-                    
-                    <label style="margin-top:15px; display:block;">Ajouter l'agenda d'un proche :</label>
-                    <div style="display:flex; gap:10px; margin-top:5px;">
-                        <input type="text" id="friend-code-input" placeholder="Code..." style="flex:1; text-transform:uppercase;">
-                        <button id="btn-add-friend" class="btn-primary btn-validated-click">Lier</button>
-                    </div>
-                    
-                    <div id="friends-list-container" class="friend-list"></div>
-                </div>
-                <hr style="opacity: 0.1; margin: 15px 0;">
-                <p id="profile-user-email" style="font-size: 0.85rem; opacity: 0.6; text-align:center; margin-bottom:10px;"></p>
+                <button onclick="openShareModal()" class="btn-secondary btn-validated-click" style="margin-top: 20px; font-size: 1.1rem; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;">
+                    Partage Agenda 🤝
+                </button>
+
+                <hr style="opacity: 0.1; margin: 20px 0;">
                 <button id="btn-logout" class="btn-secondary" style="background:var(--danger); color:white;">Se déconnecter</button>
             </div>
 
@@ -253,6 +246,30 @@
             <h3 id="cal-modal-date-title" style="color: var(--primary); text-align: center; margin-bottom: 5px;"></h3>
             <div id="cal-modal-tasks-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;"></div>
             <button onclick="document.getElementById('calendar-day-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
+        </div>
+    </div>
+
+    <div id="share-modal" class="modal modal-center">
+        <div class="modal-content content-center">
+            <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Partage Agenda 🤝</h3>
+            
+            <div style="margin-bottom: 0;">
+                <label>Mon code à donner :</label>
+                <div class="share-code-box">
+                    <span id="my-share-code">------</span>
+                    <button onclick="copyShareCode()" style="background:none; border:none; color:white; cursor:pointer; font-size:1.2rem;">📋</button>
+                </div>
+                
+                <label style="margin-top:15px; display:block;">Ajouter l'agenda d'un proche :</label>
+                <div style="display:flex; gap:10px; margin-top:5px;">
+                    <input type="text" id="friend-code-input" placeholder="Code..." style="flex:1; text-transform:uppercase;">
+                    <button id="btn-add-friend" class="btn-primary btn-validated-click">Lier</button>
+                </div>
+                
+                <div id="friends-list-container" class="friend-list"></div>
+            </div>
+            
+            <button onclick="document.getElementById('share-modal').style.display='none'" class="btn-secondary" style="margin-top: 20px; width: 100%;">Fermer</button>
         </div>
     </div>
 
