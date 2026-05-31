@@ -58,6 +58,7 @@
             
             <div id="tasks-action-bar" class="action-bar-left" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px;">
                 <button id="add-task-btn" class="btn-add-bubble btn-validated-click">+ Ajouter une tâche</button>
+                
                 <select id="task-sort-filter" onchange="renderTasks()" style="padding: 10px; font-size: 0.85rem; border-radius: 20px; font-weight: bold; cursor: pointer; max-width: 160px;">
                     <option value="chrono">⏳ Tri Chronologique</option>
                     <option value="creation">✨ Tri par Ajout</option>
@@ -109,7 +110,26 @@
                 <input type="text" id="profile-nickname" placeholder="Ex: WeriXx, Julie...">
                 <button id="btn-save-nickname" class="btn-primary btn-validated-click" style="padding: 10px 15px; font-size: 0.9rem;">Enregistrer le surnom</button>
                 
-                <hr style="opacity: 0.1; margin: 10px 0;">
+                <div class="header-action header-centered" style="margin-top: 25px; padding: 10px; margin-bottom: 10px;">
+                    <h2 style="font-size: 1.2rem;">Partage Agenda 🤝</h2>
+                </div>
+                
+                <div class="share-container">
+                    <label>Mon code à donner :</label>
+                    <div class="share-code-box">
+                        <span id="my-share-code">------</span>
+                        <button onclick="copyShareCode()" style="background:none; border:none; color:white; cursor:pointer; font-size:1.2rem;">📋</button>
+                    </div>
+                    
+                    <label style="margin-top:15px; display:block;">Ajouter l'agenda d'un proche :</label>
+                    <div style="display:flex; gap:10px; margin-top:5px;">
+                        <input type="text" id="friend-code-input" placeholder="Code..." style="flex:1; text-transform:uppercase;">
+                        <button id="btn-add-friend" class="btn-primary btn-validated-click">Lier</button>
+                    </div>
+                    
+                    <div id="friends-list-container" class="friend-list"></div>
+                </div>
+                <hr style="opacity: 0.1; margin: 15px 0;">
                 <p id="profile-user-email" style="font-size: 0.85rem; opacity: 0.6; text-align:center; margin-bottom:10px;"></p>
                 <button id="btn-logout" class="btn-secondary" style="background:var(--danger); color:white;">Se déconnecter</button>
             </div>
@@ -138,10 +158,13 @@
     <div id="task-modal" class="modal modal-center">
         <div class="modal-content content-center">
             <h3 id="modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">Nouvelle Tâche</h3>
+            
             <label>Nom de la tâche</label>
             <input type="text" id="task-name" placeholder="Ex: Aller courir...">
+            
             <label style="margin-top: 5px;">Descriptif (Optionnel)</label>
             <textarea id="task-desc" placeholder="Détails, notes, adresse..." style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; min-height: 80px; resize: vertical; font-family: inherit; margin-bottom: 5px;"></textarea>
+            
             <div style="display: flex; gap: 15px; width: 100%; margin-top: 5px;">
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
                     <label id="date-input-label">Date</label>
@@ -156,13 +179,16 @@
                     </div>
                 </div>
             </div>
+
             <div id="duplicate-dates-tags" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: -5px;"></div>
+            
             <label style="margin-top: 5px;">Rappels de notification</label>
             <div class="reminder-badges-container">
                 <div class="reminder-badge" data-value="5">5 min</div>
                 <div class="reminder-badge" data-value="15">15 min</div>
                 <div class="reminder-badge" data-value="60">1h</div>
             </div>
+
             <label style="margin-top: 5px;">Importance</label>
             <select id="task-importance">
                 <option value="high">Haute</option>
@@ -191,12 +217,14 @@
                     <option value="0">Dimanche</option>
                 </select>
             </div>
+            
             <label style="margin-top: 5px;">Heure</label>
             <div class="custom-time-container">
                 <input type="number" id="todo-time-h" placeholder="-- " inputmode="numeric" min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('todo-time-m').focus(); }">
                 <span style="font-weight:bold; opacity:0.5;">:</span>
                 <input type="number" id="todo-time-m" placeholder="-- " inputmode="numeric" min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);">
             </div>
+
             <label style="margin-top: 5px;">Activité</label>
             <input type="text" id="todo-task-name" placeholder="Tâche...">
             <div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;">
