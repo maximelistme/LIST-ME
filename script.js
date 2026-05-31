@@ -795,6 +795,22 @@ if (btnSaveNickname) {
     };
 }
 
+let btnSaveBirthday = document.getElementById('save-birthday');
+if (btnSaveBirthday) {
+    btnSaveBirthday.onclick = () => {
+        const n = document.getElementById('birthday-name').value.trim();
+        const d = document.getElementById('birthday-date').value;
+        if (n && d && currentUser) {
+            db.collection("birthdays").add({
+                name: n, date: d, userId: currentUser.uid, createdAt: Date.now()
+            }).then(() => {
+                showToast("Anniversaire enregistré ! 🎂");
+                document.getElementById('birthday-modal').style.display = 'none';
+            });
+        }
+    };
+}
+
 // Clic extérieur pour fermer les modales
 window.onclick = (e) => { 
     if(e.target.classList && e.target.classList.contains('modal')) { 
