@@ -203,8 +203,7 @@ function runNotificationEngine() {
              let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
              if (!notifs[key]) { 
                  sendNotification("🎂 Joyeux Anniversaire !", `C'est l'anniversaire de ${b.name} aujourd'hui !`); 
-                 notifs[key] = true; 
-                 localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); 
+                 notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); 
              }
         });
 
@@ -214,8 +213,7 @@ function runNotificationEngine() {
              let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
              if (!notifs[key]) { 
                  sendNotification("🎁 Bientôt un anniversaire", `C'est l'anniversaire de ${b.name} demain !`); 
-                 notifs[key] = true; 
-                 localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); 
+                 notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); 
              }
         });
 
@@ -226,8 +224,7 @@ function runNotificationEngine() {
                  let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
                  if (!notifs[key]) { 
                      sendNotification("🗓️ Anniversaires du mois", `Il y a ${thisMonthBirthdays.length} anniversaire(s) prévu(s) ce mois-ci.`); 
-                     notifs[key] = true; 
-                     localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); 
+                     notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); 
                  }
              }
         }
@@ -239,8 +236,7 @@ function runNotificationEngine() {
         if (!notifs[key]) {
             const activeTasksCount = tasks.filter(t => !t.completed).length;
             sendNotification("📋 LIST'ME : Récap de ta semaine", activeTasksCount > 0 ? `Tu as ${activeTasksCount} tâches prévues cette semaine.` : "Aucune tâche critique de planifiée.");
-            notifs[key] = true; 
-            localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs));
+            notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs));
         }
     }
 
@@ -274,8 +270,7 @@ function runNotificationEngine() {
             let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
             if (!notifs[key]) { 
                 sendNotification("⏰ Rappel : C'est pour demain !", `Ne pas oublier : "${t.name}" prévu demain.`); 
-                notifs[key] = true; 
-                localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); 
+                notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); 
             }
         }
 
@@ -291,8 +286,7 @@ function runNotificationEngine() {
                     let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {};
                     if (!notifs[key]) { 
                         sendNotification(`🔔 Rappel : ${t.name}`, `Commence dans ${r} minutes.`); 
-                        notifs[key] = true; 
-                        localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); 
+                        notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); 
                     }
                 }
             });
@@ -304,7 +298,11 @@ function runNotificationEngine() {
 setInterval(runNotificationEngine, 30000);
 
 function requestNotificationPermission() { 
-    if ("Notification" in window) Notification.requestPermission(); 
+    try {
+        if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") { 
+            Notification.requestPermission().catch(e => console.warn("Notif bloquée", e)); 
+        }
+    } catch(e) { console.warn(e); }
 }
 
 function sendNotification(title, body) {
@@ -339,28 +337,31 @@ function setSelectedRemindersToBadges(remindersArray) {
     }); 
 }
 
-// --- AUTH & SYNC ---
+// --- AUTH & SYNC SÉCURISÉ ---
 auth.onAuthStateChanged((user) => {
     if (user) {
         currentUser = user; 
         document.getElementById('main-nav').style.display = 'flex'; 
-        document.getElementById('profile-user-email').innerText = user.email; 
+        if(document.getElementById('profile-user-email')) document.getElementById('profile-user-email').innerText = user.email || ""; 
+        
         requestNotificationPermission();
         
         db.collection("users").doc(user.uid).get().then((doc) => {
-            let data = doc.exists ? doc.data() : {};
-            userNickname = data.nickname || "";
-            if(document.getElementById('profile-nickname')) document.getElementById('profile-nickname').value = userNickname;
-            
-            let myCode = data.shareCode;
-            if(!myCode) {
-                myCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-                db.collection("users").doc(user.uid).set({shareCode: myCode, sharedWith: []}, {merge: true});
-            }
-            if(document.getElementById('my-share-code')) document.getElementById('my-share-code').innerText = myCode;
+            try {
+                let data = doc.exists ? doc.data() : {};
+                userNickname = data.nickname || "";
+                if(document.getElementById('profile-nickname')) document.getElementById('profile-nickname').value = userNickname;
+                
+                let myCode = data.shareCode;
+                if(!myCode) {
+                    myCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    db.collection("users").doc(user.uid).set({shareCode: myCode, sharedWith: []}, {merge: true});
+                }
+                if(document.getElementById('my-share-code')) document.getElementById('my-share-code').innerText = myCode;
 
-            friends = data.following || [];
-            renderFriendsList();
+                friends = data.following || [];
+                renderFriendsList();
+            } catch (e) { console.error(e); }
 
             startRealtimeSync(user.uid); 
             showPage('tasks');
@@ -455,14 +456,8 @@ function autoSaveNickname() {
     } 
 }
 
-function openShareModal() { 
-    document.getElementById('share-modal').style.display = 'flex'; 
-}
-
-function copyShareCode() { 
-    const code = document.getElementById('my-share-code').innerText; 
-    navigator.clipboard.writeText(code).then(() => showToast("Code copié ! 📋")); 
-}
+function openShareModal() { document.getElementById('share-modal').style.display = 'flex'; }
+function copyShareCode() { const code = document.getElementById('my-share-code').innerText; navigator.clipboard.writeText(code).then(() => showToast("Code copié ! 📋")); }
 
 function renderFriendsList() { 
     const container = document.getElementById('friends-list-container'); 
