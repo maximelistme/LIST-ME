@@ -15,8 +15,10 @@ const db = firebase.firestore(), auth = firebase.auth();
 // --- VARIABLES D'ÉTAT LOCALES ---
 let tasks = [], sharedTasks = [], dailyTodo = [], weeklyTodo = [], routineTodo = [], birthdays = [];
 let shoppingItems = [], sharedShoppingItems = [];
+let customShoppingCards = []; // Les cartes personnalisées de l'utilisateur
 let friends = [], shoppingFriends = []; 
 let friendUnsubscribes = {}, shoppingFriendUnsubscribes = {};
+let unsubscribeUser;
 let currentUser = null, userNickname = "", hasShownWelcomeThisSession = false, taskSubView = "active"; 
 let unsubscribeTasks, unsubscribeDaily, unsubscribeWeekly, unsubscribeRoutine, unsubscribeBirthdays, unsubscribeShopping; 
 
@@ -28,7 +30,7 @@ const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 const dayInitials = ["D", "L", "M", "M", "J", "V", "S"], dayNamesFr = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 document.body.className = `theme-${currentTheme}`;
 
-// --- DICTIONNAIRE DES COURSES ---
+// --- DICTIONNAIRE DES COURSES DE BASE ---
 const foodCategories = {
     "🥩 Viandes & Poissons": {
         "Volailles": ["Filet de poulet", "Poulet entier", "Escalope de dinde"],
@@ -89,12 +91,14 @@ function switchTaskSubView(view) {
     renderTasks();
 }
 
-// --- LOGIQUE DES COURSES ---
+// --- LOGIQUE DES COURSES & CARTES CUSTOM ---
 function renderShoppingCategories() {
     const container = document.getElementById('shopping-categories');
     const breadcrumb = document.getElementById('shopping-breadcrumb');
     if(!container || !breadcrumb) return;
     container.innerHTML = '';
+
+    const currentPathStr = currentShoppingPath.join('/');
 
     if (currentShoppingPath.length === 0) {
         breadcrumb.innerText = 'Rayons';
@@ -102,31 +106,121 @@ function renderShoppingCategories() {
         breadcrumb.innerText = currentShoppingPath[currentShoppingPath.length - 1];
     }
 
-    // La carte de retour prend toute la largeur (grid-column: 1 / -1)
+    // Boutons de navigation (Retour + Créer une carte)
     if (currentShoppingPath.length > 0) {
         container.innerHTML += `<div onclick="shoppingNavigateBack()" style="grid-column: 1 / -1; background:rgba(128,128,128,0.1); color:var(--text-color); padding:12px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; border: 1px dashed rgba(128,128,128,0.3);">⬅️ Retour</div>`;
     }
+    container.innerHTML += `<div onclick="openCustomCardModal()" style="grid-column: 1 / -1; background:var(--primary); color:white; padding:10px; border-radius:20px; text-align:center; font-weight:bold; cursor:pointer; width: 70%; margin: 0 auto 10px auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);">+ Nouvelle Carte</div>`;
 
+    // Fusion de la base de données par défaut + cartes perso de l'utilisateur
+    let defaultFolders = [], defaultProducts = [];
     let currentObj = foodCategories;
-    for (let step of currentShoppingPath) { currentObj = currentObj[step]; }
+    let validDefaultPath = true;
 
-    if (Array.isArray(currentObj)) {
-        currentObj.forEach(product => {
-            container.innerHTML += `<div onclick="openShoppingItemModal('${product}')" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${product}</div>`;
-        });
-    } else {
-        Object.keys(currentObj).forEach(cat => {
-            container.innerHTML += `<div onclick="shoppingNavigateTo('${cat}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1);">${cat}</div>`;
-        });
+    for (let step of currentShoppingPath) {
+        if (currentObj && currentObj[step]) { currentObj = currentObj[step]; } 
+        else { validDefaultPath = false; break; }
     }
+
+    if (validDefaultPath && currentObj) {
+        if (Array.isArray(currentObj)) defaultProducts = currentObj;
+        else defaultFolders = Object.keys(currentObj);
+    }
+
+    const customFolders = customShoppingCards.filter(c => c.path === currentPathStr && c.type === 'folder');
+    const customProducts = customShoppingCards.filter(c => c.path === currentPathStr && c.type === 'product');
+
+    // Affichage des Dossiers
+    defaultFolders.forEach(cat => {
+        container.innerHTML += `<div onclick="shoppingNavigateTo('${cat}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1);">${cat}</div>`;
+    });
+    customFolders.forEach(cat => {
+        container.innerHTML += `<div onclick="shoppingNavigateTo('${cat.name}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1); border: 2px dashed rgba(255,255,255,0.4);">${cat.name}</div>`;
+    });
+
+    // Affichage des Produits finaux
+    defaultProducts.forEach(product => {
+        container.innerHTML += `<div onclick="openShoppingItemModal('${product}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${product}</div>`;
+    });
+    customProducts.forEach(product => {
+        container.innerHTML += `<div onclick="openShoppingItemModal('${product.id}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:2px dashed var(--primary); transition: transform 0.2s;">+ ${product.name}</div>`;
+    });
 }
 
 function shoppingNavigateTo(cat) { currentShoppingPath.push(cat); renderShoppingCategories(); }
 function shoppingNavigateBack() { currentShoppingPath.pop(); renderShoppingCategories(); }
 
+function toggleCustomCardUnits() {
+    const type = document.getElementById('custom-card-type').value;
+    document.getElementById('custom-card-units-section').style.display = type === 'product' ? 'block' : 'none';
+}
+
+function openCustomCardModal() {
+    document.getElementById('custom-card-name').value = '';
+    document.getElementById('custom-card-type').value = 'folder';
+    toggleCustomCardUnits();
+    document.getElementById('custom-card-modal').style.display = 'flex';
+}
+
+function saveCustomCard() {
+    const type = document.getElementById('custom-card-type').value;
+    const name = document.getElementById('custom-card-name').value.trim();
+    if (!name || !currentUser) return;
+
+    let units = [];
+    if (type === 'product') {
+        document.querySelectorAll('.custom-unit-cb:checked').forEach(cb => {
+            units.push({ v: cb.value, l: cb.parentElement.innerText.trim() });
+        });
+        if (units.length === 0) units.push({ v: "", l: "Pièce(s)" }); 
+    }
+
+    const newCard = {
+        id: Date.now().toString(),
+        path: currentShoppingPath.join('/'),
+        type: type,
+        name: name,
+        units: units
+    };
+
+    customShoppingCards.push(newCard);
+    db.collection("users").doc(currentUser.uid).update({ customCards: customShoppingCards }).then(() => {
+        showToast("Carte créée ! ✨");
+        document.getElementById('custom-card-modal').style.display = 'none';
+        renderShoppingCategories();
+    });
+}
+
 let tempShoppingProduct = "";
 
-function openShoppingItemModal(productName) {
+function openShoppingItemModal(identifier, isCustom) {
+    let productName = identifier;
+    let units = [];
+
+    if (isCustom) {
+        const customItem = customShoppingCards.find(c => c.id === identifier);
+        if (!customItem) return;
+        productName = customItem.name;
+        units = customItem.units;
+    } else {
+        // Logique "Intelligente" pour les unités des produits de base
+        let mainCat = currentShoppingPath.length > 0 ? currentShoppingPath[0] : "";
+        let pNameLower = productName.toLowerCase();
+
+        units.push({v: "", l: "Pièce(s)"});
+
+        if (pNameLower.includes("papier") || pNameLower.includes("sopalin")) {
+            units.push({v: "Rouleau", l: "Rouleau(x)"}, {v: "Pack", l: "Pack(s)"});
+        } else if (pNameLower.includes("lait ") || pNameLower.includes("douche") || pNameLower.includes("shampoing") || pNameLower.includes("vaisselle") || pNameLower.includes("lessive") || pNameLower.includes("eau") || pNameLower.includes("jus")) {
+            units.push({v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"});
+        } else if (mainCat.includes("Viandes") || mainCat.includes("Légumes") || mainCat.includes("Laitages")) {
+            units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"});
+            if (mainCat.includes("Légumes")) units.push({v: "Filet", l: "Filet(s)"}, {v: "Sachet", l: "Sachet(s)"});
+        } else {
+            units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"}, {v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"}, {v: "Boîte", l: "Boîte(s)"});
+        }
+    }
+
     tempShoppingProduct = productName;
     document.getElementById('shopping-modal-title').innerText = productName;
     document.getElementById('shopping-qty').value = "1";
@@ -134,20 +228,6 @@ function openShoppingItemModal(productName) {
     const unitSelect = document.getElementById('shopping-unit');
     unitSelect.innerHTML = ''; 
     
-    let mainCat = currentShoppingPath.length > 0 ? currentShoppingPath[0] : "";
-    let units = [{v: "", l: "Pièce(s)"}]; 
-    
-    if (mainCat.includes("Viandes") || mainCat.includes("Légumes")) {
-        units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"});
-        if (mainCat.includes("Légumes")) units.push({v: "Filet", l: "Filet(s)"}, {v: "Sachet", l: "Sachet(s)"});
-    } else if (mainCat.includes("Laitages")) {
-        units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"}, {v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"});
-    } else if (mainCat.includes("Entretien")) {
-        units.push({v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"}, {v: "Rouleau", l: "Rouleau(x)"});
-    } else {
-        units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"}, {v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"}, {v: "Boîte", l: "Boîte(s)"});
-    }
-
     units.forEach(u => {
         let opt = document.createElement('option');
         opt.value = u.v; opt.innerText = u.l;
@@ -156,7 +236,7 @@ function openShoppingItemModal(productName) {
 
     document.getElementById('shopping-item-modal').style.display = 'flex';
     
-    // Réinitialise la navigation instantanément en arrière-plan
+    // Réinitialise la navigation instantanément en arrière-plan comme demandé
     currentShoppingPath = [];
     renderShoppingCategories();
 }
@@ -200,10 +280,10 @@ function renderShoppingList() {
         const ownerTag = item.ownerName ? ` <small style="opacity:0.5; font-style:italic;">(par ${item.ownerName})</small>` : '';
         const d = document.createElement('div');
         d.className = `task-card`; 
-        d.style.borderLeft = "6px solid var(--primary)"; // Ajout de la couleur sur la bordure gauche
+        d.style.borderLeft = "6px solid var(--primary)"; 
         d.innerHTML = `
-            <div style="flex:1; display:flex; align-items:center; min-width:0; cursor:pointer;" onclick="toggleShoppingCheck('${item.id}', false)">
-                <div style="width:20px; height:20px; border:2px solid var(--primary); border-radius:5px; margin-right:10px;"></div>
+            <div style="flex:1; display:flex; align-items:center; min-width:0;">
+                <div onclick="toggleShoppingCheck('${item.id}', false)" style="width:20px; height:20px; border:2px solid var(--primary); border-radius:5px; margin-right:10px; cursor:pointer;"></div>
                 <div style="flex:1;">
                     <strong style="display:block;">${item.name} ${ownerTag}</strong>
                     <small style="color:var(--primary); font-weight:bold;">${item.info}</small>
@@ -224,8 +304,8 @@ function renderShoppingList() {
         const d = document.createElement('div');
         d.className = `task-card completed-bubble`; 
         d.innerHTML = `
-            <div style="flex:1; display:flex; align-items:center; min-width:0; cursor:pointer;" onclick="toggleShoppingCheck('${item.id}', true)">
-                <div style="width:20px; height:20px; background:var(--success); border-radius:5px; margin-right:10px; display:flex; align-items:center; justify-content:center; color:white; font-size:0.8rem;">✓</div>
+            <div style="flex:1; display:flex; align-items:center; min-width:0;">
+                <div onclick="toggleShoppingCheck('${item.id}', true)" style="width:20px; height:20px; background:var(--success); border-radius:5px; margin-right:10px; display:flex; align-items:center; justify-content:center; color:white; font-size:0.8rem; cursor:pointer;">✓</div>
                 <div style="flex:1; text-decoration:line-through; opacity:0.6;">
                     <strong style="display:block;">${item.name} ${ownerTag}</strong>
                     <small>${item.info}</small>
@@ -271,20 +351,27 @@ function setSelectedRemindersToBadges(remindersArray) { document.querySelectorAl
 auth.onAuthStateChanged((user) => {
     if (user) {
         currentUser = user; document.getElementById('main-nav').style.display = 'flex'; if(document.getElementById('profile-user-email')) document.getElementById('profile-user-email').innerText = user.email || ""; requestNotificationPermission();
-        db.collection("users").doc(user.uid).get().then((doc) => {
+        
+        unsubscribeUser = db.collection("users").doc(user.uid).onSnapshot((doc) => {
             try {
                 let data = doc.exists ? doc.data() : {};
                 userNickname = data.nickname || "";
                 if(document.getElementById('profile-nickname')) document.getElementById('profile-nickname').value = userNickname;
+                
+                customShoppingCards = data.customCards || []; // Charge les cartes perso
+                
                 let myCode = data.shareCode;
                 if(!myCode) { myCode = Math.random().toString(36).substring(2, 8).toUpperCase(); db.collection("users").doc(user.uid).set({shareCode: myCode, sharedWith: []}, {merge: true}); }
                 if(document.getElementById('my-share-code')) document.getElementById('my-share-code').innerText = myCode;
                 
                 friends = data.following || [];
                 shoppingFriends = data.shoppingFollowing || []; 
+                
+                if(document.getElementById('shopping-page').style.display === 'block') renderShoppingCategories();
             } catch (e) { console.error(e); }
-            startRealtimeSync(user.uid); showPage('tasks');
-        }).catch(() => { startRealtimeSync(user.uid); showPage('tasks'); });
+        });
+
+        startRealtimeSync(user.uid); showPage('tasks');
     } else {
         currentUser = null; userNickname = ""; hasShownWelcomeThisSession = false; document.getElementById('main-nav').style.display = 'none'; stopRealtimeSync(); document.querySelectorAll('main > section').forEach(s => s.style.display = 'none'); document.getElementById('auth-page').style.display = 'block';
     }
@@ -315,7 +402,7 @@ function startFriendSync(fUid, fName, mode) {
 }
 
 function stopRealtimeSync() { 
-    if (unsubscribeTasks) unsubscribeTasks(); if (unsubscribeDaily) unsubscribeDaily(); if (unsubscribeWeekly) unsubscribeWeekly(); if (unsubscribeRoutine) unsubscribeRoutine(); if (unsubscribeBirthdays) unsubscribeBirthdays(); if(unsubscribeShopping) unsubscribeShopping();
+    if (unsubscribeTasks) unsubscribeTasks(); if (unsubscribeDaily) unsubscribeDaily(); if (unsubscribeWeekly) unsubscribeWeekly(); if (unsubscribeRoutine) unsubscribeRoutine(); if (unsubscribeBirthdays) unsubscribeBirthdays(); if(unsubscribeShopping) unsubscribeShopping(); if(unsubscribeUser) unsubscribeUser();
     Object.values(friendUnsubscribes).forEach(u => u()); friendUnsubscribes = {};
     Object.values(shoppingFriendUnsubscribes).forEach(u => u()); shoppingFriendUnsubscribes = {};
     tasks = []; sharedTasks = []; dailyTodo = []; weeklyTodo = []; routineTodo = []; birthdays = []; friends = []; shoppingItems = []; sharedShoppingItems = []; shoppingFriends = [];
@@ -444,6 +531,7 @@ window.onclick = (e) => {
         if(document.getElementById('birthday-modal')) document.getElementById('birthday-modal').style.display = 'none'; 
         if(document.getElementById('share-modal')) document.getElementById('share-modal').style.display = 'none'; 
         if(document.getElementById('shopping-item-modal')) document.getElementById('shopping-item-modal').style.display = 'none'; 
+        if(document.getElementById('custom-card-modal')) document.getElementById('custom-card-modal').style.display = 'none'; 
     } 
 };
 
