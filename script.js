@@ -459,10 +459,22 @@ function autoSaveNickname() {
 function openShareModal() { document.getElementById('share-modal').style.display = 'flex'; }
 function copyShareCode() { const code = document.getElementById('my-share-code').innerText; navigator.clipboard.writeText(code).then(() => showToast("Code copié ! 📋")); }
 
+// --- AFFICHAGE DE LA LISTE D'AMIS LIES (Amélioré avec bouton "Retirer") ---
 function renderFriendsList() { 
     const container = document.getElementById('friends-list-container'); 
     if(!container) return; 
-    container.innerHTML = friends.map(f => `<span class="friend-tag">${f.nickname} <span onclick="removeFriend('${f.uid}')" style="cursor:pointer; color:var(--danger); margin-left:5px;">×</span></span>`).join(''); 
+    
+    if (friends.length === 0) {
+        container.innerHTML = "<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; margin-top: 10px; text-align: center; width: 100%;'>Aucun agenda lié pour le moment.</p>";
+        return;
+    }
+    
+    container.innerHTML = friends.map(f => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; margin-top:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;">
+            <span style="font-weight:bold; color:var(--primary-dark);">👤 ${f.nickname}</span>
+            <button onclick="removeFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:bold;">Retirer</button>
+        </div>
+    `).join(''); 
 }
 
 function removeFriend(fUid) { 
@@ -599,14 +611,13 @@ function renderTasks() {
         if (t.completed && taskSubView === "active" && !separatorDrawn) { 
             const separator = document.createElement('div'); separator.className = 'task-section-separator'; separator.innerHTML = '<span>Tâches terminées</span>'; 
             c.appendChild(separator); separatorDrawn = true; 
-            lastDateRendered = null; // Réinitialise pour les terminées
+            lastDateRendered = null; 
         } 
 
         let ghosts = Array.isArray(t.duplicateDays) ? t.duplicateDays : []; 
         const isMultiDate = (!t.completed && ghosts.length > 0); 
         const displayDateStr = t.currentDisplayDate || t.date, displayTimeStr = t.currentDisplayTime || t.time || "", displayDateFR = displayDateStr ? displayDateStr.split('-').reverse().join('/') : ''; 
 
-        // --- SÉPARATEUR DE DATE ---
         if (isChronoSort && displayDateStr !== lastDateRendered) {
             if (!t.completed || taskSubView === "archive") {
                 const dateSep = document.createElement('div');
