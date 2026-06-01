@@ -31,6 +31,7 @@
     </nav>
 
     <main id="app">
+        <!-- ONGLET : AUTHENTIFICATION -->
         <section id="auth-page">
             <div class="header-action">
                 <h2 id="auth-title">Connexion</h2>
@@ -46,6 +47,7 @@
             </div>
         </section>
 
+        <!-- ONGLET : TÂCHES -->
         <section id="tasks-page" style="display:none;">
             <div class="header-action header-centered" style="padding: 10px 15px; gap: 15px;">
                 <button id="sub-btn-active-tasks" class="sub-menu-tab active" onclick="switchTaskSubView('active')">Mes Tâches</button>
@@ -67,6 +69,7 @@
             <div id="task-list"></div>
         </section>
 
+        <!-- ONGLET : TO-DO LIST -->
         <section id="todo-page" style="display:none;">
             <div class="calendar-nav">
                 <button id="btn-daily" class="bubble active" onclick="setTodoMode('daily')">Journalier</button>
@@ -77,6 +80,7 @@
             <div id="todo-content"></div>
         </section>
 
+        <!-- ONGLET : CALENDRIER -->
         <section id="calendar-page" style="display:none;">
             <div class="calendar-nav">
                 <button id="btn-year" class="bubble" onclick="setViewState('year')">Année</button>
@@ -97,6 +101,7 @@
             </div>
         </section>
 
+        <!-- ONGLET : COURSES 🛒 -->
         <section id="shopping-page" style="display:none;">
             <div class="header-action header-centered" style="margin-bottom: 15px;">
                 <h2>Market</h2>
@@ -104,15 +109,18 @@
             
             <div id="shopping-breadcrumb" style="margin-bottom: 15px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; font-weight: bold; color: var(--primary-dark);"></div>
             
+            <!-- Zone des cartes de catégories -->
             <div id="shopping-categories" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px;"></div>
             
             <div class="header-action header-centered" style="margin-top: 30px; margin-bottom: 15px;">
                 <h2>Ma Liste de Courses</h2>
             </div>
             
+            <!-- Zone de la liste générée -->
             <div id="shopping-list-content"></div>
         </section>
 
+        <!-- ONGLET : PROFIL -->
         <section id="profile-page" style="display:none;">
             <div class="header-action header-centered"><h2>Mon Profil</h2></div>
             <div class="profile-card">
@@ -137,6 +145,7 @@
 
     <div id="toast-notification" class="toast-hidden"></div>
 
+    <!-- MODAL WELCOME, TASKS, TODO, BIRTHDAY, GHOST -->
     <div id="welcome-modal" class="modal modal-center" style="z-index: 10001;"><div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;"><h3 id="welcome-message-text" style="color: var(--primary-dark); text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3><div id="today-summary-zone"></div><button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn-secondary btn-validated-click" style="margin-top: 15px; width: 100%;">C'est parti !</button></div></div>
     
     <div id="task-modal" class="modal modal-center"><div class="modal-content content-center"><h3 id="modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">Nouvelle Tâche</h3><label>Nom de la tâche</label><input type="text" id="task-name" placeholder="Ex: Aller courir..."><label style="margin-top: 5px;">Descriptif (Optionnel)</label><textarea id="task-desc" placeholder="Détails, notes, adresse..." style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; min-height: 80px; resize: vertical; font-family: inherit; margin-bottom: 5px;"></textarea><div style="display: flex; gap: 15px; width: 100%; margin-top: 5px;"><div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><label id="date-input-label">Date</label><input type="date" id="task-date"></div><div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><label>Heure</label><div class="custom-time-container"><input type="number" id="task-time-h" placeholder="-- " min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('task-time-m').focus(); }"><span style="font-weight:bold; opacity:0.5;">:</span><input type="number" id="task-time-m" placeholder="-- " min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);"></div></div></div><div id="duplicate-dates-tags" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: -5px;"></div><label style="margin-top: 5px;">Rappels de notification</label><div class="reminder-badges-container"><div class="reminder-badge" data-value="5">5 min</div><div class="reminder-badge" data-value="15">15 min</div><div class="reminder-badge" data-value="60">1h</div></div><label style="margin-top: 5px;">Importance</label><select id="task-importance"><option value="high">Haute</option><option value="medium">Moyenne</option><option value="low">Faible</option></select><div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;"><button id="save-task" class="btn-primary btn-validated-click" style="flex:1;">Enregistrer</button><button id="close-modal" class="btn-secondary" style="flex:1;">Annuler</button></div></div></div>
@@ -147,6 +156,7 @@
 
     <div id="calendar-day-modal" class="modal modal-center"><div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto;"><h3 id="cal-modal-date-title" style="color: var(--primary); text-align: center; margin-bottom: 5px;"></h3><div id="cal-modal-tasks-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;"></div><button onclick="document.getElementById('calendar-day-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button></div></div>
 
+    <!-- MODAL : AJOUT PRODUIT COURSES -->
     <div id="shopping-item-modal" class="modal modal-center">
         <div class="modal-content content-center">
             <h3 id="shopping-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;"></h3>
@@ -159,31 +169,38 @@
                 <div style="flex: 1.5;">
                     <label>Unité / Poids</label>
                     <select id="shopping-unit" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%;">
-                        </select>
+                        <!-- Rempli dynamiquement par JS -->
+                    </select>
                 </div>
             </div>
 
             <div class="modal-buttons" style="display:flex; gap:10px; margin-top:15px;">
-                <button onclick="saveShoppingItem()" class="btn-primary btn-validated-click" style="flex:1;">Ajouter au panier</button>
+                <button onclick="saveShoppingItem()" class="btn-primary btn-validated-click" style="flex:1;">Ajouter</button>
                 <button onclick="document.getElementById('shopping-item-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
             </div>
         </div>
     </div>
 
+    <!-- MODAL : CREATION CARTE PERSONNALISÉE -->
     <div id="custom-card-modal" class="modal modal-center">
         <div class="modal-content content-center">
             <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Nouvelle Carte ✏️</h3>
             
-            <label>Type de carte</label>
-            <select id="custom-card-type" onchange="toggleCustomCardUnits()" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; margin-bottom: 10px;">
-                <option value="folder">Catégorie (Dossier)</option>
-                <option value="product">Produit Final</option>
+            <label>Rayon d'appartenance</label>
+            <select id="custom-card-category" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; margin-bottom: 10px;">
+                <option value="🥩 Viandes">🥩 Viandes</option>
+                <option value="🐟 Poissons">🐟 Poissons</option>
+                <option value="🥦 Légumes & Fruits">🥦 Légumes & Fruits</option>
+                <option value="🧀 Laitages">🧀 Laitages</option>
+                <option value="🍝 Épicerie Salée">🍝 Épicerie Salée</option>
+                <option value="🍪 Épicerie Sucrée">🍪 Épicerie Sucrée</option>
+                <option value="🧻 Entretien & Hygiène">🧻 Entretien & Hygiène</option>
             </select>
 
-            <label>Nom de la carte</label>
-            <input type="text" id="custom-card-name" placeholder="Ex: Céréales, Épices...">
+            <label>Nom du produit</label>
+            <input type="text" id="custom-card-name" placeholder="Ex: Grains de poivre, Steaks végé...">
 
-            <div id="custom-card-units-section" style="display:none; margin-top: 10px;">
+            <div id="custom-card-units-section" style="margin-top: 10px;">
                 <label>Unités autorisées (cochez les choix)</label>
                 <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; background: rgba(128,128,128,0.05); padding: 10px; border-radius: 10px;">
                     <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" class="custom-unit-cb" value="" checked> Pièce(s)</label>
@@ -204,6 +221,7 @@
         </div>
     </div>
 
+    <!-- MODAL PARTAGE DYNAMIQUE -->
     <div id="share-modal" class="modal modal-center" style="justify-content: center; align-items: center; z-index: 10005;">
         <div class="modal-content content-center">
             <h3 id="share-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Partage</h3>
@@ -227,6 +245,7 @@
         </div>
     </div>
 
+    <!-- FIREBASE SCRIPTS -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
