@@ -15,7 +15,7 @@ const db = firebase.firestore(), auth = firebase.auth();
 // --- VARIABLES D'ÉTAT LOCALES ---
 let tasks = [], sharedTasks = [], dailyTodo = [], weeklyTodo = [], routineTodo = [], birthdays = [];
 let shoppingItems = [], sharedShoppingItems = [];
-let customShoppingCards = []; // Les cartes personnalisées de l'utilisateur
+let customShoppingCards = []; 
 let friends = [], shoppingFriends = []; 
 let friendUnsubscribes = {}, shoppingFriendUnsubscribes = {};
 let unsubscribeUser;
@@ -30,13 +30,15 @@ const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 const dayInitials = ["D", "L", "M", "M", "J", "V", "S"], dayNamesFr = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 document.body.className = `theme-${currentTheme}`;
 
-// --- DICTIONNAIRE DES COURSES DE BASE ---
+// --- DICTIONNAIRE DES COURSES (Scindé & Épuré) ---
 const foodCategories = {
-    "🥩 Viandes & Poissons": {
+    "🥩 Viandes": {
         "Volailles": ["Filet de poulet", "Poulet entier", "Escalope de dinde"],
-        "Bœuf & Porc": ["Steak haché", "Rôti de bœuf", "Côte de porc", "Lardons"],
-        "Poissons": ["Pavé de saumon", "Cabillaud", "Crevettes"]
+        "Bœuf & Porc": ["Steak haché", "Rôti de bœuf", "Côte de porc", "Lardons"]
     },
+    "🐟 Poissons": [
+        "Pavé de saumon", "Cabillaud", "Crevettes", "Filet de merlu"
+    ],
     "🥦 Légumes & Fruits": {
         "Légumes Frais": ["Carottes", "Tomates", "Pommes de terre", "Salade", "Oignons", "Courgettes"],
         "Fruits": ["Pommes", "Bananes", "Fraises", "Citrons", "Oranges"]
@@ -91,7 +93,7 @@ function switchTaskSubView(view) {
     renderTasks();
 }
 
-// --- LOGIQUE DES COURSES & CARTES CUSTOM ---
+// --- LOGIQUE DES COURSES & CARTES CUSTOM MÈRES ---
 function renderShoppingCategories() {
     const container = document.getElementById('shopping-categories');
     const breadcrumb = document.getElementById('shopping-breadcrumb');
@@ -100,19 +102,19 @@ function renderShoppingCategories() {
 
     const currentPathStr = currentShoppingPath.join('/');
 
+    // Nettoyage de l'en-tête selon ta demande
     if (currentShoppingPath.length === 0) {
-        breadcrumb.innerText = 'Rayons';
+        breadcrumb.innerText = '';
     } else {
         breadcrumb.innerText = currentShoppingPath[currentShoppingPath.length - 1];
     }
 
-    // Boutons de navigation (Retour + Créer une carte)
+    // Cartes de navigation
     if (currentShoppingPath.length > 0) {
         container.innerHTML += `<div onclick="shoppingNavigateBack()" style="grid-column: 1 / -1; background:rgba(128,128,128,0.1); color:var(--text-color); padding:12px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; border: 1px dashed rgba(128,128,128,0.3);">⬅️ Retour</div>`;
     }
     container.innerHTML += `<div onclick="openCustomCardModal()" style="grid-column: 1 / -1; background:var(--primary); color:white; padding:10px; border-radius:20px; text-align:center; font-weight:bold; cursor:pointer; width: 70%; margin: 0 auto 10px auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);">+ Nouvelle Carte</div>`;
 
-    // Fusion de la base de données par défaut + cartes perso de l'utilisateur
     let defaultFolders = [], defaultProducts = [];
     let currentObj = foodCategories;
     let validDefaultPath = true;
@@ -127,21 +129,20 @@ function renderShoppingCategories() {
         else defaultFolders = Object.keys(currentObj);
     }
 
-    const customFolders = customShoppingCards.filter(c => c.path === currentPathStr && c.type === 'folder');
-    const customProducts = customShoppingCards.filter(c => c.path === currentPathStr && c.type === 'product');
+    // Récupération des produits personnalisés créés pour ce chemin exact
+    const customProducts = customShoppingCards.filter(c => c.path === currentPathStr);
 
-    // Affichage des Dossiers
+    // Rendu des Dossiers de base
     defaultFolders.forEach(cat => {
         container.innerHTML += `<div onclick="shoppingNavigateTo('${cat}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1);">${cat}</div>`;
     });
-    customFolders.forEach(cat => {
-        container.innerHTML += `<div onclick="shoppingNavigateTo('${cat.name}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1); border: 2px dashed rgba(255,255,255,0.4);">${cat.name}</div>`;
-    });
 
-    // Affichage des Produits finaux
+    // Rendu des Produits finaux de base
     defaultProducts.forEach(product => {
         container.innerHTML += `<div onclick="openShoppingItemModal('${product}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${product}</div>`;
     });
+
+    // Rendu des Produits personnalisés
     customProducts.forEach(product => {
         container.innerHTML += `<div onclick="openShoppingItemModal('${product.id}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:2px dashed var(--primary); transition: transform 0.2s;">+ ${product.name}</div>`;
     });
@@ -150,42 +151,46 @@ function renderShoppingCategories() {
 function shoppingNavigateTo(cat) { currentShoppingPath.push(cat); renderShoppingCategories(); }
 function shoppingNavigateBack() { currentShoppingPath.pop(); renderShoppingCategories(); }
 
-function toggleCustomCardUnits() {
-    const type = document.getElementById('custom-card-type').value;
-    document.getElementById('custom-card-units-section').style.display = type === 'product' ? 'block' : 'none';
-}
-
 function openCustomCardModal() {
     document.getElementById('custom-card-name').value = '';
-    document.getElementById('custom-card-type').value = 'folder';
-    toggleCustomCardUnits();
+    // Pré-sélectionne le rayon actuel si on est déjà à l'intérieur
+    if (currentShoppingPath.length > 0) {
+        document.getElementById('custom-card-category').value = currentShoppingPath[0];
+    }
     document.getElementById('custom-card-modal').style.display = 'flex';
 }
 
 function saveCustomCard() {
-    const type = document.getElementById('custom-card-type').value;
+    const targetRayon = document.getElementById('custom-card-category').value;
     const name = document.getElementById('custom-card-name').value.trim();
     if (!name || !currentUser) return;
 
     let units = [];
-    if (type === 'product') {
-        document.querySelectorAll('.custom-unit-cb:checked').forEach(cb => {
-            units.push({ v: cb.value, l: cb.parentElement.innerText.trim() });
-        });
-        if (units.length === 0) units.push({ v: "", l: "Pièce(s)" }); 
+    document.querySelectorAll('.custom-unit-cb:checked').forEach(cb => {
+        units.push({ v: cb.value, l: cb.parentElement.innerText.trim() });
+    });
+    if (units.length === 0) units.push({ v: "", l: "Pièce(s)" }); 
+
+    // Détermination intelligente de l'emplacement cible
+    let calculatedPath = targetRayon;
+    if (targetRayon === "🥩 Viandes" && currentShoppingPath[1]) {
+        calculatedPath += "/" + currentShoppingPath[1];
+    } else if (targetRayon === "🥦 Légumes & Fruits" && currentShoppingPath[1]) {
+        calculatedPath += "/" + currentShoppingPath[1];
+    } else if (targetRayon === "🧀 Laitages" && currentShoppingPath[1]) {
+        calculatedPath += "/" + currentShoppingPath[1];
     }
 
     const newCard = {
         id: Date.now().toString(),
-        path: currentShoppingPath.join('/'),
-        type: type,
+        path: calculatedPath, // Enregistré au bon niveau de profondeur
         name: name,
         units: units
     };
 
     customShoppingCards.push(newCard);
     db.collection("users").doc(currentUser.uid).update({ customCards: customShoppingCards }).then(() => {
-        showToast("Carte créée ! ✨");
+        showToast("Produit créé avec succès ! ✨");
         document.getElementById('custom-card-modal').style.display = 'none';
         renderShoppingCategories();
     });
@@ -203,7 +208,6 @@ function openShoppingItemModal(identifier, isCustom) {
         productName = customItem.name;
         units = customItem.units;
     } else {
-        // Logique "Intelligente" pour les unités des produits de base
         let mainCat = currentShoppingPath.length > 0 ? currentShoppingPath[0] : "";
         let pNameLower = productName.toLowerCase();
 
@@ -213,7 +217,7 @@ function openShoppingItemModal(identifier, isCustom) {
             units.push({v: "Rouleau", l: "Rouleau(x)"}, {v: "Pack", l: "Pack(s)"});
         } else if (pNameLower.includes("lait ") || pNameLower.includes("douche") || pNameLower.includes("shampoing") || pNameLower.includes("vaisselle") || pNameLower.includes("lessive") || pNameLower.includes("eau") || pNameLower.includes("jus")) {
             units.push({v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"});
-        } else if (mainCat.includes("Viandes") || mainCat.includes("Légumes") || mainCat.includes("Laitages")) {
+        } else if (mainCat.includes("Viandes") || mainCat.includes("Poissons") || mainCat.includes("Légumes") || mainCat.includes("Laitages")) {
             units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"});
             if (mainCat.includes("Légumes")) units.push({v: "Filet", l: "Filet(s)"}, {v: "Sachet", l: "Sachet(s)"});
         } else {
@@ -236,7 +240,7 @@ function openShoppingItemModal(identifier, isCustom) {
 
     document.getElementById('shopping-item-modal').style.display = 'flex';
     
-    // Réinitialise la navigation instantanément en arrière-plan comme demandé
+    // Réinitialise la vue principale des rayons en tâche de fond
     currentShoppingPath = [];
     renderShoppingCategories();
 }
@@ -358,7 +362,7 @@ auth.onAuthStateChanged((user) => {
                 userNickname = data.nickname || "";
                 if(document.getElementById('profile-nickname')) document.getElementById('profile-nickname').value = userNickname;
                 
-                customShoppingCards = data.customCards || []; // Charge les cartes perso
+                customShoppingCards = data.customCards || []; 
                 
                 let myCode = data.shareCode;
                 if(!myCode) { myCode = Math.random().toString(36).substring(2, 8).toUpperCase(); db.collection("users").doc(user.uid).set({shareCode: myCode, sharedWith: []}, {merge: true}); }
