@@ -20,7 +20,7 @@ let friends = [], shoppingFriends = [];
 let friendUnsubscribes = {}, shoppingFriendUnsubscribes = {};
 let unsubscribeUser;
 let currentUser = null, userNickname = "", hasShownWelcomeThisSession = false, taskSubView = "active"; 
-let myAgendaCode = "", myShoppingCode = ""; // DEUX CODES DE PARTAGE DISTINCTS
+let myAgendaCode = "", myShoppingCode = ""; 
 let unsubscribeTasks, unsubscribeDaily, unsubscribeWeekly, unsubscribeRoutine, unsubscribeBirthdays, unsubscribeShopping; 
 
 let currentTheme = localStorage.getItem('listme_theme') || 'pink', viewState = 'day', todoMode = 'daily', editingId = null, editingTodoId = null; 
@@ -465,7 +465,15 @@ function renderShoppingList() {
     });
 }
 
-function toggleShoppingCheck(id, isCompleted) { db.collection("shopping").doc(id).update({ completed: !isCompleted }); }
+// LOGIQUE MISE A JOUR : Enregistre la date de validation
+function toggleShoppingCheck(id, isCompleted) { 
+    if(!isCompleted) {
+        db.collection("shopping").doc(id).update({ completed: true, completedAtStr: todayStr });
+    } else {
+        db.collection("shopping").doc(id).update({ completed: false, completedAtStr: firebase.firestore.FieldValue.delete() });
+    }
+}
+
 function deleteShoppingItem(id) { db.collection("shopping").doc(id).delete().then(() => showToast("Produit retiré !")); }
 
 // --- NOTIFS ET ARCHIVAGE ---
@@ -473,7 +481,16 @@ function processMidnightAutoArchive() {
     if(isArchiving || !currentUser) return; isArchiving = true;
     const today = new Date().toISOString().split('T')[0]; let operations = [];
     tasks.forEach(t => { if (t.completed) return; let ghosts = Array.isArray(t.duplicateDays) ? t.duplicateDays : []; ghosts = ghosts.map(g => typeof g === 'string' ? {date: g, time: t.time} : g); if (ghosts.length > 0) { let allOccurrences = [{date: t.date, time: t.time || ""}, ...ghosts]; allOccurrences.sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.time || "").localeCompare(b.time || "")); let pastDates = allOccurrences.filter(o => o.date < today); let remainingDates = allOccurrences.filter(o => o.date >= today); if (pastDates.length > 0) { pastDates.forEach(pastOcc => { operations.push(db.collection("tasks").add({ name: t.name, desc: t.desc || "", date: pastOcc.date, time: pastOcc.time, reminders: t.reminders || [], importance: t.importance, completed: true, completedAtStr: pastOcc.date, userId: t.userId, createdAt: t.createdAt || Date.now(), duplicateDays: [] })); }); if (remainingDates.length > 0) { let nextMain = remainingDates.shift(); operations.push(db.collection("tasks").doc(t.id).update({ date: nextMain.date, time: nextMain.time, duplicateDays: remainingDates })); } else { operations.push(db.collection("tasks").doc(t.id).delete()); } } } else { if (t.date < today) operations.push(db.collection("tasks").doc(t.id).update({ completed: true, completedAtStr: t.date })); } });
-    shoppingItems.forEach(item => { if(item.completed) { const itemDateStr = new Date(item.createdAt).toISOString().split('T')[0]; if(itemDateStr < today) operations.push(db.collection("shopping").doc(item.id).delete()); } });
+    
+    // LOGIQUE MISE A JOUR : Suppression le lendemain de la validation
+    shoppingItems.forEach(item => { 
+        if(item.completed) { 
+            let compDate = item.completedAtStr;
+            if(!compDate) { compDate = new Date(item.createdAt).toISOString().split('T')[0]; } // Sécurité pour les anciens produits
+            if(compDate < today) operations.push(db.collection("shopping").doc(item.id).delete()); 
+        } 
+    });
+    
     Promise.all(operations).then(() => { isArchiving = false; }).catch(() => { isArchiving = false; });
 }
 
