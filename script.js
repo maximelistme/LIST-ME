@@ -30,14 +30,18 @@ const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 const dayInitials = ["D", "L", "M", "M", "J", "V", "S"], dayNamesFr = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 document.body.className = `theme-${currentTheme}`;
 
-// --- DICTIONNAIRE DES COURSES ---
+// --- DICTIONNAIRE DES COURSES (Arborescence complète validée) ---
 const foodCategories = {
     "🥩 Viandes": {
-        "Volailles": ["Poulet", "Dinde", "Canard"],
-        "Bœuf": ["Steak haché", "Rôti de bœuf", "Bœuf bourguignon"],
-        "Porc": ["Côte de porc", "Lardons", "Rôti de porc"],
-        "Veau": ["Escalope de veau", "Rôti de veau"],
-        "Agneau": ["Côtelette d'agneau", "Gigot d'agneau"]
+        "Volailles": {
+            "Poulet": ["Entier", "Filet", "Cuisse", "Pilon", "Aiguillette"],
+            "Dinde": ["Escalope", "Filet", "Rôti", "Cuisse"],
+            "Canard": ["Magret", "Cuisse", "Entier", "Aiguillette"]
+        },
+        "Bœuf": ["Steak haché", "Entrecôte", "Faux-filet", "Bavette", "Onglet", "Rôti", "Paleron", "Macreuse"],
+        "Porc": ["Côtes", "Lardons", "Poitrine fumée", "Filet mignon", "Rôti", "Échine"],
+        "Veau": ["Escalope", "Rôti", "Paupiettes", "Côtes", "Tendron", "Épaule"],
+        "Agneau": ["Côtelettes", "Gigot", "Épaule", "Souris", "Collier"]
     },
     "🐟 Poissons": {
         "Poissons Frais": ["Saumon", "Cabillaud", "Merlu", "Dorade", "Thon"],
