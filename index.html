@@ -95,13 +95,17 @@
 
         <!-- ONGLET : COURSES 🛒 -->
         <section id="shopping-page" style="display:none;">
+            <div class="header-action header-centered" style="margin-bottom: 15px;">
+                <h2>Market</h2>
+            </div>
+            
             <div id="shopping-breadcrumb" style="margin-bottom: 15px; display: flex; align-items: center; font-size: 1.1rem;"></div>
             
             <!-- Zone des cartes de catégories -->
             <div id="shopping-categories" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px;"></div>
             
-            <div class="header-action header-centered" style="margin-bottom: 15px;">
-                <h3 style="color: var(--primary-dark);">Ma Liste de Courses</h3>
+            <div class="header-action header-centered" style="margin-top: 30px; margin-bottom: 15px;">
+                <h2>Ma Liste de Courses</h2>
             </div>
             
             <!-- Zone de la liste générée -->
@@ -133,7 +137,7 @@
 
     <div id="toast-notification" class="toast-hidden"></div>
 
-    <!-- MODAL WELCOME, TASKS, TODO, BIRTHDAY, GHOST (identiques) -->
+    <!-- MODAL WELCOME, TASKS, TODO, BIRTHDAY, GHOST -->
     <div id="welcome-modal" class="modal modal-center" style="z-index: 10001;"><div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;"><h3 id="welcome-message-text" style="color: var(--primary-dark); text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3><div id="today-summary-zone"></div><button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn-secondary btn-validated-click" style="margin-top: 15px; width: 100%;">C'est parti !</button></div></div>
     
     <div id="task-modal" class="modal modal-center"><div class="modal-content content-center"><h3 id="modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">Nouvelle Tâche</h3><label>Nom de la tâche</label><input type="text" id="task-name" placeholder="Ex: Aller courir..."><label style="margin-top: 5px;">Descriptif (Optionnel)</label><textarea id="task-desc" placeholder="Détails, notes, adresse..." style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; min-height: 80px; resize: vertical; font-family: inherit; margin-bottom: 5px;"></textarea><div style="display: flex; gap: 15px; width: 100%; margin-top: 5px;"><div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><label id="date-input-label">Date</label><input type="date" id="task-date"></div><div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><label>Heure</label><div class="custom-time-container"><input type="number" id="task-time-h" placeholder="-- " min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('task-time-m').focus(); }"><span style="font-weight:bold; opacity:0.5;">:</span><input type="number" id="task-time-m" placeholder="-- " min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);"></div></div></div><div id="duplicate-dates-tags" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: -5px;"></div><label style="margin-top: 5px;">Rappels de notification</label><div class="reminder-badges-container"><div class="reminder-badge" data-value="5">5 min</div><div class="reminder-badge" data-value="15">15 min</div><div class="reminder-badge" data-value="60">1h</div></div><label style="margin-top: 5px;">Importance</label><select id="task-importance"><option value="high">Haute</option><option value="medium">Moyenne</option><option value="low">Faible</option></select><div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;"><button id="save-task" class="btn-primary btn-validated-click" style="flex:1;">Enregistrer</button><button id="close-modal" class="btn-secondary" style="flex:1;">Annuler</button></div></div></div>
@@ -157,18 +161,13 @@
                 <div style="flex: 1.5;">
                     <label>Unité / Poids</label>
                     <select id="shopping-unit" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%;">
-                        <option value="">Pièce(s)</option>
-                        <option value="g">Grammes (g)</option>
-                        <option value="kg">Kilos (kg)</option>
-                        <option value="L">Litres (L)</option>
-                        <option value="cl">Centilitres (cl)</option>
-                        <option value="Pack">Pack(s)</option>
+                        <!-- Rempli dynamiquement par JS -->
                     </select>
                 </div>
             </div>
 
             <div class="modal-buttons" style="display:flex; gap:10px; margin-top:15px;">
-                <button onclick="saveShoppingItem()" class="btn-primary btn-validated-click" style="flex:1;">Ajouter au panier</button>
+                <button onclick="saveShoppingItem()" class="btn-primary btn-validated-click" style="flex:1;">Ajouter</button>
                 <button onclick="document.getElementById('shopping-item-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
             </div>
         </div>
