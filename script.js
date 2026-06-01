@@ -30,7 +30,7 @@ const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 const dayInitials = ["D", "L", "M", "M", "J", "V", "S"], dayNamesFr = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 document.body.className = `theme-${currentTheme}`;
 
-// --- DICTIONNAIRE DES COURSES (Arborescence complète et mise à jour des 20 Fruits & Légumes) ---
+// --- DICTIONNAIRE DES COURSES ---
 const foodCategories = {
     "🥩 Viandes": {
         "Volailles": {
@@ -66,24 +66,40 @@ const foodCategories = {
             "Pommes", "Bananes", "Oranges", "Citrons", "Kiwis", 
             "Poires", "Pêches", "Nectarines", "Abricots", "Melons", 
             "Pastèques", "Prunes", "Raisins", "Clémentines", "Pamplemousses", 
-            "Figues", "Abricots", "Mandarines"
+            "Figues", "Mandarines"
         ],
         "Fruits rouges": ["Fraises", "Framboises", "Myrtilles", "Mûres", "Cerises", "Groseilles", "Cassis"],
         "Fruits exotiques": ["Ananas", "Mangue", "Fruit de la passion", "Litchi", "Noix de coco", "Avocats", "Grenades", "Papayes", "Kaki"]
     },
     "🧀 Laitages": {
-        "Fromages": ["Emmental râpé", "Camembert", "Chèvre", "Raclette", "Mozzarella"],
+        "Fromages": [
+            "Emmental râpé", "Camembert", "Chèvre", "Raclette", "Mozzarella",
+            "Comté", "Roquefort", "Brie", "Coulommiers", "Reblochon", "Cantal", 
+            "Gouda", "Parmesan", "Feta", "Boursin", "Kiri", "Tartare", 
+            "Tomme de Savoie", "Saint-Nectaire", "Gruyère"
+        ],
         "Crèmerie": ["Lait demi-écrémé", "Beurre doux", "Beurre salé", "Crème fraîche", "Oeufs"],
         "Desserts": ["Yaourts nature", "Yaourts aux fruits", "Crèmes dessert"]
     },
     "🍝 Épicerie Salée": {
         "Féculents": ["Riz", "Lentilles", "Quinoa", "Semoule"],
-        "Pâtes": ["Coquillettes", "Spaghetti", "Penne", "Macaroni", "Tagliatelles", "Farfalle"],
+        "Pâtes": [
+            "Coquillettes", "Spaghetti", "Penne", "Macaroni", "Tagliatelles", 
+            "Farfalle", "Fusilli", "Nouilles", "Linguine", "Cannelloni", 
+            "Vermicelles", "Crozets", "Rigatoni", "Orecchiette", "Pappardelle"
+        ],
         "Conserves": ["Sauce tomate", "Haricots verts", "Thon en boîte", "Maïs"],
-        "Condiments": ["Huile d'olive", "Vinaigre", "Sel", "Poivre", "Moutarde", "Mayonnaise"]
+        "Condiments": [
+            "Huile d'olive", "Vinaigre", "Sel", "Poivre", "Moutarde", 
+            "Mayonnaise", "Ketchup", "Sauce Barbecue", "Sauce Burger", 
+            "Sauce Béarnaise", "Sauce Soja"
+        ]
     },
     "🥨 Apéritif": { 
-        "Chips & Snacks": ["Chips", "Cacahuètes", "Biscuits apéritifs", "Noix de cajou"],
+        "Chips & Snacks": [
+            "Chips", "Pringles", "Cacahuètes", "Pistaches", "Noix de cajou",
+            "Olives", "Biscuits apéritifs", "Chips paysannes", "Doritos", "Curly"
+        ],
         "Tartinables": ["Tapenade", "Guacamole", "Houmous"]
     },
     "🍪 Épicerie Sucrée": {
@@ -98,19 +114,49 @@ const foodCategories = {
     },
     "🥤 Boissons": {
         "Eaux": ["Eau plate", "Eau gazeuse"],
-        "Jus": ["Jus d'orange", "Jus de pomme", "Multifruits"],
-        "Sirops": ["Sirop de grenadine", "Sirop de menthe", "Sirop de fraise"],
-        "Sodas": ["Cola", "Limonade", "Thé glacé"]
+        "Jus": [
+            "Jus d'orange", "Jus de pomme", "Multifruits", "Jus de raisin", 
+            "Jus d'ananas", "Jus de pamplemousse", "Jus de tomate", 
+            "Jus de clémentine", "Jus de mandarine", "Jus de mangue", 
+            "Nectar d'abricot", "Nectar de poire", "Jus de grenade", "Jus de citron"
+        ],
+        "Sirops": [
+            "Sirop de grenadine", "Sirop de menthe", "Sirop de fraise", 
+            "Sirop de pêche", "Sirop de citron", "Sirop d'orgeat", 
+            "Sirop de cassis", "Sirop de framboise", "Sirop de cerise", 
+            "Sirop de kiwi", "Sirop de pamplemousse", "Sirop de menthe glaciale", 
+            "Sirop de violette"
+        ],
+        "Sodas": [
+            "Coca-Cola", "Limonade", "Ice Tea", "Orangina", "Fanta", 
+            "Oasis", "7Up", "Sprite", "Schweppes", "Red Bull"
+        ]
     },
     "🍷 Cave": {
         "Vins": ["Vin rouge", "Vin blanc", "Vin rosé"],
-        "Bières": ["Bière blonde", "Bière ambrée", "Pack de bières"],
-        "Spiritueux": ["Rhum", "Vodka", "Whisky", "Gin"]
+        "Bières": [
+            "Desperados", "Corona", "Skøll", "Bière blonde", 
+            "Bière blanche", "Bière brune", "Pack de bières"
+        ],
+        "Spiritueux": [
+            "Ricard", "Pastis", "Rhum", "Vodka", "Whisky", "Gin", 
+            "Tequila", "Get 27", "Baileys", "Cognac", "Martini"
+        ]
     },
     "🥖 Boulangerie": {
-        "Pains": ["Baguette", "Pain de mie", "Pain de campagne", "Pain complet"],
-        "Viennoiseries": ["Croissants", "Pains au chocolat", "Brioches"],
-        "Pâtisserie": ["Tarte aux pommes", "Éclair au chocolat", "Mille-feuille"],
+        "Pains": [
+            "Baguette", "Baguette tradition", "Pain de mie", "Pain de campagne", 
+            "Pain complet", "Pain aux céréales", "Pains Burger (Buns)", 
+            "Pains Pita", "Wraps"
+        ],
+        "Viennoiseries": [
+            "Croissants", "Pains au chocolat", "Brioches", "Chaussons aux pommes", 
+            "Pains aux raisins", "Chouquettes", "Pains au lait", "Croissants aux amandes"
+        ],
+        "Pâtisserie": [
+            "Tarte aux pommes", "Éclair au chocolat", "Mille-feuille", 
+            "Paris-Brest", "Flan parisien", "Religieuse", "Tarte au citron", "Fraisier"
+        ],
         "Aide à la pâtisserie": ["Farine", "Sucre", "Levure", "Extrait de vanille", "Pépites de chocolat"]
     },
     "🥓 Charcuterie": [
@@ -338,14 +384,6 @@ function saveShoppingItem() {
             showToast("Ajouté au panier ! 🛒");
             document.getElementById('shopping-item-modal').style.display = 'none';
         });
-    }
-}
-
-// --- FONCTIONS DE DÉFILEMENT (SCROLL) ---
-function scrollToShoppingList() {
-    const listHeader = document.getElementById('shopping-list-header');
-    if (listHeader) {
-        listHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
@@ -612,7 +650,7 @@ function openCalendarDayModal(day, monthName, year, totalDayTasks, currentFullDa
 
 // --- RENDER TODO ---
 function setTodoMode(m) { todoMode = m; renderTodo(); }
-function renderTodo() { const c = document.getElementById('todo-content'); if (!c) return; document.querySelectorAll('#todo-page .bubble').forEach(b => b.classList.remove('active')); if (todoMode === 'daily') document.getElementById('btn-daily').classList.add('active'); else if (todoMode === 'weekly') document.getElementById('btn-weekly').classList.add('active'); else if (todoMode === 'routine') document.getElementById('btn-routine').classList.add('active'); if(todoMode === 'daily') { document.getElementById('todo-today-date').innerText = new Date().toLocaleDateString('fr-FR', {weekday: 'long', day: 'numeric', month: 'long'}); c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container'); for (let h = 8; h <= 20; h++) { const currentHourStr = `${h.toString().padStart(2, '0')}:00`; let items = dailyTodo.filter(it => it.date === todayStr && parseInt(it.time.split(':')[0]) === h), weeklyItems = weeklyTodo.filter(it => parseInt(it.dayOfWeek) === currentDayOfWeek && parseInt(it.time.split(':')[0]) === h), routineItems = routineTodo.filter(it => parseInt(it.dayOfWeek) === currentDayOfWeek && parseInt(it.time.split(':')[0]) === h); let combinedItems = [...items, ...weeklyItems, ...routineItems]; combinedItems.sort((a,b) => a.time.localeCompare(b.time)); const hourCard = document.createElement('div'); hourCard.className = 'weekly-day-card'; hourCard.innerHTML = `<div class="weekly-day-header"><span class="weekly-day-title">${currentHourStr}</span><button onclick="openTodoModal('${h.toString().padStart(2,'0')}:00', false, 0, false)" class="weekly-add-btn">+</button></div><div class="weekly-subtasks">${combinedItems.map(it => { const isWeekly = it.hasOwnProperty('dayOfWeek') && !it.hasOwnProperty('isRoutine'), isRoutine = it.hasOwnProperty('isRoutine'); let checkFunc = `toggleTodo('${it.id}', ${it.completed})`, delFunc = `deleteDailyTodo('${it.id}')`, labelSuffix = ''; if (isWeekly) { checkFunc = `toggleWeeklyTodo('${it.id}', ${it.completed})`; delFunc = `deleteWeeklyTodo('${it.id}')`; labelSuffix = ' <small style="opacity:0.5;">(Hebdo)</small>'; } else if (isRoutine) { checkFunc = `toggleRoutineTodo('${it.id}', ${it.completed})`; delFunc = `deleteRoutineTodo('${it.id}')`; labelSuffix = ' <small style="opacity:0.5; color:var(--primary-dark);">(Type ⚙️)</small>'; } return `<div class="weekly-item"><span onclick="event.stopPropagation(); ${checkFunc}" style="cursor:pointer;" class="weekly-item-text ${it.completed ? 'todo-completed' : ''}"><b>${it.time}</b> : ${it.name}${labelSuffix}</span><div class="weekly-item-actions"><button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', ${(isWeekly || isRoutine)}, ${(isWeekly || isRoutine) ? it.dayOfWeek : 0}, ${isRoutine})" style="color:var(--primary);">✎</button><button onclick="${delFunc}" style="color:var(--danger);"></button></div></div>`; }).join('') || '<span class="empty-subtasks-msg">Aucun événement</span>'}</div>`; wc.appendChild(hourCard); } } else if (todoMode === 'weekly') { document.getElementById('todo-today-date').innerText = "Planification Hebdomadaire"; c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container'); const presidentialOrder = [1, 2, 3, 4, 5, 6, 0]; presidentialOrder.forEach(dayNum => { let combinedTasks = [...weeklyTodo.filter(it => parseInt(it.dayOfWeek) === dayNum), ...routineTodo.filter(it => parseInt(it.dayOfWeek) === dayNum)]; combinedTasks.sort((a,b) => a.time.localeCompare(b.time)); const dayCard = document.createElement('div'); dayCard.className = 'weekly-day-card'; dayCard.innerHTML = `<div class="weekly-day-header"><span class="weekly-day-title">${dayNamesFr[dayNum]}</span><button onclick="openTodoModal('12:00', true, ${dayNum}, false)" class="weekly-add-btn">+</button></div><div class="weekly-subtasks">${combinedTasks.map(it => { const isRoutine = it.hasOwnProperty('isRoutine') || routineTodo.some(r => r.id === it.id); const checkFunc = isRoutine ? `toggleRoutineTodo('${it.id}', ${it.completed})` : `toggleWeeklyTodo('${it.id}', ${it.completed})`, delFunc = isRoutine ? `deleteRoutineTodo('${it.id}')` : `deleteWeeklyTodo('${it.id}')`; return `<div class="weekly-item"><span onclick="${checkFunc}" style="cursor:pointer;" class="weekly-item-text ${it.completed ? 'todo-completed' : ''}"><b>${it.time}</b> : ${it.name} ${isRoutine ? '<small style="opacity:0.5; color:var(--primary-dark);">(Type ⚙️)</small>':''}</span><div class="weekly-item-actions"><button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, ${isRoutine})" style="color:var(--primary);">✎</button><button onclick="${delFunc}" style="color:var(--danger);">×</button></div></div>`; }).join('') || '<span class="empty-subtasks-msg">Aucune activité planifiée</span>'}</div>`; wc.appendChild(dayCard); }); } else if (todoMode === 'routine') { document.getElementById('todo-today-date').innerText = "Configuration de la Semaine Type ⚙️"; c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container'); const presidentialOrder = [1, 2, 3, 4, 5, 6, 0]; presidentialOrder.forEach(dayNum => { const dayTasks = routineTodo.filter(it => parseInt(it.dayOfWeek) === dayNum); dayTasks.sort((a,b) => a.time.localeCompare(b.time)); const dayCard = document.createElement('div'); dayCard.className = 'weekly-day-card'; dayCard.innerHTML = `<div class="weekly-day-header"><span class="weekly-day-title">${dayNamesFr[dayNum]}</span><button onclick="openTodoModal('12:00', true, ${dayNum}, true)" class="weekly-add-btn">+</button></div><div class="weekly-subtasks">${dayTasks.map(it => `<div class="weekly-item"><span class="weekly-item-text"><b>${it.time}</b> : ${it.name}</span><div class="weekly-item-actions"><button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, true)" style="color:var(--primary);">✎</button><button onclick="deleteRoutineTodo('${it.id}')" style="color:var(--danger);">×</button></div></div>`).join('') || '<span class="empty-subtasks-msg">Aucune tâche type définie</span>'}</div>`; wc.appendChild(dayCard); }); } }
+function renderTodo() { const c = document.getElementById('todo-content'); if (!c) return; document.querySelectorAll('#todo-page .bubble').forEach(b => b.classList.remove('active')); if (todoMode === 'daily') document.getElementById('btn-daily').classList.add('active'); else if (todoMode === 'weekly') document.getElementById('btn-weekly').classList.add('active'); else if (todoMode === 'routine') document.getElementById('btn-routine').classList.add('active'); if(todoMode === 'daily') { document.getElementById('todo-today-date').innerText = new Date().toLocaleDateString('fr-FR', {weekday: 'long', day: 'numeric', month: 'long'}); c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container'); for (let h = 8; h <= 20; h++) { const currentHourStr = `${h.toString().padStart(2, '0')}:00`; let items = dailyTodo.filter(it => it.date === todayStr && parseInt(it.time.split(':')[0]) === h), weeklyItems = weeklyTodo.filter(it => parseInt(it.dayOfWeek) === currentDayOfWeek && parseInt(it.time.split(':')[0]) === h), routineItems = routineTodo.filter(it => parseInt(it.dayOfWeek) === currentDayOfWeek && parseInt(it.time.split(':')[0]) === h); let combinedItems = [...items, ...weeklyItems, ...routineItems]; combinedItems.sort((a,b) => a.time.localeCompare(b.time)); const hourCard = document.createElement('div'); hourCard.className = 'weekly-day-card'; hourCard.innerHTML = `<div class="weekly-day-header"><span class="weekly-day-title">${currentHourStr}</span><button onclick="openTodoModal('${h.toString().padStart(2,'0')}:00', false, 0, false)" class="weekly-add-btn">+</button></div><div class="weekly-subtasks">${combinedItems.map(it => { const isWeekly = it.hasOwnProperty('dayOfWeek') && !it.hasOwnProperty('isRoutine'), isRoutine = it.hasOwnProperty('isRoutine'); let checkFunc = `toggleTodo('${it.id}', ${it.completed})`, delFunc = `deleteDailyTodo('${it.id}')`, labelSuffix = ''; if (isWeekly) { checkFunc = `toggleWeeklyTodo('${it.id}', ${it.completed})`; delFunc = `deleteWeeklyTodo('${it.id}')`; labelSuffix = ' <small style="opacity:0.5;">(Hebdo)</small>'; } else if (isRoutine) { checkFunc = `toggleRoutineTodo('${it.id}', ${it.completed})`; delFunc = `deleteRoutineTodo('${it.id}')`; labelSuffix = ' <small style="opacity:0.5; color:var(--primary-dark);">(Type ⚙️)</small>'; } return `<div class="weekly-item"><span onclick="event.stopPropagation(); ${checkFunc}" style="cursor:pointer;" class="weekly-item-text ${it.completed ? 'todo-completed' : ''}"><b>${it.time}</b> : ${it.name}${labelSuffix}</span><div class="weekly-item-actions"><button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', ${(isWeekly || isRoutine)}, ${(isWeekly || isRoutine) ? it.dayOfWeek : 0}, ${isRoutine})" style="color:var(--primary);">✎</button><button onclick="${delFunc}" style="color:var(--danger);">×</button></div></div>`; }).join('') || '<span class="empty-subtasks-msg">Aucun événement</span>'}</div>`; wc.appendChild(hourCard); } } else if (todoMode === 'weekly') { document.getElementById('todo-today-date').innerText = "Planification Hebdomadaire"; c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container'); const presidentialOrder = [1, 2, 3, 4, 5, 6, 0]; presidentialOrder.forEach(dayNum => { let combinedTasks = [...weeklyTodo.filter(it => parseInt(it.dayOfWeek) === dayNum), ...routineTodo.filter(it => parseInt(it.dayOfWeek) === dayNum)]; combinedTasks.sort((a,b) => a.time.localeCompare(b.time)); const dayCard = document.createElement('div'); dayCard.className = 'weekly-day-card'; dayCard.innerHTML = `<div class="weekly-day-header"><span class="weekly-day-title">${dayNamesFr[dayNum]}</span><button onclick="openTodoModal('12:00', true, ${dayNum}, false)" class="weekly-add-btn">+</button></div><div class="weekly-subtasks">${combinedTasks.map(it => { const isRoutine = it.hasOwnProperty('isRoutine') || routineTodo.some(r => r.id === it.id); const checkFunc = isRoutine ? `toggleRoutineTodo('${it.id}', ${it.completed})` : `toggleWeeklyTodo('${it.id}', ${it.completed})`, delFunc = isRoutine ? `deleteRoutineTodo('${it.id}')` : `deleteWeeklyTodo('${it.id}')`; return `<div class="weekly-item"><span onclick="${checkFunc}" style="cursor:pointer;" class="weekly-item-text ${it.completed ? 'todo-completed' : ''}"><b>${it.time}</b> : ${it.name} ${isRoutine ? '<small style="opacity:0.5; color:var(--primary-dark);">(Type ⚙️)</small>':''}</span><div class="weekly-item-actions"><button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, ${isRoutine})" style="color:var(--primary);">✎</button><button onclick="${delFunc}" style="color:var(--danger);">×</button></div></div>`; }).join('') || '<span class="empty-subtasks-msg">Aucune activité planifiée</span>'}</div>`; wc.appendChild(dayCard); }); } else if (todoMode === 'routine') { document.getElementById('todo-today-date').innerText = "Configuration de la Semaine Type ⚙️"; c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container'); const presidentialOrder = [1, 2, 3, 4, 5, 6, 0]; presidentialOrder.forEach(dayNum => { const dayTasks = routineTodo.filter(it => parseInt(it.dayOfWeek) === dayNum); dayTasks.sort((a,b) => a.time.localeCompare(b.time)); const dayCard = document.createElement('div'); dayCard.className = 'weekly-day-card'; dayCard.innerHTML = `<div class="weekly-day-header"><span class="weekly-day-title">${dayNamesFr[dayNum]}</span><button onclick="openTodoModal('12:00', true, ${dayNum}, true)" class="weekly-add-btn">+</button></div><div class="weekly-subtasks">${dayTasks.map(it => `<div class="weekly-item"><span class="weekly-item-text"><b>${it.time}</b> : ${it.name}</span><div class="weekly-item-actions"><button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, true)" style="color:var(--primary);">✎</button><button onclick="deleteRoutineTodo('${it.id}')" style="color:var(--danger);">×</button></div></div>`).join('') || '<span class="empty-subtasks-msg">Aucune tâche type définie</span>'}</div>`; wc.appendChild(dayCard); }); } }
 function openTodoModal(time, isWeeklyOrRoutine, dayNum = 1, isRoutine = false) { editingTodoId = null; setCustomTime('todo-time', time); document.getElementById('todo-task-name').value = ''; document.getElementById('todo-modal-title').innerText = isRoutine ? "Ajouter à la Semaine Type" : "Ajouter à la To-Do List"; if(isWeeklyOrRoutine) { document.getElementById('todo-day-selector-block').style.display = 'flex'; document.getElementById('todo-day-select').value = dayNum; } else { document.getElementById('todo-day-selector-block').style.display = 'none'; } document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeeklyOrRoutine && !isRoutine); document.getElementById('save-todo').setAttribute('data-routine-mode', isRoutine); document.getElementById('todo-modal').style.display = 'flex'; }
 function editTodoItem(id, name, time, isWeeklyOrRoutine, dayNum = 1, isRoutine = false) { editingTodoId = id; setCustomTime('todo-time', time); document.getElementById('todo-task-name').value = name; document.getElementById('todo-modal-title').innerText = isRoutine ? "Modifier la Semaine Type" : "Modifier la To-Do List"; if(isWeeklyOrRoutine) { document.getElementById('todo-day-selector-block').style.display = 'flex'; document.getElementById('todo-day-select').value = dayNum; } else { document.getElementById('todo-day-selector-block').style.display = 'none'; } document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeeklyOrRoutine && !isRoutine); document.getElementById('save-todo').setAttribute('data-routine-mode', isRoutine); document.getElementById('todo-modal').style.display = 'flex'; }
 
