@@ -8,6 +8,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Mogra&display=swap" rel="stylesheet">
     <title>LIST'ME</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Force l'affichage permanent des flèches pour la quantité */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            opacity: 1 !important;
+            display: block !important;
+        }
+    </style>
 </head>
 <body class="theme-pink">
 
@@ -99,7 +107,7 @@
                 <h2>Market</h2>
             </div>
             
-            <div id="shopping-breadcrumb" style="margin-bottom: 15px; display: flex; align-items: center; font-size: 1.1rem;"></div>
+            <div id="shopping-breadcrumb" style="margin-bottom: 15px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; font-weight: bold; color: var(--primary-dark);"></div>
             
             <!-- Zone des cartes de catégories -->
             <div id="shopping-categories" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px;"></div>
