@@ -57,8 +57,8 @@ const foodCategories = {
     }
 };
 
-let currentShoppingPath = []; // Permet de savoir où on est dans les rayons
-let currentShareMode = 'agenda'; // 'agenda' ou 'shopping' pour le modal de partage
+let currentShoppingPath = []; 
+let currentShareMode = 'agenda'; 
 
 // --- UTILITAIRES ---
 function getCustomTime(prefix) { let h = document.getElementById(prefix + '-h'), m = document.getElementById(prefix + '-m'); if(!h || !m) return ""; let hVal = h.value.trim(), mVal = m.value.trim(); if(hVal) return `${hVal.padStart(2, '0')}:${mVal ? mVal.padStart(2, '0') : "00"}`; return ""; }
@@ -97,9 +97,14 @@ function renderShoppingCategories() {
     container.innerHTML = '';
 
     if (currentShoppingPath.length === 0) {
-        breadcrumb.innerHTML = '<span style="font-weight:bold; color:var(--primary);">Rayons</span>';
+        breadcrumb.innerText = 'Rayons';
     } else {
-        breadcrumb.innerHTML = `<button onclick="shoppingNavigateBack()" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; font-weight:bold; margin-right:10px;">⬅️ Retour</button> <span style="opacity:0.7; font-size:0.9rem;">${currentShoppingPath.join(' > ')}</span>`;
+        breadcrumb.innerText = currentShoppingPath[currentShoppingPath.length - 1];
+    }
+
+    // La carte de retour prend toute la largeur (grid-column: 1 / -1)
+    if (currentShoppingPath.length > 0) {
+        container.innerHTML += `<div onclick="shoppingNavigateBack()" style="grid-column: 1 / -1; background:rgba(128,128,128,0.1); color:var(--text-color); padding:12px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; border: 1px dashed rgba(128,128,128,0.3);">⬅️ Retour</div>`;
     }
 
     let currentObj = foodCategories;
@@ -111,8 +116,7 @@ function renderShoppingCategories() {
         });
     } else {
         Object.keys(currentObj).forEach(cat => {
-            let bgColor = currentShoppingPath.length === 0 ? 'var(--primary)' : 'var(--primary-dark)';
-            container.innerHTML += `<div onclick="shoppingNavigateTo('${cat}')" style="background:${bgColor}; color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1);">${cat}</div>`;
+            container.innerHTML += `<div onclick="shoppingNavigateTo('${cat}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1);">${cat}</div>`;
         });
     }
 }
@@ -127,12 +131,11 @@ function openShoppingItemModal(productName) {
     document.getElementById('shopping-modal-title').innerText = productName;
     document.getElementById('shopping-qty').value = "1";
 
-    // Unités dynamiques selon le rayon principal
     const unitSelect = document.getElementById('shopping-unit');
-    unitSelect.innerHTML = ''; // Vide l'ancien menu
+    unitSelect.innerHTML = ''; 
     
     let mainCat = currentShoppingPath.length > 0 ? currentShoppingPath[0] : "";
-    let units = [{v: "", l: "Pièce(s)"}]; // Toujours dispo par défaut
+    let units = [{v: "", l: "Pièce(s)"}]; 
     
     if (mainCat.includes("Viandes") || mainCat.includes("Légumes")) {
         units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"});
@@ -142,11 +145,9 @@ function openShoppingItemModal(productName) {
     } else if (mainCat.includes("Entretien")) {
         units.push({v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"}, {v: "Rouleau", l: "Rouleau(x)"});
     } else {
-        // Épicerie Salée/Sucrée
         units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"}, {v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"}, {v: "Boîte", l: "Boîte(s)"});
     }
 
-    // Ajout des options au menu déroulant
     units.forEach(u => {
         let opt = document.createElement('option');
         opt.value = u.v; opt.innerText = u.l;
@@ -154,6 +155,10 @@ function openShoppingItemModal(productName) {
     });
 
     document.getElementById('shopping-item-modal').style.display = 'flex';
+    
+    // Réinitialise la navigation instantanément en arrière-plan
+    currentShoppingPath = [];
+    renderShoppingCategories();
 }
 
 function saveShoppingItem() {
@@ -195,6 +200,7 @@ function renderShoppingList() {
         const ownerTag = item.ownerName ? ` <small style="opacity:0.5; font-style:italic;">(par ${item.ownerName})</small>` : '';
         const d = document.createElement('div');
         d.className = `task-card`; 
+        d.style.borderLeft = "6px solid var(--primary)"; // Ajout de la couleur sur la bordure gauche
         d.innerHTML = `
             <div style="flex:1; display:flex; align-items:center; min-width:0; cursor:pointer;" onclick="toggleShoppingCheck('${item.id}', false)">
                 <div style="width:20px; height:20px; border:2px solid var(--primary); border-radius:5px; margin-right:10px;"></div>
