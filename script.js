@@ -556,8 +556,10 @@ function renderTasks() {
         filteredList.sort((a,b) => { const dateA = a.completedAtStr || a.date, dateB = b.completedAtStr || b.date; if (archiveSort === 'desc') { if (dateA !== dateB) return dateB.localeCompare(dateA); return b.createdAt - a.createdAt; } else { if (dateA !== dateB) return dateA.localeCompare(dateB); return a.createdAt - b.createdAt; } }); 
     } 
     
+    const isChronoSort = (taskSubView === "archive") || (document.getElementById('task-sort-filter') && document.getElementById('task-sort-filter').value === 'chrono');
+
     if (taskSubView === "active") { 
-        const sortMode = document.getElementById('task-sort-filter').value; 
+        const sortMode = document.getElementById('task-sort-filter') ? document.getElementById('task-sort-filter').value : 'chrono'; 
         let imminentTasks = [], standardTasks = [], completedTodayTasks = []; 
         filteredList.forEach(t => { 
             t.currentDisplayDate = t.date; t.currentDisplayTime = t.time; 
@@ -591,15 +593,30 @@ function renderTasks() {
     if(filteredList.length === 0) { c.innerHTML = `<p style="text-align:center; opacity:0.4; font-style:italic; margin-top:30px;">${taskSubView==='active'?'Aucune tâche active !':'Aucune archive ne correspond'}</p>`; return; } 
 
     let separatorDrawn = false; 
+    let lastDateRendered = null;
+
     filteredList.forEach(t => { 
         if (t.completed && taskSubView === "active" && !separatorDrawn) { 
             const separator = document.createElement('div'); separator.className = 'task-section-separator'; separator.innerHTML = '<span>Tâches terminées</span>'; 
             c.appendChild(separator); separatorDrawn = true; 
+            lastDateRendered = null; // Réinitialise pour les terminées
         } 
 
         let ghosts = Array.isArray(t.duplicateDays) ? t.duplicateDays : []; 
         const isMultiDate = (!t.completed && ghosts.length > 0); 
         const displayDateStr = t.currentDisplayDate || t.date, displayTimeStr = t.currentDisplayTime || t.time || "", displayDateFR = displayDateStr ? displayDateStr.split('-').reverse().join('/') : ''; 
+
+        // --- SÉPARATEUR DE DATE ---
+        if (isChronoSort && displayDateStr !== lastDateRendered) {
+            if (!t.completed || taskSubView === "archive") {
+                const dateSep = document.createElement('div');
+                let dateLabel = displayDateStr === todayStr ? `Aujourd'hui (${displayDateFR})` : displayDateFR;
+                dateSep.innerHTML = `<div style="text-align: center; margin: 18px 0 8px 0; font-size: 0.85rem; font-weight: bold; color: var(--primary); opacity: 0.7; letter-spacing: 1px;">— ${dateLabel} —</div>`;
+                c.appendChild(dateSep);
+                lastDateRendered = displayDateStr;
+            }
+        }
+
         let descHtml = t.desc ? `<div class="task-desc-text" style="flex:1; min-width:0; font-size: 0.85rem; opacity: 0.7; font-style: italic; white-space: pre-wrap; line-height: 1.3; margin-left: 10px; padding-left: 10px; border-left: 1px dashed rgba(128,128,128,0.3); display: flex; align-items: center; word-break: break-word; overflow-wrap: anywhere;">${t.desc}</div>` : ''; 
         let ghostHtml = isMultiDate ? `<span onclick="event.stopPropagation(); openGhostModal('${t.id}')" style="display:inline-block; margin-top:8px; font-size:0.75rem; color:var(--primary); background:rgba(0,206,209,0.1); padding:4px 10px; border-radius:12px; cursor:pointer; font-weight:bold;">🗓️ + ${ghosts.length} date(s) prévue(s)</span>` : ""; 
 
