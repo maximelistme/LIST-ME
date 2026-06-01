@@ -28,7 +28,7 @@ const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 const dayInitials = ["D", "L", "M", "M", "J", "V", "S"], dayNamesFr = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 document.body.className = `theme-${currentTheme}`;
 
-// --- DICTIONNAIRE DES COURSES (À modifier selon tes envies !) ---
+// --- DICTIONNAIRE DES COURSES ---
 const foodCategories = {
     "🥩 Viandes & Poissons": {
         "Volailles": ["Filet de poulet", "Poulet entier", "Escalope de dinde"],
@@ -97,7 +97,7 @@ function renderShoppingCategories() {
     container.innerHTML = '';
 
     if (currentShoppingPath.length === 0) {
-        breadcrumb.innerHTML = '<span style="font-weight:bold; color:var(--primary);">Rayons Principaux</span>';
+        breadcrumb.innerHTML = '<span style="font-weight:bold; color:var(--primary);">Rayons</span>';
     } else {
         breadcrumb.innerHTML = `<button onclick="shoppingNavigateBack()" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; font-weight:bold; margin-right:10px;">⬅️ Retour</button> <span style="opacity:0.7; font-size:0.9rem;">${currentShoppingPath.join(' > ')}</span>`;
     }
@@ -106,12 +106,10 @@ function renderShoppingCategories() {
     for (let step of currentShoppingPath) { currentObj = currentObj[step]; }
 
     if (Array.isArray(currentObj)) {
-        // C'est la liste finale des produits
         currentObj.forEach(product => {
             container.innerHTML += `<div onclick="openShoppingItemModal('${product}')" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${product}</div>`;
         });
     } else {
-        // C'est une sous-catégorie
         Object.keys(currentObj).forEach(cat => {
             let bgColor = currentShoppingPath.length === 0 ? 'var(--primary)' : 'var(--primary-dark)';
             container.innerHTML += `<div onclick="shoppingNavigateTo('${cat}')" style="background:${bgColor}; color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1);">${cat}</div>`;
@@ -123,11 +121,38 @@ function shoppingNavigateTo(cat) { currentShoppingPath.push(cat); renderShopping
 function shoppingNavigateBack() { currentShoppingPath.pop(); renderShoppingCategories(); }
 
 let tempShoppingProduct = "";
+
 function openShoppingItemModal(productName) {
     tempShoppingProduct = productName;
     document.getElementById('shopping-modal-title').innerText = productName;
     document.getElementById('shopping-qty').value = "1";
-    document.getElementById('shopping-unit').value = ""; // Pièce par défaut
+
+    // Unités dynamiques selon le rayon principal
+    const unitSelect = document.getElementById('shopping-unit');
+    unitSelect.innerHTML = ''; // Vide l'ancien menu
+    
+    let mainCat = currentShoppingPath.length > 0 ? currentShoppingPath[0] : "";
+    let units = [{v: "", l: "Pièce(s)"}]; // Toujours dispo par défaut
+    
+    if (mainCat.includes("Viandes") || mainCat.includes("Légumes")) {
+        units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"});
+        if (mainCat.includes("Légumes")) units.push({v: "Filet", l: "Filet(s)"}, {v: "Sachet", l: "Sachet(s)"});
+    } else if (mainCat.includes("Laitages")) {
+        units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"}, {v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"});
+    } else if (mainCat.includes("Entretien")) {
+        units.push({v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"}, {v: "Rouleau", l: "Rouleau(x)"});
+    } else {
+        // Épicerie Salée/Sucrée
+        units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"}, {v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"}, {v: "Boîte", l: "Boîte(s)"});
+    }
+
+    // Ajout des options au menu déroulant
+    units.forEach(u => {
+        let opt = document.createElement('option');
+        opt.value = u.v; opt.innerText = u.l;
+        unitSelect.appendChild(opt);
+    });
+
     document.getElementById('shopping-item-modal').style.display = 'flex';
 }
 
@@ -155,9 +180,8 @@ function renderShoppingList() {
     const c = document.getElementById('shopping-list-content');
     if (!c) return; c.innerHTML = '';
     
-    // Fusionner mes courses et celles des amis liés pour les courses
     const allShopping = [...shoppingItems, ...sharedShoppingItems];
-    allShopping.sort((a, b) => a.createdAt - b.createdAt); // Plus vieux au plus récent
+    allShopping.sort((a, b) => a.createdAt - b.createdAt);
     
     const actives = allShopping.filter(item => !item.completed);
     const completeds = allShopping.filter(item => item.completed);
@@ -167,11 +191,10 @@ function renderShoppingList() {
         return;
     }
 
-    // Afficher les actifs
     actives.forEach(item => {
         const ownerTag = item.ownerName ? ` <small style="opacity:0.5; font-style:italic;">(par ${item.ownerName})</small>` : '';
         const d = document.createElement('div');
-        d.className = `task-card`; // On réutilise le style des tâches
+        d.className = `task-card`; 
         d.innerHTML = `
             <div style="flex:1; display:flex; align-items:center; min-width:0; cursor:pointer;" onclick="toggleShoppingCheck('${item.id}', false)">
                 <div style="width:20px; height:20px; border:2px solid var(--primary); border-radius:5px; margin-right:10px;"></div>
@@ -190,7 +213,6 @@ function renderShoppingList() {
         c.innerHTML += '<div class="task-section-separator"><span>Dans le chariot</span></div>';
     }
 
-    // Afficher les complétés
     completeds.forEach(item => {
         const ownerTag = item.ownerName ? ` <small style="opacity:0.5; font-style:italic;">(par ${item.ownerName})</small>` : '';
         const d = document.createElement('div');
@@ -218,15 +240,7 @@ function processMidnightAutoArchive() {
     if(isArchiving || !currentUser) return; isArchiving = true;
     const today = new Date().toISOString().split('T')[0]; let operations = [];
     tasks.forEach(t => { if (t.completed) return; let ghosts = Array.isArray(t.duplicateDays) ? t.duplicateDays : []; ghosts = ghosts.map(g => typeof g === 'string' ? {date: g, time: t.time} : g); if (ghosts.length > 0) { let allOccurrences = [{date: t.date, time: t.time || ""}, ...ghosts]; allOccurrences.sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.time || "").localeCompare(b.time || "")); let pastDates = allOccurrences.filter(o => o.date < today); let remainingDates = allOccurrences.filter(o => o.date >= today); if (pastDates.length > 0) { pastDates.forEach(pastOcc => { operations.push(db.collection("tasks").add({ name: t.name, desc: t.desc || "", date: pastOcc.date, time: pastOcc.time, reminders: t.reminders || [], importance: t.importance, completed: true, completedAtStr: pastOcc.date, userId: t.userId, createdAt: t.createdAt || Date.now(), duplicateDays: [] })); }); if (remainingDates.length > 0) { let nextMain = remainingDates.shift(); operations.push(db.collection("tasks").doc(t.id).update({ date: nextMain.date, time: nextMain.time, duplicateDays: remainingDates })); } else { operations.push(db.collection("tasks").doc(t.id).delete()); } } } else { if (t.date < today) operations.push(db.collection("tasks").doc(t.id).update({ completed: true, completedAtStr: t.date })); } });
-    
-    // Auto-nettoyage des courses terminées le lendemain
-    shoppingItems.forEach(item => {
-        if(item.completed) {
-            const itemDateStr = new Date(item.createdAt).toISOString().split('T')[0];
-            if(itemDateStr < today) operations.push(db.collection("shopping").doc(item.id).delete());
-        }
-    });
-    
+    shoppingItems.forEach(item => { if(item.completed) { const itemDateStr = new Date(item.createdAt).toISOString().split('T')[0]; if(itemDateStr < today) operations.push(db.collection("shopping").doc(item.id).delete()); } });
     Promise.all(operations).then(() => { isArchiving = false; }).catch(() => { isArchiving = false; });
 }
 
@@ -261,7 +275,7 @@ auth.onAuthStateChanged((user) => {
                 if(document.getElementById('my-share-code')) document.getElementById('my-share-code').innerText = myCode;
                 
                 friends = data.following || [];
-                shoppingFriends = data.shoppingFollowing || []; // Nouvelle liste pour les courses
+                shoppingFriends = data.shoppingFollowing || []; 
             } catch (e) { console.error(e); }
             startRealtimeSync(user.uid); showPage('tasks');
         }).catch(() => { startRealtimeSync(user.uid); showPage('tasks'); });
@@ -318,7 +332,6 @@ function copyShareCode() { const code = document.getElementById('my-share-code')
 function renderFriendsList() { 
     const container = document.getElementById('friends-list-container'); if(!container) return; 
     let activeList = currentShareMode === 'agenda' ? friends : shoppingFriends;
-    
     if (activeList.length === 0) { container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; margin-top: 10px; text-align: center; width: 100%;'>Aucun ${currentShareMode === 'agenda' ? 'agenda' : 'panier'} lié pour le moment.</p>`; return; }
     container.innerHTML = activeList.map(f => `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; margin-top:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;"><span style="font-weight:bold; color:var(--primary-dark);">👤 ${f.nickname}</span><button onclick="removeFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:bold;">Retirer</button></div>`).join(''); 
 }
@@ -338,22 +351,18 @@ if(btnAddFriend) {
     btnAddFriend.onclick = () => { 
         const code = document.getElementById('friend-code-input').value.trim().toUpperCase(); 
         if(!code || code === document.getElementById('my-share-code').innerText) return; 
-        
         db.collection("users").where("shareCode", "==", code).get().then(snapshot => { 
             if(snapshot.empty) { showToast("Code introuvable ! ❌"); return; } 
             let friendDoc = snapshot.docs[0], friendUid = friendDoc.id, friendData = friendDoc.data(); 
             let friendName = friendData.nickname || "Inconnu"; 
-            
             if (currentShareMode === 'agenda') {
                 if(friends.some(f => f.uid === friendUid)) { showToast("Déjà lié ! 🤝"); return; } 
-                friends.push({uid: friendUid, nickname: friendName}); 
-                db.collection("users").doc(currentUser.uid).update({following: friends}); 
+                friends.push({uid: friendUid, nickname: friendName}); db.collection("users").doc(currentUser.uid).update({following: friends}); 
                 let sharedWith = friendData.sharedWith || []; if(!sharedWith.includes(currentUser.uid)) { sharedWith.push(currentUser.uid); db.collection("users").doc(friendUid).update({sharedWith: sharedWith}); } 
                 startFriendSync(friendUid, friendName, 'agenda'); showToast(`Agenda de ${friendName} lié ! ✨`);
             } else {
                 if(shoppingFriends.some(f => f.uid === friendUid)) { showToast("Déjà lié aux courses ! 🤝"); return; } 
-                shoppingFriends.push({uid: friendUid, nickname: friendName}); 
-                db.collection("users").doc(currentUser.uid).update({shoppingFollowing: shoppingFriends}); 
+                shoppingFriends.push({uid: friendUid, nickname: friendName}); db.collection("users").doc(currentUser.uid).update({shoppingFollowing: shoppingFriends}); 
                 startFriendSync(friendUid, friendName, 'shopping'); showToast(`Courses de ${friendName} liées ! ✨`);
             }
             renderFriendsList(); document.getElementById('friend-code-input').value = ""; 
