@@ -30,24 +30,31 @@ const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 const dayInitials = ["D", "L", "M", "M", "J", "V", "S"], dayNamesFr = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 document.body.className = `theme-${currentTheme}`;
 
-// --- DICTIONNAIRE DES COURSES (Nouvelle Arborescence Complète) ---
+// --- DICTIONNAIRE DES COURSES (Arborescence complète & ajustée) ---
 const foodCategories = {
     "🥩 Viandes": {
-        "Volailles": ["Filet de poulet", "Poulet entier", "Escalope de dinde"],
-        "Bœuf & Porc": ["Steak haché", "Rôti de bœuf", "Côte de porc", "Lardons"],
-        "Veau & Agneau": ["Côtelette d'agneau", "Escalope de veau"]
+        "Volailles": ["Poulet", "Dinde", "Canard"],
+        "Bœuf": ["Steak haché", "Rôti de bœuf", "Bœuf bourguignon"],
+        "Porc": ["Côte de porc", "Lardons", "Rôti de porc"],
+        "Veau": ["Escalope de veau", "Rôti de veau"],
+        "Agneau": ["Côtelette d'agneau", "Gigot d'agneau"]
     },
     "🐟 Poissons": {
-        "Poissons Frais": ["Pavé de saumon", "Cabillaud", "Filet de merlu"],
-        "Fruits de Mer": ["Crevettes", "Moules", "Huîtres"]
+        "Poissons Frais": ["Saumon", "Cabillaud", "Merlu", "Dorade", "Thon"],
+        "Fruits de Mer": {
+            "Coquillages": ["Moules", "Huîtres", "Coquilles Saint-Jacques", "Palourdes"],
+            "Crustacés": ["Crevettes", "Langoustines", "Crabe", "Homard"]
+        }
     },
     "🥦 Légumes": {
-        "Légumes Frais": ["Carottes", "Tomates", "Pommes de terre", "Courgettes", "Oignons", "Salade"],
-        "Herbes Fraîches": ["Persil", "Ciboulette", "Basilic", "Menthe"]
+        "Légumes": ["Carottes", "Tomates", "Pommes de terre", "Oignons", "Salade"],
+        "Courges": ["Potiron", "Butternut", "Potimarron", "Citrouille"],
+        "Herbes diverses": ["Persil", "Ciboulette", "Basilic", "Menthe", "Coriandre"]
     },
     "🍎 Fruits": {
-        "Fruits Frais": ["Pommes", "Bananes", "Oranges", "Citrons", "Kiwis"],
-        "Fruits Rouges": ["Fraises", "Framboises", "Myrtilles"]
+        "Fruits": ["Pommes", "Bananes", "Oranges", "Citrons", "Kiwis", "Poires"],
+        "Fruits rouges": ["Fraises", "Framboises", "Myrtilles", "Mûres", "Cerises"],
+        "Fruits exotiques": ["Ananas", "Mangue", "Fruit de la passion", "Litchi", "Noix de coco"]
     },
     "🧀 Laitages": {
         "Fromages": ["Emmental râpé", "Camembert", "Chèvre", "Raclette", "Mozzarella"],
@@ -55,46 +62,55 @@ const foodCategories = {
         "Desserts": ["Yaourts nature", "Yaourts aux fruits", "Crèmes dessert"]
     },
     "🍝 Épicerie Salée": {
-        "Féculents": ["Pâtes", "Riz", "Lentilles", "Purée"],
+        "Féculents": ["Riz", "Lentilles", "Quinoa", "Semoule"],
+        "Pâtes": ["Coquillettes", "Spaghetti", "Penne", "Macaroni", "Tagliatelles", "Farfalle"],
         "Conserves": ["Sauce tomate", "Haricots verts", "Thon en boîte", "Maïs"],
-        "Condiments": ["Huile d'olive", "Vinaigre", "Sel", "Poivre", "Moutarde", "Mayonnaise"],
-        "Apéritif": ["Chips", "Cacahuètes", "Biscuits apéritifs"]
+        "Condiments": ["Huile d'olive", "Vinaigre", "Sel", "Poivre", "Moutarde", "Mayonnaise"]
+    },
+    "🥨 Apéritif": { 
+        "Chips & Snacks": ["Chips", "Cacahuètes", "Biscuits apéritifs", "Noix de cajou"],
+        "Tartinables": ["Tapenade", "Guacamole", "Houmous"]
     },
     "🍪 Épicerie Sucrée": {
         "Petit-déjeuner": ["Céréales", "Confiture", "Pâte à tartiner", "Café", "Thé"],
-        "Goûter": ["Gâteaux", "Chocolat", "Biscuits", "Bonbons"],
-        "Aide à la pâtisserie": ["Farine", "Sucre", "Levure", "Extrait de vanille"]
+        "Goûter": ["Gâteaux", "Chocolat", "Biscuits", "Bonbons"]
     },
     "❄️ Surgelés": {
-        "Légumes & Frites": ["Frites", "Poêlée de légumes", "Épinards"],
-        "Plats & Pizzas": ["Pizza", "Plat préparé", "Bâtonnets de poisson"],
-        "Glaces": ["Bacs de glace", "Cônes", "Bâtonnets"]
+        "Légumes": ["Frites", "Poêlée de légumes", "Épinards", "Haricots verts"],
+        "Plats": ["Plat préparé", "Bâtonnets de poisson", "Lasagnes"],
+        "Pizzas": ["Pizza 4 fromages", "Pizza Margherita", "Pizza Royale"],
+        "Glaces": ["Bacs de glace", "Cônes", "Bâtonnets", "Sorbets"]
     },
     "🥤 Boissons": {
         "Eaux": ["Eau plate", "Eau gazeuse"],
-        "Jus & Sirops": ["Jus d'orange", "Jus de pomme", "Sirop de grenadine"],
+        "Jus": ["Jus d'orange", "Jus de pomme", "Multifruits"],
+        "Sirops": ["Sirop de grenadine", "Sirop de menthe", "Sirop de fraise"],
         "Sodas": ["Cola", "Limonade", "Thé glacé"]
     },
     "🍷 Cave": {
         "Vins": ["Vin rouge", "Vin blanc", "Vin rosé"],
         "Bières": ["Bière blonde", "Bière ambrée", "Pack de bières"],
-        "Spiritueux": ["Rhum", "Vodka", "Whisky"]
+        "Spiritueux": ["Rhum", "Vodka", "Whisky", "Gin"]
     },
     "🥖 Boulangerie": {
-        "Pains": ["Baguette", "Pain de mie", "Pain de campagne"],
-        "Viennoiseries": ["Croissants", "Pains au chocolat", "Brioches"]
+        "Pains": ["Baguette", "Pain de mie", "Pain de campagne", "Pain complet"],
+        "Viennoiseries": ["Croissants", "Pains au chocolat", "Brioches"],
+        "Pâtisserie": ["Tarte aux pommes", "Éclair au chocolat", "Mille-feuille"],
+        "Aide à la pâtisserie": ["Farine", "Sucre", "Levure", "Extrait de vanille", "Pépites de chocolat"]
     },
-    "🥓 Charcuterie": {
-        "Charcuterie": ["Jambon blanc", "Saucisson", "Chorizo", "Pâté"],
-        "Traiteur": ["Salade piémontaise", "Carottes râpées", "Quiche", "Pâte à tarte"]
-    },
+    "🥓 Charcuterie": [
+        "Jambon blanc", "Saucisson", "Chorizo", "Pâté", "Lardons", "Saucisses"
+    ],
     "👶 Bébé": {
         "Repas": ["Lait en poudre", "Petits pots salés", "Compotes"],
         "Change & Soin": ["Couches", "Lingettes", "Coton", "Liniment"]
     },
     "🐾 Animaux": {
         "Chiens": ["Croquettes chien", "Pâtée chien", "Friandises chien"],
-        "Chats": ["Croquettes chat", "Pâtée chat", "Litière"]
+        "Chats": ["Croquettes chat", "Pâtée chat", "Litière"],
+        "Rongeurs": ["Foin", "Granulés cobaye", "Litière chanvre"],
+        "Oiseaux": ["Graines oiseaux", "Millet", "Fond de cage"],
+        "Poissons": ["Flocons", "Granulés", "Filtre"]
     },
     "🧴 Soin & Beauté": {
         "Douche & Cheveux": ["Gel douche", "Shampoing", "Après-shampoing", "Savon"],
@@ -192,10 +208,10 @@ function shoppingNavigateBack() { currentShoppingPath.pop(); renderShoppingCateg
 
 function openCustomCardModal() {
     document.getElementById('custom-card-name').value = '';
-    
-    // MAJ des catégories dynamiques pour le modal
     const catSelect = document.getElementById('custom-card-category');
     catSelect.innerHTML = '';
+    
+    // Insère tous les rayons de la base actuelle
     Object.keys(foodCategories).forEach(cat => {
         let opt = document.createElement('option');
         opt.value = cat; opt.innerText = cat;
@@ -221,9 +237,9 @@ function saveCustomCard() {
     if (units.length === 0) units.push({ v: "", l: "Pièce(s)" }); 
 
     let calculatedPath = targetRayon;
-    // Si l'utilisateur est déjà profond dans un rayon qui correspond à sa sélection, on l'ajoute au niveau actuel
-    if (currentShoppingPath.length > 0 && currentShoppingPath[0] === targetRayon && currentShoppingPath[1]) {
-        calculatedPath += "/" + currentShoppingPath[1];
+    // La carte est rangée exactement là où l'utilisateur se trouve
+    if (currentShoppingPath.length > 0 && currentShoppingPath[0] === targetRayon) {
+        calculatedPath = currentShoppingPath.join('/');
     }
 
     const newCard = {
@@ -266,8 +282,10 @@ function openShoppingItemModal(identifier, isCustom) {
             units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"});
             if (mainCat.includes("Légumes") || mainCat.includes("Fruits")) units.push({v: "Filet", l: "Filet(s)"}, {v: "Sachet", l: "Sachet(s)"});
             if (mainCat.includes("Surgelés")) units.push({v: "Boîte", l: "Boîte(s)"}, {v: "Sachet", l: "Sachet(s)"});
+        } else if (mainCat.includes("Apéritif")) {
+            units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"}, {v: "Boîte", l: "Boîte(s)"}, {v: "Sachet", l: "Sachet(s)"});
         } else {
-            units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"}, {v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"}, {v: "Boîte", l: "Boîte(s)"});
+            units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"}, {v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"}, {v: "Boîte", l: "Boîte(s)"}, {v: "Sachet", l: "Sachet(s)"});
         }
     }
 
