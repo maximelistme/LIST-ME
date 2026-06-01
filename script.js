@@ -30,34 +30,79 @@ const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 const dayInitials = ["D", "L", "M", "M", "J", "V", "S"], dayNamesFr = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 document.body.className = `theme-${currentTheme}`;
 
-// --- DICTIONNAIRE DES COURSES (Scindé & Épuré) ---
+// --- DICTIONNAIRE DES COURSES (Nouvelle Arborescence Complète) ---
 const foodCategories = {
     "🥩 Viandes": {
         "Volailles": ["Filet de poulet", "Poulet entier", "Escalope de dinde"],
-        "Bœuf & Porc": ["Steak haché", "Rôti de bœuf", "Côte de porc", "Lardons"]
+        "Bœuf & Porc": ["Steak haché", "Rôti de bœuf", "Côte de porc", "Lardons"],
+        "Veau & Agneau": ["Côtelette d'agneau", "Escalope de veau"]
     },
-    "🐟 Poissons": [
-        "Pavé de saumon", "Cabillaud", "Crevettes", "Filet de merlu"
-    ],
-    "🥦 Légumes & Fruits": {
-        "Légumes Frais": ["Carottes", "Tomates", "Pommes de terre", "Salade", "Oignons", "Courgettes"],
-        "Fruits": ["Pommes", "Bananes", "Fraises", "Citrons", "Oranges"]
+    "🐟 Poissons": {
+        "Poissons Frais": ["Pavé de saumon", "Cabillaud", "Filet de merlu"],
+        "Fruits de Mer": ["Crevettes", "Moules", "Huîtres"]
+    },
+    "🥦 Légumes": {
+        "Légumes Frais": ["Carottes", "Tomates", "Pommes de terre", "Courgettes", "Oignons", "Salade"],
+        "Herbes Fraîches": ["Persil", "Ciboulette", "Basilic", "Menthe"]
+    },
+    "🍎 Fruits": {
+        "Fruits Frais": ["Pommes", "Bananes", "Oranges", "Citrons", "Kiwis"],
+        "Fruits Rouges": ["Fraises", "Framboises", "Myrtilles"]
     },
     "🧀 Laitages": {
         "Fromages": ["Emmental râpé", "Camembert", "Chèvre", "Raclette", "Mozzarella"],
-        "Crèmerie": ["Lait demi-écrémé", "Beurre doux", "Beurre salé", "Crème fraîche", "Yaourts nature", "Oeufs"]
+        "Crèmerie": ["Lait demi-écrémé", "Beurre doux", "Beurre salé", "Crème fraîche", "Oeufs"],
+        "Desserts": ["Yaourts nature", "Yaourts aux fruits", "Crèmes dessert"]
     },
     "🍝 Épicerie Salée": {
         "Féculents": ["Pâtes", "Riz", "Lentilles", "Purée"],
-        "Conserves": ["Sauce tomate", "Haricots verts", "Thon en boîte", "Maïs"]
+        "Conserves": ["Sauce tomate", "Haricots verts", "Thon en boîte", "Maïs"],
+        "Condiments": ["Huile d'olive", "Vinaigre", "Sel", "Poivre", "Moutarde", "Mayonnaise"],
+        "Apéritif": ["Chips", "Cacahuètes", "Biscuits apéritifs"]
     },
     "🍪 Épicerie Sucrée": {
         "Petit-déjeuner": ["Céréales", "Confiture", "Pâte à tartiner", "Café", "Thé"],
-        "Goûter": ["Gâteaux", "Chocolat", "Biscuits"]
+        "Goûter": ["Gâteaux", "Chocolat", "Biscuits", "Bonbons"],
+        "Aide à la pâtisserie": ["Farine", "Sucre", "Levure", "Extrait de vanille"]
+    },
+    "❄️ Surgelés": {
+        "Légumes & Frites": ["Frites", "Poêlée de légumes", "Épinards"],
+        "Plats & Pizzas": ["Pizza", "Plat préparé", "Bâtonnets de poisson"],
+        "Glaces": ["Bacs de glace", "Cônes", "Bâtonnets"]
+    },
+    "🥤 Boissons": {
+        "Eaux": ["Eau plate", "Eau gazeuse"],
+        "Jus & Sirops": ["Jus d'orange", "Jus de pomme", "Sirop de grenadine"],
+        "Sodas": ["Cola", "Limonade", "Thé glacé"]
+    },
+    "🍷 Cave": {
+        "Vins": ["Vin rouge", "Vin blanc", "Vin rosé"],
+        "Bières": ["Bière blonde", "Bière ambrée", "Pack de bières"],
+        "Spiritueux": ["Rhum", "Vodka", "Whisky"]
+    },
+    "🥖 Boulangerie": {
+        "Pains": ["Baguette", "Pain de mie", "Pain de campagne"],
+        "Viennoiseries": ["Croissants", "Pains au chocolat", "Brioches"]
+    },
+    "🥓 Charcuterie": {
+        "Charcuterie": ["Jambon blanc", "Saucisson", "Chorizo", "Pâté"],
+        "Traiteur": ["Salade piémontaise", "Carottes râpées", "Quiche", "Pâte à tarte"]
+    },
+    "👶 Bébé": {
+        "Repas": ["Lait en poudre", "Petits pots salés", "Compotes"],
+        "Change & Soin": ["Couches", "Lingettes", "Coton", "Liniment"]
+    },
+    "🐾 Animaux": {
+        "Chiens": ["Croquettes chien", "Pâtée chien", "Friandises chien"],
+        "Chats": ["Croquettes chat", "Pâtée chat", "Litière"]
+    },
+    "🧴 Soin & Beauté": {
+        "Douche & Cheveux": ["Gel douche", "Shampoing", "Après-shampoing", "Savon"],
+        "Hygiène & Visage": ["Dentifrice", "Brosse à dents", "Déodorant", "Crème visage", "Coton-tiges"]
     },
     "🧻 Entretien & Hygiène": {
-        "Maison": ["Papier toilette", "Sopalin", "Liquide vaisselle", "Lessive"],
-        "Hygiène": ["Gel douche", "Shampoing", "Dentifrice", "Déodorant"]
+        "Papier": ["Papier toilette", "Sopalin", "Mouchoirs"],
+        "Ménage": ["Liquide vaisselle", "Lessive", "Adoucissant", "Éponge", "Nettoyant sol", "Javel"]
     }
 };
 
@@ -102,14 +147,12 @@ function renderShoppingCategories() {
 
     const currentPathStr = currentShoppingPath.join('/');
 
-    // Nettoyage de l'en-tête selon ta demande
     if (currentShoppingPath.length === 0) {
         breadcrumb.innerText = '';
     } else {
         breadcrumb.innerText = currentShoppingPath[currentShoppingPath.length - 1];
     }
 
-    // Cartes de navigation
     if (currentShoppingPath.length > 0) {
         container.innerHTML += `<div onclick="shoppingNavigateBack()" style="grid-column: 1 / -1; background:rgba(128,128,128,0.1); color:var(--text-color); padding:12px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; border: 1px dashed rgba(128,128,128,0.3);">⬅️ Retour</div>`;
     }
@@ -129,20 +172,16 @@ function renderShoppingCategories() {
         else defaultFolders = Object.keys(currentObj);
     }
 
-    // Récupération des produits personnalisés créés pour ce chemin exact
     const customProducts = customShoppingCards.filter(c => c.path === currentPathStr);
 
-    // Rendu des Dossiers de base
     defaultFolders.forEach(cat => {
         container.innerHTML += `<div onclick="shoppingNavigateTo('${cat}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1);">${cat}</div>`;
     });
 
-    // Rendu des Produits finaux de base
     defaultProducts.forEach(product => {
         container.innerHTML += `<div onclick="openShoppingItemModal('${product}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${product}</div>`;
     });
 
-    // Rendu des Produits personnalisés
     customProducts.forEach(product => {
         container.innerHTML += `<div onclick="openShoppingItemModal('${product.id}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:2px dashed var(--primary); transition: transform 0.2s;">+ ${product.name}</div>`;
     });
@@ -153,10 +192,20 @@ function shoppingNavigateBack() { currentShoppingPath.pop(); renderShoppingCateg
 
 function openCustomCardModal() {
     document.getElementById('custom-card-name').value = '';
-    // Pré-sélectionne le rayon actuel si on est déjà à l'intérieur
+    
+    // MAJ des catégories dynamiques pour le modal
+    const catSelect = document.getElementById('custom-card-category');
+    catSelect.innerHTML = '';
+    Object.keys(foodCategories).forEach(cat => {
+        let opt = document.createElement('option');
+        opt.value = cat; opt.innerText = cat;
+        catSelect.appendChild(opt);
+    });
+
     if (currentShoppingPath.length > 0) {
-        document.getElementById('custom-card-category').value = currentShoppingPath[0];
+        catSelect.value = currentShoppingPath[0];
     }
+    
     document.getElementById('custom-card-modal').style.display = 'flex';
 }
 
@@ -171,19 +220,15 @@ function saveCustomCard() {
     });
     if (units.length === 0) units.push({ v: "", l: "Pièce(s)" }); 
 
-    // Détermination intelligente de l'emplacement cible
     let calculatedPath = targetRayon;
-    if (targetRayon === "🥩 Viandes" && currentShoppingPath[1]) {
-        calculatedPath += "/" + currentShoppingPath[1];
-    } else if (targetRayon === "🥦 Légumes & Fruits" && currentShoppingPath[1]) {
-        calculatedPath += "/" + currentShoppingPath[1];
-    } else if (targetRayon === "🧀 Laitages" && currentShoppingPath[1]) {
+    // Si l'utilisateur est déjà profond dans un rayon qui correspond à sa sélection, on l'ajoute au niveau actuel
+    if (currentShoppingPath.length > 0 && currentShoppingPath[0] === targetRayon && currentShoppingPath[1]) {
         calculatedPath += "/" + currentShoppingPath[1];
     }
 
     const newCard = {
         id: Date.now().toString(),
-        path: calculatedPath, // Enregistré au bon niveau de profondeur
+        path: calculatedPath, 
         name: name,
         units: units
     };
@@ -213,13 +258,14 @@ function openShoppingItemModal(identifier, isCustom) {
 
         units.push({v: "", l: "Pièce(s)"});
 
-        if (pNameLower.includes("papier") || pNameLower.includes("sopalin")) {
-            units.push({v: "Rouleau", l: "Rouleau(x)"}, {v: "Pack", l: "Pack(s)"});
-        } else if (pNameLower.includes("lait ") || pNameLower.includes("douche") || pNameLower.includes("shampoing") || pNameLower.includes("vaisselle") || pNameLower.includes("lessive") || pNameLower.includes("eau") || pNameLower.includes("jus")) {
+        if (pNameLower.includes("papier") || pNameLower.includes("sopalin") || pNameLower.includes("mouchoir") || pNameLower.includes("couches")) {
+            units.push({v: "Rouleau", l: "Rouleau(x)"}, {v: "Pack", l: "Pack(s)"}, {v: "Boîte", l: "Boîte(s)"});
+        } else if (pNameLower.includes("lait ") || pNameLower.includes("douche") || pNameLower.includes("shampoing") || pNameLower.includes("vaisselle") || pNameLower.includes("lessive") || pNameLower.includes("eau") || pNameLower.includes("jus") || mainCat.includes("Boissons") || mainCat.includes("Cave")) {
             units.push({v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"});
-        } else if (mainCat.includes("Viandes") || mainCat.includes("Poissons") || mainCat.includes("Légumes") || mainCat.includes("Laitages")) {
+        } else if (mainCat.includes("Viandes") || mainCat.includes("Poissons") || mainCat.includes("Légumes") || mainCat.includes("Fruits") || mainCat.includes("Laitages") || mainCat.includes("Charcuterie") || mainCat.includes("Surgelés")) {
             units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"});
-            if (mainCat.includes("Légumes")) units.push({v: "Filet", l: "Filet(s)"}, {v: "Sachet", l: "Sachet(s)"});
+            if (mainCat.includes("Légumes") || mainCat.includes("Fruits")) units.push({v: "Filet", l: "Filet(s)"}, {v: "Sachet", l: "Sachet(s)"});
+            if (mainCat.includes("Surgelés")) units.push({v: "Boîte", l: "Boîte(s)"}, {v: "Sachet", l: "Sachet(s)"});
         } else {
             units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"}, {v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"}, {v: "Boîte", l: "Boîte(s)"});
         }
@@ -240,7 +286,6 @@ function openShoppingItemModal(identifier, isCustom) {
 
     document.getElementById('shopping-item-modal').style.display = 'flex';
     
-    // Réinitialise la vue principale des rayons en tâche de fond
     currentShoppingPath = [];
     renderShoppingCategories();
 }
