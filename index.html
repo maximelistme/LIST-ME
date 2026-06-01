@@ -13,15 +13,17 @@
 
     <nav class="navbar">
         <h1>LIST'ME</h1>
-        <div class="main-nav-container" id="main-nav" style="display:none;">
+        <div class="main-nav-container" id="main-nav" style="display:none; overflow-x: auto; white-space: nowrap;">
             <button class="nav-bubble active" id="nav-btn-tasks" onclick="showPage('tasks')">Tâches</button>
             <button class="nav-bubble" id="nav-btn-todo" onclick="showPage('todo')">To-Do List</button>
             <button class="nav-bubble" id="nav-btn-calendar" onclick="showPage('calendar')">Calendrier</button>
+            <button class="nav-bubble" id="nav-btn-shopping" onclick="showPage('shopping')">Courses 🛒</button>
             <button class="nav-bubble" id="nav-btn-profile" onclick="showPage('profile')">Profil</button>
         </div>
     </nav>
 
     <main id="app">
+        <!-- ONGLET : AUTHENTIFICATION -->
         <section id="auth-page">
             <div class="header-action">
                 <h2 id="auth-title">Connexion</h2>
@@ -31,43 +33,35 @@
                 <input type="email" id="auth-email" placeholder="votre@mail.com">
                 <label>Mot de passe</label>
                 <input type="password" id="auth-pass" placeholder="••••••••">
-                
                 <button id="btn-login" class="btn-primary btn-validated-click" style="margin-top: 10px;">Se connecter</button>
-                
-                <button id="btn-google" class="btn-primary btn-validated-click" style="margin-top: 10px; background: #ffffff; color: #2C3E50; border: 1px solid rgba(128,128,128,0.3); display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;">
-                    <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.79 2.7v2.24h2.9c1.69-1.55 2.69-3.84 2.69-6.57z" fill="#4285F4"/><path d="M9 18c2.43 0 4.47-.8 5.96-2.23l-2.9-2.24c-.8.54-1.84.87-3.06.87-2.35 0-4.34-1.58-5.05-3.71H.92v2.32C2.4 15.97 5.46 18 9 18z" fill="#34A853"/><path d="M3.95 10.69a5.409 5.409 0 0 1 0-3.38V4.99H.92a8.997 8.997 0 0 0 0 8.02l3.03-2.32z" fill="#FBBC05"/><path d="M9 3.58c1.32 0 2.5.45 3.44 1.35L15 2.4C13.46.99 11.42 0 9 0 5.46 0 2.4 2.03.92 4.99l3.03 2.32c.71-2.13 2.7-3.73 5.05-3.73z" fill="#EA4335"/></svg>
-                    Continuer avec Google
-                </button>
-
+                <button id="btn-google" class="btn-primary btn-validated-click" style="margin-top: 10px; background: #ffffff; color: #2C3E50; border: 1px solid rgba(128,128,128,0.3); display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;">Continuer avec Google</button>
                 <button id="btn-register" class="btn-secondary" style="background:none; color:var(--primary-dark); font-size:0.9rem; text-decoration:underline; cursor:pointer; margin-top: 5px;">Pas de compte ? S'inscrire</button>
             </div>
         </section>
 
+        <!-- ONGLET : TÂCHES -->
         <section id="tasks-page" style="display:none;">
             <div class="header-action header-centered" style="padding: 10px 15px; gap: 15px;">
                 <button id="sub-btn-active-tasks" class="sub-menu-tab active" onclick="switchTaskSubView('active')">Mes Tâches</button>
                 <button id="sub-btn-archived-tasks" class="sub-menu-tab" onclick="switchTaskSubView('archive')">Archives</button>
             </div>
-
             <div id="archive-search-bar" class="action-bar-left" style="display: none; justify-content: flex-end; align-items: center; width: 100%; margin-bottom: 15px;">
                 <select id="archive-sort-filter" onchange="renderTasks()" style="padding: 10px 15px; font-size: 0.85rem; border-radius: 20px; font-weight: bold; cursor: pointer; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color);">
                     <option value="desc">⬇️ Plus récentes</option>
                     <option value="asc">⬆️ Plus anciennes</option>
                 </select>
             </div>
-            
             <div id="tasks-action-bar" class="action-bar-left" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px;">
                 <button id="add-task-btn" class="btn-add-bubble btn-validated-click">+ Ajouter une tâche</button>
-                
                 <select id="task-sort-filter" onchange="renderTasks()" style="padding: 10px; font-size: 0.85rem; border-radius: 20px; font-weight: bold; cursor: pointer; max-width: 160px;">
                     <option value="chrono">⏳ Tri Chronologique</option>
                     <option value="creation">✨ Tri par Ajout</option>
                 </select>
             </div>
-
             <div id="task-list"></div>
         </section>
 
+        <!-- ONGLET : TO-DO LIST -->
         <section id="todo-page" style="display:none;">
             <div class="calendar-nav">
                 <button id="btn-daily" class="bubble active" onclick="setTodoMode('daily')">Journalier</button>
@@ -78,20 +72,18 @@
             <div id="todo-content"></div>
         </section>
 
+        <!-- ONGLET : CALENDRIER -->
         <section id="calendar-page" style="display:none;">
             <div class="calendar-nav">
                 <button id="btn-year" class="bubble" onclick="setViewState('year')">Année</button>
                 <button id="btn-month" class="bubble" onclick="setViewState('month')">Mois</button>
                 <button id="btn-day" class="bubble active" onclick="setViewState('day')">Jours</button>
             </div>
-            
             <div style="display:flex; justify-content:center; align-items:center; margin-bottom:15px; position:relative; width: 100%; height: 35px;">
                 <button id="btn-add-birthday" onclick="openBirthdayModal()" class="btn-add-birthday btn-validated-click" style="position: absolute; left: 15px;">+ 🎂</button>
                 <div id="calendar-title" class="calendar-title" style="margin:0; font-size: 1.5em; text-align:center;"></div>
             </div>
-            
             <div id="calendar-content"></div>
-            
             <div id="calendar-legend" class="calendar-legend">
                 <span class="legend-item"><span class="legend-dot" style="background:var(--danger)"></span>Haute</span>
                 <span class="legend-item"><span class="legend-dot" style="background:var(--warning)"></span>Moyenne</span>
@@ -101,25 +93,36 @@
             </div>
         </section>
 
-        <section id="profile-page" style="display:none;">
-            <div class="header-action header-centered">
-                <h2>Mon Profil</h2>
+        <!-- ONGLET : COURSES 🛒 -->
+        <section id="shopping-page" style="display:none;">
+            <div id="shopping-breadcrumb" style="margin-bottom: 15px; display: flex; align-items: center; font-size: 1.1rem;"></div>
+            
+            <!-- Zone des cartes de catégories -->
+            <div id="shopping-categories" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px;"></div>
+            
+            <div class="header-action header-centered" style="margin-bottom: 15px;">
+                <h3 style="color: var(--primary-dark);">Ma Liste de Courses</h3>
             </div>
+            
+            <!-- Zone de la liste générée -->
+            <div id="shopping-list-content"></div>
+        </section>
+
+        <!-- ONGLET : PROFIL -->
+        <section id="profile-page" style="display:none;">
+            <div class="header-action header-centered"><h2>Mon Profil</h2></div>
             <div class="profile-card">
                 <label style="text-align: center; display: block; width: 100%;">Nom profil</label>
                 <input type="text" id="profile-nickname" placeholder="Ex: WeriXx, Julie..." onchange="autoSaveNickname()" style="text-align: center;">
                 
-                <button onclick="openShareModal()" class="btn-secondary btn-validated-click" style="margin-top: 20px; font-size: 1.1rem; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;">
-                    Partage Agenda 🤝
-                </button>
+                <button onclick="openShareModal('agenda')" class="btn-secondary btn-validated-click" style="margin-top: 20px; font-size: 1rem; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;">Partage Agenda 🤝</button>
+                <button onclick="openShareModal('shopping')" class="btn-secondary btn-validated-click" style="margin-top: 10px; font-size: 1rem; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;">Partage Liste de Courses 🛒</button>
 
                 <hr style="opacity: 0.1; margin: 20px 0;">
                 <button id="btn-logout" class="btn-secondary" style="background:var(--danger); color:white;">Se déconnecter</button>
             </div>
 
-            <div class="header-action header-centered" style="margin-top: 30px;">
-                <h2>Thèmes</h2>
-            </div>
+            <div class="header-action header-centered" style="margin-top: 30px;"><h2>Thèmes</h2></div>
             <div class="theme-selector">
                 <div class="theme-option pink" onclick="changeTheme('pink')">Bonbon</div>
                 <div class="theme-option dark" onclick="changeTheme('dark')">Sombre</div>
@@ -130,118 +133,51 @@
 
     <div id="toast-notification" class="toast-hidden"></div>
 
-    <div id="welcome-modal" class="modal modal-center" style="z-index: 10001;">
-        <div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;">
-            <h3 id="welcome-message-text" style="color: var(--primary-dark); text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3>
-            <div id="today-summary-zone"></div>
-            <button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn-secondary btn-validated-click" style="margin-top: 15px; width: 100%;">C'est parti !</button>
-        </div>
-    </div>
+    <!-- MODAL WELCOME, TASKS, TODO, BIRTHDAY, GHOST (identiques) -->
+    <div id="welcome-modal" class="modal modal-center" style="z-index: 10001;"><div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;"><h3 id="welcome-message-text" style="color: var(--primary-dark); text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3><div id="today-summary-zone"></div><button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn-secondary btn-validated-click" style="margin-top: 15px; width: 100%;">C'est parti !</button></div></div>
+    
+    <div id="task-modal" class="modal modal-center"><div class="modal-content content-center"><h3 id="modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">Nouvelle Tâche</h3><label>Nom de la tâche</label><input type="text" id="task-name" placeholder="Ex: Aller courir..."><label style="margin-top: 5px;">Descriptif (Optionnel)</label><textarea id="task-desc" placeholder="Détails, notes, adresse..." style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; min-height: 80px; resize: vertical; font-family: inherit; margin-bottom: 5px;"></textarea><div style="display: flex; gap: 15px; width: 100%; margin-top: 5px;"><div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><label id="date-input-label">Date</label><input type="date" id="task-date"></div><div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><label>Heure</label><div class="custom-time-container"><input type="number" id="task-time-h" placeholder="-- " min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('task-time-m').focus(); }"><span style="font-weight:bold; opacity:0.5;">:</span><input type="number" id="task-time-m" placeholder="-- " min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);"></div></div></div><div id="duplicate-dates-tags" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: -5px;"></div><label style="margin-top: 5px;">Rappels de notification</label><div class="reminder-badges-container"><div class="reminder-badge" data-value="5">5 min</div><div class="reminder-badge" data-value="15">15 min</div><div class="reminder-badge" data-value="60">1h</div></div><label style="margin-top: 5px;">Importance</label><select id="task-importance"><option value="high">Haute</option><option value="medium">Moyenne</option><option value="low">Faible</option></select><div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;"><button id="save-task" class="btn-primary btn-validated-click" style="flex:1;">Enregistrer</button><button id="close-modal" class="btn-secondary" style="flex:1;">Annuler</button></div></div></div>
 
-    <div id="task-modal" class="modal modal-center">
+    <div id="todo-modal" class="modal modal-center"><div class="modal-content content-center"><h3 id="todo-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">To-Do List</h3><div id="todo-day-selector-block" style="display:none; flex-direction:column; gap:5px;"><label>Jour de la semaine</label><select id="todo-day-select"><option value="1">Lundi</option><option value="2">Mardi</option><option value="3">Mercredi</option><option value="4">Jeudi</option><option value="5">Vendredi</option><option value="6">Samedi</option><option value="0">Dimanche</option></select></div><label style="margin-top: 5px;">Heure</label><div class="custom-time-container"><input type="number" id="todo-time-h" placeholder="-- " min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('todo-time-m').focus(); }"><span style="font-weight:bold; opacity:0.5;">:</span><input type="number" id="todo-time-m" placeholder="-- " min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);"></div><label style="margin-top: 5px;">Activité</label><input type="text" id="todo-task-name" placeholder="Tâche..."><div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;"><button id="save-todo" class="btn-primary btn-validated-click" style="flex:1;">Ajouter</button><button id="close-todo-modal" class="btn-secondary" style="flex:1;">Annuler</button></div></div></div>
+
+    <div id="birthday-modal" class="modal modal-center"><div class="modal-content content-center"><h3 style="text-align: center; color: var(--birthday-color); margin-bottom: 5px;">Ajouter un Anniversaire 🎂</h3><label>Prénom / Nom</label><input type="text" id="birthday-name" placeholder="Ex: Maman, Thomas..."><label style="margin-top: 5px;">Date de naissance</label><input type="date" id="birthday-date"><div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;"><button id="save-birthday" class="btn-primary btn-validated-click" style="flex:1; background:var(--birthday-color);">Enregistrer</button><button onclick="document.getElementById('birthday-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button></div></div></div>
+
+    <div id="calendar-day-modal" class="modal modal-center"><div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto;"><h3 id="cal-modal-date-title" style="color: var(--primary); text-align: center; margin-bottom: 5px;"></h3><div id="cal-modal-tasks-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;"></div><button onclick="document.getElementById('calendar-day-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button></div></div>
+
+    <!-- MODAL : AJOUT PRODUIT COURSES -->
+    <div id="shopping-item-modal" class="modal modal-center">
         <div class="modal-content content-center">
-            <h3 id="modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">Nouvelle Tâche</h3>
+            <h3 id="shopping-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;"></h3>
             
-            <label>Nom de la tâche</label>
-            <input type="text" id="task-name" placeholder="Ex: Aller courir...">
-            
-            <label style="margin-top: 5px;">Descriptif (Optionnel)</label>
-            <textarea id="task-desc" placeholder="Détails, notes, adresse..." style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; min-height: 80px; resize: vertical; font-family: inherit; margin-bottom: 5px;"></textarea>
-            
-            <div style="display: flex; gap: 15px; width: 100%; margin-top: 5px;">
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
-                    <label id="date-input-label">Date</label>
-                    <input type="date" id="task-date">
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <div style="flex: 1;">
+                    <label>Quantité</label>
+                    <input type="number" id="shopping-qty" value="1" min="1" style="text-align: center;">
                 </div>
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
-                    <label>Heure</label>
-                    <div class="custom-time-container">
-                        <input type="number" id="task-time-h" placeholder="-- " inputmode="numeric" min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('task-time-m').focus(); }">
-                        <span style="font-weight:bold; opacity:0.5;">:</span>
-                        <input type="number" id="task-time-m" placeholder="-- " inputmode="numeric" min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);">
-                    </div>
+                <div style="flex: 1.5;">
+                    <label>Unité / Poids</label>
+                    <select id="shopping-unit" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%;">
+                        <option value="">Pièce(s)</option>
+                        <option value="g">Grammes (g)</option>
+                        <option value="kg">Kilos (kg)</option>
+                        <option value="L">Litres (L)</option>
+                        <option value="cl">Centilitres (cl)</option>
+                        <option value="Pack">Pack(s)</option>
+                    </select>
                 </div>
             </div>
 
-            <div id="duplicate-dates-tags" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: -5px;"></div>
-            
-            <label style="margin-top: 5px;">Rappels de notification</label>
-            <div class="reminder-badges-container">
-                <div class="reminder-badge" data-value="5">5 min</div>
-                <div class="reminder-badge" data-value="15">15 min</div>
-                <div class="reminder-badge" data-value="60">1h</div>
-            </div>
-
-            <label style="margin-top: 5px;">Importance</label>
-            <select id="task-importance">
-                <option value="high">Haute</option>
-                <option value="medium">Moyenne</option>
-                <option value="low">Faible</option>
-            </select>
-            <div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;">
-                <button id="save-task" class="btn-primary btn-validated-click" style="flex:1;">Enregistrer</button>
-                <button id="close-modal" class="btn-secondary" style="flex:1;">Annuler</button>
+            <div class="modal-buttons" style="display:flex; gap:10px; margin-top:15px;">
+                <button onclick="saveShoppingItem()" class="btn-primary btn-validated-click" style="flex:1;">Ajouter au panier</button>
+                <button onclick="document.getElementById('shopping-item-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
             </div>
         </div>
     </div>
 
-    <div id="todo-modal" class="modal modal-center">
-        <div class="modal-content content-center">
-            <h3 id="todo-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">To-Do List</h3>
-            <div id="todo-day-selector-block" style="display:none; flex-direction:column; gap:5px;">
-                <label>Jour de la semaine</label>
-                <select id="todo-day-select">
-                    <option value="1">Lundi</option>
-                    <option value="2">Mardi</option>
-                    <option value="3">Mercredi</option>
-                    <option value="4">Jeudi</option>
-                    <option value="5">Vendredi</option>
-                    <option value="6">Samedi</option>
-                    <option value="0">Dimanche</option>
-                </select>
-            </div>
-            
-            <label style="margin-top: 5px;">Heure</label>
-            <div class="custom-time-container">
-                <input type="number" id="todo-time-h" placeholder="-- " inputmode="numeric" min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('todo-time-m').focus(); }">
-                <span style="font-weight:bold; opacity:0.5;">:</span>
-                <input type="number" id="todo-time-m" placeholder="-- " inputmode="numeric" min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);">
-            </div>
-
-            <label style="margin-top: 5px;">Activité</label>
-            <input type="text" id="todo-task-name" placeholder="Tâche...">
-            <div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;">
-                <button id="save-todo" class="btn-primary btn-validated-click" style="flex:1;">Ajouter</button>
-                <button id="close-todo-modal" class="btn-secondary" style="flex:1;">Annuler</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="birthday-modal" class="modal modal-center">
-        <div class="modal-content content-center">
-            <h3 style="text-align: center; color: var(--birthday-color); margin-bottom: 5px;">Ajouter un Anniversaire 🎂</h3>
-            <label>Prénom / Nom</label>
-            <input type="text" id="birthday-name" placeholder="Ex: Maman, Thomas...">
-            <label style="margin-top: 5px;">Date de naissance</label>
-            <input type="date" id="birthday-date">
-            <div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;">
-                <button id="save-birthday" class="btn-primary btn-validated-click" style="flex:1; background:var(--birthday-color);">Enregistrer</button>
-                <button onclick="document.getElementById('birthday-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="calendar-day-modal" class="modal modal-center">
-        <div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto;">
-            <h3 id="cal-modal-date-title" style="color: var(--primary); text-align: center; margin-bottom: 5px;"></h3>
-            <div id="cal-modal-tasks-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;"></div>
-            <button onclick="document.getElementById('calendar-day-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
-        </div>
-    </div>
-
+    <!-- MODAL PARTAGE DYNAMIQUE -->
     <div id="share-modal" class="modal modal-center" style="justify-content: center; align-items: center; z-index: 10005;">
         <div class="modal-content content-center">
-            <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Partage Agenda 🤝</h3>
+            <h3 id="share-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Partage</h3>
             
             <div style="margin-bottom: 0;">
                 <label>Mon code à donner :</label>
@@ -250,7 +186,7 @@
                     <button onclick="copyShareCode()" style="background:none; border:none; cursor:pointer; font-size:1.5rem;" title="Copier le code">📋</button>
                 </div>
                 
-                <label style="margin-top:15px; display:block;">Ajouter l'agenda d'un proche :</label>
+                <label style="margin-top:15px; display:block;">Ajouter le code d'un proche :</label>
                 <div style="display:flex; gap:10px; margin-top:5px;">
                     <input type="text" id="friend-code-input" placeholder="Code..." style="flex:1; text-transform:uppercase;">
                     <button id="btn-add-friend" class="btn-primary btn-validated-click">Lier</button>
@@ -258,15 +194,14 @@
                 
                 <div id="friends-list-container" class="friend-list"></div>
             </div>
-            
             <button onclick="document.getElementById('share-modal').style.display='none'" class="btn-secondary" style="margin-top: 20px; width: 100%;">Fermer</button>
         </div>
     </div>
 
+    <!-- FIREBASE SCRIPTS -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    
     <script src="script.js"></script>
 </body>
 </html>
