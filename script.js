@@ -20,6 +20,7 @@ let friends = [], shoppingFriends = [];
 let friendUnsubscribes = {}, shoppingFriendUnsubscribes = {};
 let unsubscribeUser;
 let currentUser = null, userNickname = "", hasShownWelcomeThisSession = false, taskSubView = "active"; 
+let myAgendaCode = "", myShoppingCode = ""; // DEUX CODES DE PARTAGE DISTINCTS
 let unsubscribeTasks, unsubscribeDaily, unsubscribeWeekly, unsubscribeRoutine, unsubscribeBirthdays, unsubscribeShopping; 
 
 let currentTheme = localStorage.getItem('listme_theme') || 'pink', viewState = 'day', todoMode = 'daily', editingId = null, editingTodoId = null; 
@@ -419,7 +420,7 @@ function renderShoppingList() {
         return;
     }
 
-    if(scrollUpBtn && allShopping.length > 3) scrollUpBtn.style.display = 'flex';
+    if(scrollUpBtn && allShopping.length > 0) scrollUpBtn.style.display = 'flex';
     else if(scrollUpBtn) scrollUpBtn.style.display = 'none';
 
     actives.forEach(item => {
@@ -506,9 +507,20 @@ auth.onAuthStateChanged((user) => {
                 
                 customShoppingCards = data.customCards || []; 
                 
-                let myCode = data.shareCode;
-                if(!myCode) { myCode = Math.random().toString(36).substring(2, 8).toUpperCase(); db.collection("users").doc(user.uid).set({shareCode: myCode, sharedWith: []}, {merge: true}); }
-                if(document.getElementById('my-share-code')) document.getElementById('my-share-code').innerText = myCode;
+                let updateData = {};
+                myAgendaCode = data.shareCode;
+                myShoppingCode = data.shoppingShareCode;
+
+                if(!myAgendaCode) { myAgendaCode = Math.random().toString(36).substring(2, 8).toUpperCase(); updateData.shareCode = myAgendaCode; updateData.sharedWith = []; }
+                if(!myShoppingCode) { myShoppingCode = Math.random().toString(36).substring(2, 8).toUpperCase(); updateData.shoppingShareCode = myShoppingCode; updateData.shoppingSharedWith = []; }
+                
+                if(Object.keys(updateData).length > 0) {
+                    db.collection("users").doc(user.uid).set(updateData, {merge: true});
+                }
+
+                if(document.getElementById('my-share-code') && document.getElementById('share-modal').style.display === 'flex') {
+                    document.getElementById('my-share-code').innerText = currentShareMode === 'agenda' ? myAgendaCode : myShoppingCode;
+                }
                 
                 friends = data.following || [];
                 shoppingFriends = data.shoppingFollowing || []; 
@@ -562,6 +574,7 @@ function autoSaveNickname() { const nick = document.getElementById('profile-nick
 function openShareModal(mode) { 
     currentShareMode = mode;
     document.getElementById('share-modal-title').innerText = mode === 'agenda' ? "Partage Agenda 🤝" : "Partage Courses 🛒";
+    document.getElementById('my-share-code').innerText = mode === 'agenda' ? myAgendaCode : myShoppingCode;
     renderFriendsList();
     document.getElementById('share-modal').style.display = 'flex'; 
 }
@@ -589,11 +602,15 @@ let btnAddFriend = document.getElementById('btn-add-friend');
 if(btnAddFriend) { 
     btnAddFriend.onclick = () => { 
         const code = document.getElementById('friend-code-input').value.trim().toUpperCase(); 
-        if(!code || code === document.getElementById('my-share-code').innerText) return; 
-        db.collection("users").where("shareCode", "==", code).get().then(snapshot => { 
+        if(!code || code === myAgendaCode || code === myShoppingCode) return; 
+        
+        let searchField = currentShareMode === 'agenda' ? "shareCode" : "shoppingShareCode";
+        
+        db.collection("users").where(searchField, "==", code).get().then(snapshot => { 
             if(snapshot.empty) { showToast("Code introuvable ! ❌"); return; } 
             let friendDoc = snapshot.docs[0], friendUid = friendDoc.id, friendData = friendDoc.data(); 
             let friendName = friendData.nickname || "Inconnu"; 
+            
             if (currentShareMode === 'agenda') {
                 if(friends.some(f => f.uid === friendUid)) { showToast("Déjà lié ! 🤝"); return; } 
                 friends.push({uid: friendUid, nickname: friendName}); db.collection("users").doc(currentUser.uid).update({following: friends}); 
@@ -602,6 +619,7 @@ if(btnAddFriend) {
             } else {
                 if(shoppingFriends.some(f => f.uid === friendUid)) { showToast("Déjà lié aux courses ! 🤝"); return; } 
                 shoppingFriends.push({uid: friendUid, nickname: friendName}); db.collection("users").doc(currentUser.uid).update({shoppingFollowing: shoppingFriends}); 
+                let shoppingSharedWith = friendData.shoppingSharedWith || []; if(!shoppingSharedWith.includes(currentUser.uid)) { shoppingSharedWith.push(currentUser.uid); db.collection("users").doc(friendUid).update({shoppingSharedWith: shoppingSharedWith}); }
                 startFriendSync(friendUid, friendName, 'shopping'); showToast(`Courses de ${friendName} liées ! ✨`);
             }
             renderFriendsList(); document.getElementById('friend-code-input').value = ""; 
