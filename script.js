@@ -30,7 +30,7 @@ const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 const dayInitials = ["D", "L", "M", "M", "J", "V", "S"], dayNamesFr = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 document.body.className = `theme-${currentTheme}`;
 
-// --- DICTIONNAIRE DES COURSES (Arborescence complète & ajustée) ---
+// --- DICTIONNAIRE DES COURSES ---
 const foodCategories = {
     "🥩 Viandes": {
         "Volailles": ["Poulet", "Dinde", "Canard"],
@@ -211,7 +211,6 @@ function openCustomCardModal() {
     const catSelect = document.getElementById('custom-card-category');
     catSelect.innerHTML = '';
     
-    // Insère tous les rayons de la base actuelle
     Object.keys(foodCategories).forEach(cat => {
         let opt = document.createElement('option');
         opt.value = cat; opt.innerText = cat;
@@ -237,7 +236,6 @@ function saveCustomCard() {
     if (units.length === 0) units.push({ v: "", l: "Pièce(s)" }); 
 
     let calculatedPath = targetRayon;
-    // La carte est rangée exactement là où l'utilisateur se trouve
     if (currentShoppingPath.length > 0 && currentShoppingPath[0] === targetRayon) {
         calculatedPath = currentShoppingPath.join('/');
     }
@@ -328,8 +326,24 @@ function saveShoppingItem() {
     }
 }
 
+// --- FONCTIONS DE DÉFILEMENT (SCROLL) ---
+function scrollToShoppingList() {
+    const listHeader = document.getElementById('shopping-list-header');
+    if (listHeader) {
+        listHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function scrollToTopShopping() {
+    const marketHeader = document.getElementById('shopping-page');
+    if (marketHeader) {
+        marketHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
 function renderShoppingList() {
     const c = document.getElementById('shopping-list-content');
+    const scrollUpBtn = document.getElementById('shopping-scroll-up-btn');
     if (!c) return; c.innerHTML = '';
     
     const allShopping = [...shoppingItems, ...sharedShoppingItems];
@@ -340,8 +354,12 @@ function renderShoppingList() {
 
     if (allShopping.length === 0) {
         c.innerHTML = '<p style="text-align:center; opacity:0.5; font-style:italic;">La liste est vide !</p>';
+        if(scrollUpBtn) scrollUpBtn.style.display = 'none';
         return;
     }
+
+    if(scrollUpBtn && allShopping.length > 3) scrollUpBtn.style.display = 'flex';
+    else if(scrollUpBtn) scrollUpBtn.style.display = 'none';
 
     actives.forEach(item => {
         const ownerTag = item.ownerName ? ` <small style="opacity:0.5; font-style:italic;">(par ${item.ownerName})</small>` : '';
