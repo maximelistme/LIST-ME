@@ -9,7 +9,6 @@
     <title>LIST'ME</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Force l'affichage des flèches pour les champs quantité */
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
             opacity: 1 !important;
@@ -102,7 +101,7 @@
                 <h2>Market</h2>
             </div>
             
-            <div id="shopping-breadcrumb" style="margin-bottom: 15px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; font-weight: bold; color: var(--primary-dark);"></div>
+            <div id="shopping-breadcrumb" style="margin-bottom: 15px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; font-weight: bold; color: var(--primary-dark); min-height: 28px;"></div>
             
             <div id="shopping-categories" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px;"></div>
             
@@ -159,7 +158,7 @@
                 <div style="flex: 1.5;">
                     <label>Unité / Poids</label>
                     <select id="shopping-unit" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%;">
-                        </select>
+                    </select>
                 </div>
             </div>
 
@@ -172,19 +171,24 @@
 
     <div id="custom-card-modal" class="modal modal-center">
         <div class="modal-content content-center">
-            <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Nouvelle Carte ✏️</h3>
+            <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Nouveau Produit ✏️</h3>
             
-            <label>Type de carte</label>
-            <select id="custom-card-type" onchange="toggleCustomCardUnits()" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; margin-bottom: 10px;">
-                <option value="folder">Catégorie (Dossier)</option>
-                <option value="product">Produit Final</option>
+            <label>Rayon de rangement</label>
+            <select id="custom-card-category" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; margin-bottom: 10px;">
+                <option value="🥩 Viandes">🥩 Viandes</option>
+                <option value="🐟 Poissons">🐟 Poissons</option>
+                <option value="🥦 Légumes & Fruits">🥦 Légumes & Fruits</option>
+                <option value="🧀 Laitages">🧀 Laitages</option>
+                <option value="🍝 Épicerie Salée">🍝 Épicerie Salée</option>
+                <option value="🍪 Épicerie Sucrée">🍪 Épicerie Sucrée</option>
+                <option value="🧻 Entretien & Hygiène">🧻 Entretien & Hygiène</option>
             </select>
 
-            <label>Nom de la carte</label>
-            <input type="text" id="custom-card-name" placeholder="Ex: Céréales, Épices...">
+            <label>Nom du produit</label>
+            <input type="text" id="custom-card-name" placeholder="Ex: Pavé de veau, Épices...">
 
-            <div id="custom-card-units-section" style="display:none; margin-top: 10px;">
-                <label>Unités autorisées (cochez les choix)</label>
+            <div style="margin-top: 10px;">
+                <label>Unités de mesure autorisées</label>
                 <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; background: rgba(128,128,128,0.05); padding: 10px; border-radius: 10px;">
                     <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" class="custom-unit-cb" value="" checked> Pièce(s)</label>
                     <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" class="custom-unit-cb" value="g"> Grammes (g)</label>
