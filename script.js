@@ -20,6 +20,7 @@ let friends = [], shoppingFriends = [];
 let friendUnsubscribes = {}, shoppingFriendUnsubscribes = {};
 let unsubscribeUser;
 let currentUser = null, userNickname = "", hasShownWelcomeThisSession = false, taskSubView = "active"; 
+let shoppingSubView = "personal"; // Nouvel état pour l'onglet de la liste de courses
 let myAgendaCode = "", myShoppingCode = ""; 
 let unsubscribeTasks, unsubscribeDaily, unsubscribeWeekly, unsubscribeRoutine, unsubscribeBirthdays, unsubscribeShopping; 
 
@@ -183,9 +184,6 @@ const foodCategories = {
         "Ménage": ["Liquide vaisselle", "Lessive", "Adoucissant", "Éponge", "Nettoyant sol", "Javel"]
     }
 };
-
-let currentShoppingPath = []; 
-let currentShareMode = 'agenda'; 
 
 // --- UTILITAIRES ---
 function getCustomTime(prefix) { let h = document.getElementById(prefix + '-h'), m = document.getElementById(prefix + '-m'); if(!h || !m) return ""; let hVal = h.value.trim(), mVal = m.value.trim(); if(hVal) return `${hVal.padStart(2, '0')}:${mVal ? mVal.padStart(2, '0') : "00"}`; return ""; }
@@ -380,6 +378,7 @@ function saveShoppingItem() {
             info: displayInfo,
             completed: false,
             userId: currentUser.uid,
+            listType: shoppingSubView, // 'personal' ou 'shared'
             createdAt: Date.now()
         }).then(() => {
             showToast("Ajouté au panier ! 🛒");
@@ -403,28 +402,58 @@ function scrollToTopShopping() {
     }
 }
 
+// --- ONGLETS ET AFFICHAGE DE LA LISTE ---
+function switchShoppingSubView(view) {
+    shoppingSubView = view;
+    document.getElementById('sub-btn-shopping-personal').classList.toggle('active', view === 'personal');
+    document.getElementById('sub-btn-shopping-shared').classList.toggle('active', view === 'shared');
+    renderShoppingList();
+}
+
 function renderShoppingList() {
     const c = document.getElementById('shopping-list-content');
     const scrollUpBtn = document.getElementById('shopping-scroll-up-btn');
-    if (!c) return; c.innerHTML = '';
+    const tabsContainer = document.getElementById('shopping-tabs-container');
     
-    const allShopping = [...shoppingItems, ...sharedShoppingItems];
-    allShopping.sort((a, b) => a.createdAt - b.createdAt);
-    
-    const actives = allShopping.filter(item => !item.completed);
-    const completeds = allShopping.filter(item => item.completed);
+    if (!c) return; 
+    c.innerHTML = '';
 
-    if (allShopping.length === 0) {
+    // Gestion des onglets
+    if (shoppingFriends.length > 0) {
+        tabsContainer.style.display = 'flex';
+    } else {
+        tabsContainer.style.display = 'none';
+        shoppingSubView = 'personal'; 
+        if(document.getElementById('sub-btn-shopping-personal')) document.getElementById('sub-btn-shopping-personal').classList.add('active');
+        if(document.getElementById('sub-btn-shopping-shared')) document.getElementById('sub-btn-shopping-shared').classList.remove('active');
+    }
+
+    // Filtrage ciblé des listes
+    let currentList = [];
+    if (shoppingSubView === 'personal') {
+        currentList = shoppingItems.filter(item => item.listType !== 'shared');
+    } else {
+        let mySharedItems = shoppingItems.filter(item => item.listType === 'shared');
+        let friendsSharedItems = sharedShoppingItems.filter(item => item.listType === 'shared' || !item.listType);
+        currentList = [...mySharedItems, ...friendsSharedItems];
+    }
+    
+    currentList.sort((a, b) => a.createdAt - b.createdAt);
+    
+    const actives = currentList.filter(item => !item.completed);
+    const completeds = currentList.filter(item => item.completed);
+
+    if (currentList.length === 0) {
         c.innerHTML = '<p style="text-align:center; opacity:0.5; font-style:italic;">La liste est vide !</p>';
         if(scrollUpBtn) scrollUpBtn.style.display = 'none';
         return;
     }
 
-    if(scrollUpBtn && allShopping.length > 0) scrollUpBtn.style.display = 'flex';
+    if(scrollUpBtn && currentList.length > 0) scrollUpBtn.style.display = 'flex';
     else if(scrollUpBtn) scrollUpBtn.style.display = 'none';
 
     actives.forEach(item => {
-        const ownerTag = item.ownerName ? ` <small style="opacity:0.5; font-style:italic;">(par ${item.ownerName})</small>` : '';
+        const ownerTag = item.ownerName && shoppingSubView === 'shared' ? ` <small style="opacity:0.6; font-style:italic;">(${item.ownerName})</small>` : '';
         const d = document.createElement('div');
         d.className = `task-card`; 
         d.style.borderLeft = "6px solid var(--primary)"; 
@@ -432,7 +461,7 @@ function renderShoppingList() {
             <div style="flex:1; display:flex; align-items:center; min-width:0;">
                 <div onclick="toggleShoppingCheck('${item.id}', false)" style="width:20px; height:20px; border:2px solid var(--primary); border-radius:5px; margin-right:10px; cursor:pointer;"></div>
                 <div style="flex:1;">
-                    <strong style="display:block;">${item.name} ${ownerTag}</strong>
+                    <strong style="display:block;">${item.name}${ownerTag}</strong>
                     <small style="color:var(--primary); font-weight:bold;">${item.info}</small>
                 </div>
             </div>
@@ -442,19 +471,23 @@ function renderShoppingList() {
         c.appendChild(d);
     });
 
-    if (completeds.length > 0 && actives.length > 0) {
-        c.innerHTML += '<div class="task-section-separator"><span>Dans le chariot</span></div>';
+    if (completeds.length > 0) {
+        let marginStyle = actives.length === 0 ? "margin-top: 0;" : "";
+        c.innerHTML += `<div class="task-section-separator" style="display: flex; justify-content: space-between; align-items: center; padding-right: 5px; ${marginStyle}">
+            <span>Dans le chariot</span>
+            <button onclick="clearCompletedShopping()" style="background:none; border:none; color:var(--danger); font-size:0.85rem; font-weight:bold; cursor:pointer; text-decoration:underline;">Vider le cadie</button>
+        </div>`;
     }
 
     completeds.forEach(item => {
-        const ownerTag = item.ownerName ? ` <small style="opacity:0.5; font-style:italic;">(par ${item.ownerName})</small>` : '';
+        const ownerTag = item.ownerName && shoppingSubView === 'shared' ? ` <small style="opacity:0.6; font-style:italic;">(${item.ownerName})</small>` : '';
         const d = document.createElement('div');
         d.className = `task-card completed-bubble`; 
         d.innerHTML = `
             <div style="flex:1; display:flex; align-items:center; min-width:0;">
                 <div onclick="toggleShoppingCheck('${item.id}', true)" style="width:20px; height:20px; background:var(--success); border-radius:5px; margin-right:10px; display:flex; align-items:center; justify-content:center; color:white; font-size:0.8rem; cursor:pointer;">✓</div>
                 <div style="flex:1; text-decoration:line-through; opacity:0.6;">
-                    <strong style="display:block;">${item.name} ${ownerTag}</strong>
+                    <strong style="display:block;">${item.name}${ownerTag}</strong>
                     <small>${item.info}</small>
                 </div>
             </div>
@@ -465,32 +498,45 @@ function renderShoppingList() {
     });
 }
 
-// LOGIQUE MISE A JOUR : Enregistre la date de validation
 function toggleShoppingCheck(id, isCompleted) { 
-    if(!isCompleted) {
-        db.collection("shopping").doc(id).update({ completed: true, completedAtStr: todayStr });
-    } else {
-        db.collection("shopping").doc(id).update({ completed: false, completedAtStr: firebase.firestore.FieldValue.delete() });
-    }
+    db.collection("shopping").doc(id).update({ completed: !isCompleted });
 }
 
-function deleteShoppingItem(id) { db.collection("shopping").doc(id).delete().then(() => showToast("Produit retiré !")); }
+function deleteShoppingItem(id) { 
+    db.collection("shopping").doc(id).delete().then(() => showToast("Produit retiré !")); 
+}
+
+function clearCompletedShopping() {
+    let currentList = [];
+    if (shoppingSubView === 'personal') {
+        currentList = shoppingItems.filter(item => item.listType !== 'shared');
+    } else {
+        let mySharedItems = shoppingItems.filter(item => item.listType === 'shared');
+        let friendsSharedItems = sharedShoppingItems.filter(item => item.listType === 'shared' || !item.listType);
+        currentList = [...mySharedItems, ...friendsSharedItems];
+    }
+    
+    let completeds = currentList.filter(item => item.completed);
+    if (completeds.length === 0) return;
+
+    let operations = [];
+    completeds.forEach(item => {
+        operations.push(db.collection("shopping").doc(item.id).delete());
+    });
+
+    Promise.all(operations).then(() => {
+        showToast("Le chariot a été vidé ! 🗑️");
+    }).catch(e => {
+        console.error(e);
+        showToast("Certains produits (partagés par d'autres) ne peuvent être supprimés que par eux.");
+    });
+}
 
 // --- NOTIFS ET ARCHIVAGE ---
 function processMidnightAutoArchive() {
     if(isArchiving || !currentUser) return; isArchiving = true;
     const today = new Date().toISOString().split('T')[0]; let operations = [];
     tasks.forEach(t => { if (t.completed) return; let ghosts = Array.isArray(t.duplicateDays) ? t.duplicateDays : []; ghosts = ghosts.map(g => typeof g === 'string' ? {date: g, time: t.time} : g); if (ghosts.length > 0) { let allOccurrences = [{date: t.date, time: t.time || ""}, ...ghosts]; allOccurrences.sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.time || "").localeCompare(b.time || "")); let pastDates = allOccurrences.filter(o => o.date < today); let remainingDates = allOccurrences.filter(o => o.date >= today); if (pastDates.length > 0) { pastDates.forEach(pastOcc => { operations.push(db.collection("tasks").add({ name: t.name, desc: t.desc || "", date: pastOcc.date, time: pastOcc.time, reminders: t.reminders || [], importance: t.importance, completed: true, completedAtStr: pastOcc.date, userId: t.userId, createdAt: t.createdAt || Date.now(), duplicateDays: [] })); }); if (remainingDates.length > 0) { let nextMain = remainingDates.shift(); operations.push(db.collection("tasks").doc(t.id).update({ date: nextMain.date, time: nextMain.time, duplicateDays: remainingDates })); } else { operations.push(db.collection("tasks").doc(t.id).delete()); } } } else { if (t.date < today) operations.push(db.collection("tasks").doc(t.id).update({ completed: true, completedAtStr: t.date })); } });
-    
-    // LOGIQUE MISE A JOUR : Suppression le lendemain de la validation
-    shoppingItems.forEach(item => { 
-        if(item.completed) { 
-            let compDate = item.completedAtStr;
-            if(!compDate) { compDate = new Date(item.createdAt).toISOString().split('T')[0]; } // Sécurité pour les anciens produits
-            if(compDate < today) operations.push(db.collection("shopping").doc(item.id).delete()); 
-        } 
-    });
-    
     Promise.all(operations).then(() => { isArchiving = false; }).catch(() => { isArchiving = false; });
 }
 
