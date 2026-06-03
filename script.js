@@ -43,14 +43,14 @@ document.body.className = `theme-${currentTheme}`;
 const foodCategories = {
     "🥩 Viandes": {
         "Volailles": {
-            "Poulet": ["Entier", "Filet", "Cuisse", "Pilon", "Aiguillette"],
-            "Dinde": ["Escalope", "Filet", "Rôti", "Cuisse"],
-            "Canard": ["Magret", "Cuisse", "Entier", "Aiguillette"]
+            "Poulet": ["Entier (Poulet)", "Filet (Poulet)", "Cuisse (Poulet)", "Pilon (Poulet)", "Aiguillette (Poulet)"],
+            "Dinde": ["Escalope (Dinde)", "Filet (Dinde)", "Rôti (Dinde)", "Cuisse (Dinde)"],
+            "Canard": ["Magret (Canard)", "Cuisse (Canard)", "Entier (Canard)", "Aiguillette (Canard)"]
         },
-        "Bœuf": ["Steak haché", "Entrecôte", "Faux-filet", "Bavette", "Onglet", "Rôti", "Paleron", "Macreuse"],
-        "Porc": ["Côtes", "Lardons", "Poitrine fumée", "Filet mignon", "Rôti", "Échine"],
-        "Veau": ["Escalope", "Rôti", "Paupiettes", "Côtes", "Tendron", "Épaule"],
-        "Agneau": ["Côtelettes", "Gigot", "Épaule", "Souris", "Collier"]
+        "Bœuf": ["Steak haché (Bœuf)", "Entrecôte (Bœuf)", "Faux-filet (Bœuf)", "Bavette (Bœuf)", "Onglet (Bœuf)", "Rôti (Bœuf)", "Paleron (Bœuf)", "Macreuse (Bœuf)"],
+        "Porc": ["Côtes (Porc)", "Lardons (Porc)", "Poitrine fumée (Porc)", "Filet mignon (Porc)", "Rôti (Porc)", "Échine (Porc)"],
+        "Veau": ["Escalope (Veau)", "Rôti (Veau)", "Paupiettes (Veau)", "Côtes (Veau)", "Tendron (Veau)", "Épaule (Veau)"],
+        "Agneau": ["Côtelettes (Agneau)", "Gigot (Agneau)", "Épaule (Agneau)", "Souris (Agneau)", "Collier (Agneau)"]
     },
     "🐟 Poissons": {
         "Poissons Frais": ["Saumon", "Cabillaud", "Merlu", "Dorade", "Thon"],
@@ -228,6 +228,11 @@ function shoppingNavigateTo(cat) {
     renderShoppingCategories(); 
 }
 
+// Fonction de formatage pour rendre transparentes les parenthèses sans briser l'alignement
+function formatProductDisplay(name) {
+    return name.replace(/\(([^)]+)\)/g, '<span style="color:transparent; font-size:0; opacity:0; pointer-events:none;">($1)</span>');
+}
+
 function shoppingNavigateBack() { 
     shoppingSearchQuery = ""; // Réinitialise la recherche au recul
     currentShoppingPath.pop(); 
@@ -296,7 +301,7 @@ function renderShoppingCategories() {
                 if (product.isCustom) {
                     container.innerHTML += `<div onclick="openShoppingItemModal('${product.id}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:2px dashed var(--primary); transition: transform 0.2s;">+ ${product.name}</div>`;
                 } else {
-                    container.innerHTML += `<div onclick="openShoppingItemModal('${product.name}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${product.name}</div>`;
+                    container.innerHTML += `<div onclick="openShoppingItemModal('${product.name}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${formatProductDisplay(product.name)}</div>`;
                 }
             });
         }
@@ -322,7 +327,7 @@ function renderShoppingCategories() {
         });
 
         defaultProducts.forEach(product => {
-            container.innerHTML += `<div onclick="openShoppingItemModal('${product}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${product}</div>`;
+            container.innerHTML += `<div onclick="openShoppingItemModal('${product}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${formatProductDisplay(product)}</div>`;
         });
 
         customProducts.forEach(product => {
@@ -428,7 +433,7 @@ function openShoppingItemModal(identifier, isCustom) {
     }
 
     tempShoppingProduct = productName;
-    document.getElementById('shopping-modal-title').innerText = productName;
+    document.getElementById('shopping-modal-title').innerText = formatProductDisplay(productName);
     document.getElementById('shopping-qty').value = "1";
 
     const unitSelect = document.getElementById('shopping-unit');
