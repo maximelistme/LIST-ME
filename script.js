@@ -299,9 +299,11 @@ function renderShoppingCategories() {
         } else {
             matches.forEach(product => {
                 if (product.isCustom) {
-                    container.innerHTML += `<div onclick="openShoppingItemModal('${product.id}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:2px dashed var(--primary); transition: transform 0.2s;">+ ${product.name}</div>`;
+                    const safeId = product.id.replace(/'/g, "\\'");
+                    container.innerHTML += `<div onclick="openShoppingItemModal('${safeId}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:2px dashed var(--primary); transition: transform 0.2s;">+ ${product.name}</div>`;
                 } else {
-                    container.innerHTML += `<div onclick="openShoppingItemModal('${product.name}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${formatProductDisplay(product.name)}</div>`;
+                    const safeName = product.name.replace(/'/g, "\\'");
+                    container.innerHTML += `<div onclick="openShoppingItemModal('${safeName}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${formatProductDisplay(product.name)}</div>`;
                 }
             });
         }
@@ -323,15 +325,18 @@ function renderShoppingCategories() {
         const customProducts = customShoppingCards.filter(c => c.path === currentPathStr);
 
         defaultFolders.forEach(cat => {
-            container.innerHTML += `<div onclick="shoppingNavigateTo('${cat}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1);">${cat}</div>`;
+            const safeCat = cat.replace(/'/g, "\\'");
+            container.innerHTML += `<div onclick="shoppingNavigateTo('${safeCat}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1);">${cat}</div>`;
         });
 
         defaultProducts.forEach(product => {
-            container.innerHTML += `<div onclick="openShoppingItemModal('${product}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${formatProductDisplay(product)}</div>`;
+            const safeProduct = product.replace(/'/g, "\\'");
+            container.innerHTML += `<div onclick="openShoppingItemModal('${safeProduct}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${formatProductDisplay(product)}</div>`;
         });
 
         customProducts.forEach(product => {
-            container.innerHTML += `<div onclick="openShoppingItemModal('${product.id}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:2px dashed var(--primary); transition: transform 0.2s;">+ ${product.name}</div>`;
+            const safeId = product.id.replace(/'/g, "\\'");
+            container.innerHTML += `<div onclick="openShoppingItemModal('${safeId}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:2px dashed var(--primary); transition: transform 0.2s;">+ ${product.name}</div>`;
         });
     }
 
@@ -433,7 +438,10 @@ function openShoppingItemModal(identifier, isCustom) {
     }
 
     tempShoppingProduct = productName;
-    document.getElementById('shopping-modal-title').innerText = formatProductDisplay(productName);
+    
+    // CORRECTION ICI : passage en innerHTML pour interpréter la balise HTML de formatProductDisplay
+    document.getElementById('shopping-modal-title').innerHTML = formatProductDisplay(productName);
+    
     document.getElementById('shopping-qty').value = "1";
 
     const unitSelect = document.getElementById('shopping-unit');
