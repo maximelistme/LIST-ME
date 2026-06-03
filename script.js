@@ -24,10 +24,11 @@ let shoppingSubView = "personal"; // État pour l'onglet de la liste de courses
 let myAgendaCode = "", myShoppingCode = ""; 
 let unsubscribeTasks, unsubscribeDaily, unsubscribeWeekly, unsubscribeRoutine, unsubscribeBirthdays, unsubscribeShopping; 
 
-// --- VARIABLES DE CONTRÔLE ET LOGIQUE ---
+// --- VARIABLES DE CONTRÔLE ET RECHERCHE ---
 let currentShoppingPath = []; 
 let currentShareMode = 'agenda';
 let isArchiving = false;
+let shoppingSearchQuery = ""; // Variable globale pour la recherche du Market
 
 let currentTheme = localStorage.getItem('listme_theme') || 'pink', viewState = 'day', todoMode = 'daily', editingId = null, editingTodoId = null; 
 let selectedYear = new Date().getFullYear(), selectedMonth = new Date().getMonth();
@@ -221,10 +222,26 @@ function switchTaskSubView(view) {
 }
 
 // --- LOGIQUE DES COURSES & CARTES CUSTOM MÈRES ---
+function shoppingNavigateTo(cat) { 
+    shoppingSearchQuery = ""; // Réinitialise la recherche à l'entrée d'un rayon
+    currentShoppingPath.push(cat); 
+    renderShoppingCategories(); 
+}
+
+function shoppingNavigateBack() { 
+    shoppingSearchQuery = ""; // Réinitialise la recherche au recul
+    currentShoppingPath.pop(); 
+    renderShoppingCategories(); 
+}
+
 function renderShoppingCategories() {
     const container = document.getElementById('shopping-categories');
     const breadcrumb = document.getElementById('shopping-breadcrumb');
     if(!container || !breadcrumb) return;
+
+    // Sauvegarde du focus avant effacement
+    let isFocused = (document.activeElement && document.activeElement.id === 'shopping-search');
+
     container.innerHTML = '';
 
     const currentPathStr = currentShoppingPath.join('/');
@@ -235,42 +252,99 @@ function renderShoppingCategories() {
         breadcrumb.innerText = currentShoppingPath[currentShoppingPath.length - 1];
     }
 
-    if (currentShoppingPath.length > 0) {
-        container.innerHTML += `<div onclick="shoppingNavigateBack()" style="grid-column: 1 / -1; background:rgba(128,128,128,0.1); color:var(--text-color); padding:12px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; border: 1px dashed rgba(128,128,128,0.3);">⬅️ Retour</div>`;
-    }
+    const isAtRoot = (currentShoppingPath.length === 0);
+
+    // --- BARRE DE NAVIGATION FIXE (RETOUR À GAUCHE, RECHERCHE À DROITE) ---
+    let navRowHtml = `<div style="grid-column: 1 / -1; display: flex; gap: 10px; width: 100%; align-items: center; margin-bottom: 5px;">`;
+    navRowHtml += `<div onclick="${isAtRoot ? '' : 'shoppingNavigateBack()'}" style="flex: 1; background:rgba(128,128,128,0.1); color:var(--text-color); padding:12px; border-radius:12px; text-align:center; font-weight:bold; white-space: nowrap; border: 1px dashed rgba(128,128,128,0.3); ${isAtRoot ? 'opacity: 0.3; cursor: default; pointer-events: none;' : 'cursor: pointer;'}-webkit-user-select: none; user-select: none;">⬅️ Retour</div>`;
+    navRowHtml += `<input type="text" id="shopping-search" placeholder="🔍 Rechercher un produit..." oninput="handleShoppingSearch(this.value)" value="${shoppingSearchQuery}" style="flex: 2; padding: 12px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; font-weight: bold; outline: none;">`;
+    navRowHtml += `</div>`;
+    
+    container.innerHTML += navRowHtml;
     container.innerHTML += `<div onclick="openCustomCardModal()" style="grid-column: 1 / -1; background:var(--primary); color:white; padding:10px; border-radius:20px; text-align:center; font-weight:bold; cursor:pointer; width: 70%; margin: 0 auto 10px auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);">+ Nouveau Produit</div>`;
 
-    let defaultFolders = [], defaultProducts = [];
-    let currentObj = foodCategories;
-    let validDefaultPath = true;
+    // --- LOGIQUE D'AFFICHAGE : MODE RECHERCHE vs MODE NAVIGATION ---
+    if (shoppingSearchQuery.trim() !== "") {
+        let matches = [];
+        let q = shoppingSearchQuery.toLowerCase().trim();
 
-    for (let step of currentShoppingPath) {
-        if (currentObj && currentObj[step]) { currentObj = currentObj[step]; } 
-        else { validDefaultPath = false; break; }
+        function extractMatches(obj) {
+            if (Array.isArray(obj)) {
+                obj.forEach(p => {
+                    if (p.toLowerCase().includes(q) && !matches.some(m => m.name === p)) {
+                        matches.push({ name: p, isCustom: false });
+                    }
+                });
+            } else if (typeof obj === 'object' && obj !== null) {
+                for (let key in obj) {
+                    extractMatches(obj[key]);
+                }
+            }
+        }
+        extractMatches(foodCategories);
+
+        customShoppingCards.forEach(card => {
+            if (card.name.toLowerCase().includes(q) && !matches.some(m => m.id === card.id)) {
+                matches.push({ name: card.name, id: card.id, isCustom: true });
+            }
+        });
+
+        if (matches.length === 0) {
+            container.innerHTML += `<p style="grid-column: 1 / -1; text-align:center; opacity:0.5; font-style:italic; margin-top:10px;">Aucun produit trouvé pour "${shoppingSearchQuery}"</p>`;
+        } else {
+            matches.forEach(product => {
+                if (product.isCustom) {
+                    container.innerHTML += `<div onclick="openShoppingItemModal('${product.id}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:2px dashed var(--primary); transition: transform 0.2s;">+ ${product.name}</div>`;
+                } else {
+                    container.innerHTML += `<div onclick="openShoppingItemModal('${product.name}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${product.name}</div>`;
+                }
+            });
+        }
+    } else {
+        let defaultFolders = [], defaultProducts = [];
+        let currentObj = foodCategories;
+        let validDefaultPath = true;
+
+        for (let step of currentShoppingPath) {
+            if (currentObj && currentObj[step]) { currentObj = currentObj[step]; } 
+            else { validDefaultPath = false; break; }
+        }
+
+        if (validDefaultPath && currentObj) {
+            if (Array.isArray(currentObj)) defaultProducts = currentObj;
+            else defaultFolders = Object.keys(currentObj);
+        }
+
+        const customProducts = customShoppingCards.filter(c => c.path === currentPathStr);
+
+        defaultFolders.forEach(cat => {
+            container.innerHTML += `<div onclick="shoppingNavigateTo('${cat}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1);">${cat}</div>`;
+        });
+
+        defaultProducts.forEach(product => {
+            container.innerHTML += `<div onclick="openShoppingItemModal('${product}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${product}</div>`;
+        });
+
+        customProducts.forEach(product => {
+            container.innerHTML += `<div onclick="openShoppingItemModal('${product.id}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:2px dashed var(--primary); transition: transform 0.2s;">+ ${product.name}</div>`;
+        });
     }
 
-    if (validDefaultPath && currentObj) {
-        if (Array.isArray(currentObj)) defaultProducts = currentObj;
-        else defaultFolders = Object.keys(currentObj);
+    if (isFocused) {
+        const input = document.getElementById('shopping-search');
+        if (input) {
+            input.focus();
+            const val = input.value;
+            input.value = '';
+            input.value = val; 
+        }
     }
-
-    const customProducts = customShoppingCards.filter(c => c.path === currentPathStr);
-
-    defaultFolders.forEach(cat => {
-        container.innerHTML += `<div onclick="shoppingNavigateTo('${cat}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1);">${cat}</div>`;
-    });
-
-    defaultProducts.forEach(product => {
-        container.innerHTML += `<div onclick="openShoppingItemModal('${product}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${product}</div>`;
-    });
-
-    customProducts.forEach(product => {
-        container.innerHTML += `<div onclick="openShoppingItemModal('${product.id}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:2px dashed var(--primary); transition: transform 0.2s;">+ ${product.name}</div>`;
-    });
 }
 
-function shoppingNavigateTo(cat) { currentShoppingPath.push(cat); renderShoppingCategories(); }
-function shoppingNavigateBack() { currentShoppingPath.pop(); renderShoppingCategories(); }
+function handleShoppingSearch(val) {
+    shoppingSearchQuery = val;
+    renderShoppingCategories();
+}
 
 function openCustomCardModal() {
     document.getElementById('custom-card-name').value = '';
@@ -401,13 +475,6 @@ function scrollToShoppingList() {
     }
 }
 
-function scrollToTopShopping() {
-    const marketHeader = document.getElementById('shopping-page');
-    if (marketHeader) {
-        marketHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-}
-
 // --- ONGLETS ET AFFICHAGE DE LA LISTE ---
 function switchShoppingSubView(view) {
     shoppingSubView = view;
@@ -424,7 +491,6 @@ function renderShoppingList() {
     if (!c) return; 
     c.innerHTML = '';
 
-    // Gestion des onglets
     if (shoppingFriends.length > 0) {
         tabsContainer.style.display = 'flex';
     } else {
@@ -434,7 +500,6 @@ function renderShoppingList() {
         if(document.getElementById('sub-btn-shopping-shared')) document.getElementById('sub-btn-shopping-shared').classList.remove('active');
     }
 
-    // Filtrage ciblé des listes
     let currentList = [];
     if (shoppingSubView === 'personal') {
         currentList = shoppingItems.filter(item => item.listType !== 'shared');
@@ -547,6 +612,13 @@ function clearCompletedShopping() {
             showToast("Le chariot a été vidé d'un coup ! 🗑️");
         }
     });
+}
+
+function scrollToTopShopping() {
+    const marketHeader = document.getElementById('shopping-page');
+    if (marketHeader) {
+        marketHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 // --- NOTIFS ET ARCHIVAGE ---
