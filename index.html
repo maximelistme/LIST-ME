@@ -119,9 +119,14 @@
             <!-- Zone des cartes de catégories -->
             <div id="shopping-categories" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px;"></div>
             
-            <!-- ANCRE POUR LE DÉFILEMENT VERS LE BAS -->
-            <div id="shopping-list-header" class="header-action header-centered" style="margin-top: 30px; margin-bottom: 15px;">
+            <!-- ANCRE ET ONGLETS POUR LE DÉFILEMENT VERS LE BAS -->
+            <div id="shopping-list-header" class="header-action header-centered" style="margin-top: 30px; margin-bottom: 15px; flex-direction: column;">
                 <h2>Ma Liste de Courses</h2>
+                
+                <div id="shopping-tabs-container" style="display:none; gap: 15px; margin-top: 15px;">
+                    <button id="sub-btn-shopping-personal" class="sub-menu-tab active" onclick="switchShoppingSubView('personal')">Ma liste</button>
+                    <button id="sub-btn-shopping-shared" class="sub-menu-tab" onclick="switchShoppingSubView('shared')">Ma liste partagée</button>
+                </div>
             </div>
             
             <!-- Zone de la liste générée -->
