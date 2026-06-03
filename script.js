@@ -20,13 +20,19 @@ let friends = [], shoppingFriends = [];
 let friendUnsubscribes = {}, shoppingFriendUnsubscribes = {};
 let unsubscribeUser;
 let currentUser = null, userNickname = "", hasShownWelcomeThisSession = false, taskSubView = "active"; 
-let shoppingSubView = "personal"; // Nouvel état pour l'onglet de la liste de courses
+let shoppingSubView = "personal"; // État pour l'onglet de la liste de courses
 let myAgendaCode = "", myShoppingCode = ""; 
 let unsubscribeTasks, unsubscribeDaily, unsubscribeWeekly, unsubscribeRoutine, unsubscribeBirthdays, unsubscribeShopping; 
+
+// --- VARIABLES DE CONTRÔLE ET LOGIQUE ---
+let currentShoppingPath = []; 
+let currentShareMode = 'agenda';
+let isArchiving = false;
 
 let currentTheme = localStorage.getItem('listme_theme') || 'pink', viewState = 'day', todoMode = 'daily', editingId = null, editingTodoId = null; 
 let selectedYear = new Date().getFullYear(), selectedMonth = new Date().getMonth();
 let todayStr = new Date().toISOString().split('T')[0];
+let lastCheckedDayStr = todayStr;
 const currentDayOfWeek = new Date().getDay();
 const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 const dayInitials = ["D", "L", "M", "M", "J", "V", "S"], dayNamesFr = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
@@ -232,7 +238,7 @@ function renderShoppingCategories() {
     if (currentShoppingPath.length > 0) {
         container.innerHTML += `<div onclick="shoppingNavigateBack()" style="grid-column: 1 / -1; background:rgba(128,128,128,0.1); color:var(--text-color); padding:12px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; border: 1px dashed rgba(128,128,128,0.3);">⬅️ Retour</div>`;
     }
-    container.innerHTML += `<div onclick="openCustomCardModal()" style="grid-column: 1 / -1; background:var(--primary); color:white; padding:10px; border-radius:20px; text-align:center; font-weight:bold; cursor:pointer; width: 70%; margin: 0 auto 10px auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);">+ Nouvelle Carte</div>`;
+    container.innerHTML += `<div onclick="openCustomCardModal()" style="grid-column: 1 / -1; background:var(--primary); color:white; padding:10px; border-radius:20px; text-align:center; font-weight:bold; cursor:pointer; width: 70%; margin: 0 auto 10px auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);">+ Nouveau Produit</div>`;
 
     let defaultFolders = [], defaultProducts = [];
     let currentObj = foodCategories;
@@ -378,7 +384,7 @@ function saveShoppingItem() {
             info: displayInfo,
             completed: false,
             userId: currentUser.uid,
-            listType: shoppingSubView, // 'personal' ou 'shared'
+            listType: shoppingSubView, 
             createdAt: Date.now()
         }).then(() => {
             showToast("Ajouté au panier ! 🛒");
@@ -433,7 +439,7 @@ function renderShoppingList() {
     if (shoppingSubView === 'personal') {
         currentList = shoppingItems.filter(item => item.listType !== 'shared');
     } else {
-        let mySharedItems = shoppingItems.filter(item => item.listType === 'shared');
+        let mySharedItems = shoppingItems.filter(item => item.listType === 'shared').map(item => ({ ...item, isMine: true }));
         let friendsSharedItems = sharedShoppingItems.filter(item => item.listType === 'shared' || !item.listType);
         currentList = [...mySharedItems, ...friendsSharedItems];
     }
@@ -452,8 +458,14 @@ function renderShoppingList() {
     if(scrollUpBtn && currentList.length > 0) scrollUpBtn.style.display = 'flex';
     else if(scrollUpBtn) scrollUpBtn.style.display = 'none';
 
+    const getOwnerTag = (item) => {
+        if (shoppingSubView !== 'shared') return '';
+        if (item.isMine) return ` <small style="opacity:0.6; font-style:italic; color:var(--primary);">(Moi)</small>`;
+        if (item.ownerName) return ` <small style="opacity:0.6; font-style:italic;">(${item.ownerName})</small>`;
+        return '';
+    };
+
     actives.forEach(item => {
-        const ownerTag = item.ownerName && shoppingSubView === 'shared' ? ` <small style="opacity:0.6; font-style:italic;">(${item.ownerName})</small>` : '';
         const d = document.createElement('div');
         d.className = `task-card`; 
         d.style.borderLeft = "6px solid var(--primary)"; 
@@ -461,12 +473,12 @@ function renderShoppingList() {
             <div style="flex:1; display:flex; align-items:center; min-width:0;">
                 <div onclick="toggleShoppingCheck('${item.id}', false)" style="width:20px; height:20px; border:2px solid var(--primary); border-radius:5px; margin-right:10px; cursor:pointer;"></div>
                 <div style="flex:1;">
-                    <strong style="display:block;">${item.name}${ownerTag}</strong>
+                    <strong style="display:block;">${item.name}${getOwnerTag(item)}</strong>
                     <small style="color:var(--primary); font-weight:bold;">${item.info}</small>
                 </div>
             </div>
             <div class="task-actions" style="flex-shrink:0;">
-                <button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
+                ${item.isMine || shoppingSubView === 'personal' ? `<button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>` : ''}
             </div>`;
         c.appendChild(d);
     });
@@ -480,19 +492,18 @@ function renderShoppingList() {
     }
 
     completeds.forEach(item => {
-        const ownerTag = item.ownerName && shoppingSubView === 'shared' ? ` <small style="opacity:0.6; font-style:italic;">(${item.ownerName})</small>` : '';
         const d = document.createElement('div');
         d.className = `task-card completed-bubble`; 
         d.innerHTML = `
             <div style="flex:1; display:flex; align-items:center; min-width:0;">
                 <div onclick="toggleShoppingCheck('${item.id}', true)" style="width:20px; height:20px; background:var(--success); border-radius:5px; margin-right:10px; display:flex; align-items:center; justify-content:center; color:white; font-size:0.8rem; cursor:pointer;">✓</div>
                 <div style="flex:1; text-decoration:line-through; opacity:0.6;">
-                    <strong style="display:block;">${item.name}${ownerTag}</strong>
+                    <strong style="display:block;">${item.name}${getOwnerTag(item)}</strong>
                     <small>${item.info}</small>
                 </div>
             </div>
             <div class="task-actions" style="flex-shrink:0;">
-                <button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
+                ${item.isMine || shoppingSubView === 'personal' ? `<button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>` : ''}
             </div>`;
         c.appendChild(d);
     });
@@ -520,15 +531,21 @@ function clearCompletedShopping() {
     if (completeds.length === 0) return;
 
     let operations = [];
+    let skipCount = 0;
+
     completeds.forEach(item => {
-        operations.push(db.collection("shopping").doc(item.id).delete());
+        let deletePromise = db.collection("shopping").doc(item.id).delete().catch(() => {
+            skipCount++;
+        });
+        operations.push(deletePromise);
     });
 
     Promise.all(operations).then(() => {
-        showToast("Le chariot a été vidé ! 🗑️");
-    }).catch(e => {
-        console.error(e);
-        showToast("Certains produits (partagés par d'autres) ne peuvent être supprimés que par eux.");
+        if (skipCount > 0) {
+            showToast(`Cadie vidé ! (${skipCount} produits gérés par vos amis) 🗑️`);
+        } else {
+            showToast("Le chariot a été vidé d'un coup ! 🗑️");
+        }
     });
 }
 
@@ -588,7 +605,7 @@ auth.onAuthStateChanged((user) => {
                 friends = data.following || [];
                 shoppingFriends = data.shoppingFollowing || []; 
                 
-                if(document.getElementById('shopping-page').style.display === 'block') renderShoppingCategories();
+                if(document.getElementById('shopping-page').style.display === 'block') { renderShoppingCategories(); renderShoppingList(); }
             } catch (e) { console.error(e); }
         });
 
