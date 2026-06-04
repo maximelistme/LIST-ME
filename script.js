@@ -424,7 +424,7 @@ function saveShoppingItem() {
             completed: false,
             userId: currentUser.uid,
             ownerName: userNickname || "Inconnu",
-            listId: currentShoppingListId, // Assigne l'id de la liste sélectionnée
+            listId: currentShoppingListId,
             createdAt: Date.now()
         }).then(() => {
             showToast("Ajouté au panier ! 🛒");
@@ -442,6 +442,15 @@ function scrollToShoppingList() {
 function renderShoppingTabs() {
     const container = document.getElementById('shopping-tabs-dynamic');
     if (!container) return;
+    
+    if (mySharedLists.length === 0) {
+        container.style.display = 'none';
+        currentShoppingListId = "personal"; 
+        return;
+    } else {
+        container.style.display = 'flex';
+    }
+
     container.innerHTML = '';
 
     // 1. Onglet Personnel Fini
@@ -479,7 +488,7 @@ function syncCurrentShoppingItems() {
 
     let query = db.collection("shopping").where("listId", "==", currentShoppingListId);
     
-    // Si personnel, on récupère les siens + support des anciens produits sans structure listId
+    // Si personnel, on récupère les siens
     if (currentShoppingListId === "personal") {
         query = db.collection("shopping").where("userId", "==", currentUser.uid);
     }
@@ -610,16 +619,21 @@ function renderMySharedListsInModal() {
 function copyListCode(code) { navigator.clipboard.writeText(code).then(() => showToast("Code de liste copié ! 📋")); }
 
 function createNewSharedShoppingList() {
-    const name = document.getElementById('new-shared-list-name').value.trim();
-    if (!name || !currentUser) { showToast("Veuillez donner un nom à la liste ! ❌"); return; }
+    const nameInput = document.getElementById('new-shared-list-name');
+    const name = nameInput.value.trim();
+    if (!name) { showToast("Veuillez donner un nom à la liste ! ❌"); return; }
+    if (!currentUser) { showToast("Erreur: Utilisateur non connecté."); return; }
     const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
     db.collection("shoppingLists").add({
         name: name, code: uniqueCode, createdBy: currentUser.uid, members: [currentUser.uid], createdAt: Date.now()
     }).then((docRef) => {
         showToast(`Liste "${name}" créée ! 🎉`);
-        document.getElementById('new-shared-list-name').value = '';
-        currentShoppingListId = docRef.id; // Bascule automatiquement sur la nouvelle liste
+        nameInput.value = '';
+        currentShoppingListId = docRef.id; 
+    }).catch(error => {
+        console.error("Erreur Firebase:", error);
+        showToast("Erreur de permission base de données.");
     });
 }
 
@@ -636,7 +650,7 @@ function joinSharedShoppingList() {
         db.collection("shoppingLists").doc(doc.id).update({ members: updatedMembers }).then(() => {
             showToast(`Vous avez rejoint "${data.name}" ! 🛒`);
             document.getElementById('join-shared-list-code').value = '';
-            currentShoppingListId = doc.id; // Bascule sur la liste raccordée
+            currentShoppingListId = doc.id; 
         });
     });
 }
@@ -653,6 +667,7 @@ function leaveSharedList(listId) {
             db.collection("shoppingLists").doc(listId).update({ members: updatedMembers });
         }
         showToast("Liste quittée !");
+        if (currentShoppingListId === listId) { currentShoppingListId = "personal"; renderShoppingTabs(); syncCurrentShoppingItems(); }
     });
 }
 
