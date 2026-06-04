@@ -31,7 +31,6 @@
     </nav>
 
     <main id="app">
-        <!-- ONGLET : AUTHENTIFICATION -->
         <section id="auth-page">
             <div class="header-action">
                 <h2 id="auth-title">Connexion</h2>
@@ -47,7 +46,6 @@
             </div>
         </section>
 
-        <!-- ONGLET : TÂCHES -->
         <section id="tasks-page" style="display:none;">
             <div class="header-action header-centered" style="padding: 10px 15px; gap: 15px;">
                 <button id="sub-btn-active-tasks" class="sub-menu-tab active" onclick="switchTaskSubView('active')">Mes Tâches</button>
@@ -69,7 +67,6 @@
             <div id="task-list"></div>
         </section>
 
-        <!-- ONGLET : TO-DO LIST -->
         <section id="todo-page" style="display:none;">
             <div class="calendar-nav">
                 <button id="btn-daily" class="bubble active" onclick="setTodoMode('daily')">Journalier</button>
@@ -80,7 +77,6 @@
             <div id="todo-content"></div>
         </section>
 
-        <!-- ONGLET : CALENDRIER -->
         <section id="calendar-page" style="display:none;">
             <div class="calendar-nav">
                 <button id="btn-year" class="bubble" onclick="setViewState('year')">Année</button>
@@ -101,42 +97,34 @@
             </div>
         </section>
 
-        <!-- ONGLET : COURSES 🛒 -->
         <section id="shopping-page" style="display:none;">
             <div class="header-action header-centered" style="margin-bottom: 15px;">
                 <h2>Market</h2>
             </div>
             
-            <!-- ACTIONS DE DÉFILEMENT ET PARTAGE MULTIPLE -->
             <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; padding: 0 10px;">
                 <button onclick="scrollToShoppingList()" class="btn-primary" style="padding: 10px 18px; font-size: 0.9rem; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: var(--primary); color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     🛒 Voir ma liste ⬇️
                 </button>
                 <button onclick="openCustomShoppingListShareModal()" class="btn-primary" style="padding: 10px 18px; font-size: 0.9rem; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: var(--primary); color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    🤝 Partager
+                    🤝 Partager ma liste de course
                 </button>
             </div>
 
             <div id="shopping-breadcrumb" style="margin-bottom: 15px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; font-weight: bold; color: var(--primary-dark); min-height: 28px;"></div>
             
-            <!-- Zone des cartes de catégories -->
             <div id="shopping-categories" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px;"></div>
             
-            <!-- ANCRE POUR LA LISTE DE COURSES -->
             <div id="shopping-list-header" class="header-action header-centered" style="margin-top: 30px; margin-bottom: 5px; flex-direction: column; width: 100%;">
                 <h2>Ma Liste de Courses</h2>
                 <div id="shopping-list-participants" style="font-size: 0.85rem; opacity: 0.8; text-align: center; margin-top: 5px; display: none;"></div>
             </div>
 
-            <!-- ZONE ONGLETS + TRI SUR LA MÊME LIGNE -->
             <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%; border-bottom: 2px solid var(--primary); padding: 0 10px 0 10px; margin-bottom: 15px; box-sizing: border-box; flex-wrap: wrap; gap: 10px;">
                 
-                <!-- ONGLETS DE TYPE MARQUE-PAGE -->
                 <div id="shopping-tabs-dynamic" style="display: none; gap: 6px; overflow-x: auto; white-space: nowrap; flex: 1;">
-                    <!-- Rempli dynamiquement en JS -->
-                </div>
+                    </div>
                 
-                <!-- MENU DE TRI -->
                 <select id="shopping-sort-filter" onchange="renderShoppingList()" style="padding: 6px 10px; font-size: 0.8rem; border-radius: 12px; font-weight: bold; cursor: pointer; background: var(--card-bg); color: var(--text-color); border: 1px solid rgba(128,128,128,0.3); outline: none; margin-left: auto; margin-bottom: 5px;">
                     <option value="date">✨ Tri par Ajout</option>
                     <option value="alpha">🔤 Alphabétique</option>
@@ -146,10 +134,8 @@
                 
             </div>
             
-            <!-- Zone de la liste générée -->
             <div id="shopping-list-content"></div>
 
-            <!-- BOUTON DE DÉFILEMENT (Remonter) -->
             <div id="shopping-scroll-up-btn" style="display: none; justify-content: center; margin-top: 25px; margin-bottom: 15px;">
                 <button onclick="scrollToTopShopping()" class="btn-secondary" style="padding: 8px 15px; font-size: 0.85rem; border-radius: 20px;">
                     ⬆️ Retour aux rayons
@@ -157,7 +143,6 @@
             </div>
         </section>
 
-        <!-- ONGLET : PROFIL -->
         <section id="profile-page" style="display:none;">
             <div class="header-action header-centered"><h2>Mon Profil</h2></div>
             <div class="profile-card">
@@ -181,7 +166,6 @@
 
     <div id="toast-notification" class="toast-hidden"></div>
 
-    <!-- MODALS EXISTANTS -->
     <div id="welcome-modal" class="modal modal-center" style="display: none; z-index: 10001;"><div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;"><h3 id="welcome-message-text" style="color: var(--primary-dark); text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3><div id="today-summary-zone"></div><button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn-secondary btn-validated-click" style="margin-top: 15px; width: 100%;">C'est parti !</button></div></div>
     
     <div id="task-modal" class="modal modal-center" style="display: none;"><div class="modal-content content-center"><h3 id="modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">Nouvelle Tâche</h3><label>Nom de la tâche</label><input type="text" id="task-name" placeholder="Ex: Aller courir..."><label style="margin-top: 5px;">Descriptif (Optionnel)</label><textarea id="task-desc" placeholder="Détails, notes, adresse..." style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; min-height: 80px; resize: vertical; font-family: inherit; margin-bottom: 5px;"></textarea><div style="display: flex; gap: 15px; width: 100%; margin-top: 5px;"><div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><label id="date-input-label">Date</label><input type="date" id="task-date"></div><div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><label>Heure</label><div class="custom-time-container"><input type="number" id="task-time-h" placeholder="-- " min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('task-time-m').focus(); }"><span style="font-weight:bold; opacity:0.5;">:</span><input type="number" id="task-time-m" placeholder="-- " min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);"></div></div></div><div id="duplicate-dates-tags" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: -5px;"></div><label style="margin-top: 5px;">Rappels de notification</label><div class="reminder-badges-container"><div class="reminder-badge" data-value="5">5 min</div><div class="reminder-badge" data-value="15">15 min</div><div class="reminder-badge" data-value="60">1h</div></div><label style="margin-top: 5px;">Importance</label><select id="task-importance"><option value="high">Haute</option><option value="medium">Moyenne</option><option value="low">Faible</option></select><div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;"><button id="save-task" class="btn-primary btn-validated-click" style="flex:1;">Enregistrer</button><button id="close-modal" class="btn-secondary" style="flex:1;">Annuler</button></div></div></div>
@@ -192,7 +176,6 @@
 
     <div id="calendar-day-modal" class="modal modal-center" style="display: none;"><div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto;"><h3 id="cal-modal-date-title" style="color: var(--primary); text-align: center; margin-bottom: 5px;"></h3><div id="cal-modal-tasks-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;"></div><button onclick="document.getElementById('calendar-day-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button></div></div>
 
-    <!-- MODAL : AJOUT PRODUIT COURSES -->
     <div id="shopping-item-modal" class="modal modal-center" style="display: none;">
         <div class="modal-content content-center">
             <h3 id="shopping-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;"></h3>
@@ -205,17 +188,8 @@
                 <div style="flex: 1.5;">
                     <label>Mesure</label>
                     <select id="shopping-unit" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; box-sizing: border-box;">
-                        <!-- Rempli dynamiquement par JS -->
-                    </select>
+                        </select>
                 </div>
-            </div>
-
-            <!-- NOUVEAU : Option d'attribution pour les listes "Événement" -->
-            <div id="assignee-container" style="display: none; width: 100%; margin-top: 10px;">
-                <label style="color: var(--primary); font-weight: bold;">🎯 Attribuer cet achat à :</label>
-                <select id="shopping-assignee" style="padding: 14px; border-radius: 10px; border: 2px dashed var(--primary); background: rgba(128,128,128,0.05); color: var(--text-color); font-size: 1rem; width: 100%; box-sizing: border-box;">
-                    <!-- Rempli en JS -->
-                </select>
             </div>
 
             <div class="modal-buttons" style="display:flex; gap:10px; margin-top:15px;">
@@ -225,15 +199,13 @@
         </div>
     </div>
 
-    <!-- MODAL : CREATION PRODUIT PERSONNALISÉ -->
     <div id="custom-card-modal" class="modal modal-center" style="display: none;">
         <div class="modal-content content-center">
             <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Nouveau Produit ✏️</h3>
             
             <label>Rayon de rangement</label>
             <select id="custom-card-category" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; margin-bottom: 10px;">
-                <!-- Rempli dynamiquement en JS -->
-            </select>
+                </select>
 
             <label>Nom du produit</label>
             <input type="text" id="custom-card-name" placeholder="Ex: Gaufres, Épices...">
@@ -259,7 +231,6 @@
         </div>
     </div>
 
-    <!-- MODAL PARTAGE DYNAMIQUE (AGENDA) -->
     <div id="share-modal" class="modal modal-center" style="display: none; justify-content: center; align-items: center; z-index: 10005;">
         <div class="modal-content content-center">
             <h3 id="share-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Partage</h3>
@@ -282,25 +253,16 @@
         </div>
     </div>
 
-    <!-- MODAL : GESTION DES LISTES DE COURSES MULTIPLES -->
     <div id="shopping-list-multi-share-modal" class="modal modal-center" style="display: none; z-index: 10006;">
         <div class="modal-content content-center" style="max-height: 85vh; overflow-y: auto;">
             <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Listes Partagées 🛒</h3>
             
-            <!-- Création avec Sélection Type -->
             <div style="background: rgba(128,128,128,0.05); padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px solid rgba(128,128,128,0.1);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                    <label style="font-weight: bold; margin: 0;">Créer une liste :</label>
-                    <select id="new-list-type" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 8px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); outline: none;">
-                        <option value="standard">🤝 Partage classique</option>
-                        <option value="event">🎉 Événement (Attribution)</option>
-                    </select>
-                </div>
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Créer une nouvelle liste partagée :</label>
                 <input type="text" id="new-shared-list-name" placeholder="Ex: Courses Coloc, Weekend...">
                 <button onclick="createNewSharedShoppingList()" class="btn-primary" style="width: 100%; padding: 10px; margin-top: 5px;">Créer & Générer un code</button>
             </div>
 
-            <!-- Raccordement -->
             <div style="background: rgba(128,128,128,0.05); padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px solid rgba(128,128,128,0.1);">
                 <label style="font-weight: bold; display: block; margin-bottom: 5px;">Rejoindre une liste :</label>
                 <div style="display: flex; gap: 8px;">
@@ -309,17 +271,14 @@
                 </div>
             </div>
 
-            <!-- Liste des groupes actifs -->
             <label style="font-weight: bold; display: block; margin-bottom: 5px;">Vos listes partagées actives :</label>
             <div id="my-shared-lists-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; width: 100%;">
-                <!-- Injecté en JS -->
-            </div>
+                </div>
 
             <button onclick="document.getElementById('shopping-list-multi-share-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
         </div>
     </div>
 
-    <!-- MODAL : SUCCÈS CRÉATION LISTE PARTAGÉE -->
     <div id="share-success-modal" class="modal modal-center" style="display: none; z-index: 10007;">
         <div class="modal-content content-center">
             <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">🎉 Liste Créée !</h3>
@@ -338,10 +297,9 @@
         </div>
     </div>
 
-    <!-- FIREBASE SCRIPTS -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="script.js?v=event_update"></script>
+    <script src="script.js?v=calendar_fix"></script>
 </body>
 </html>
