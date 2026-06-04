@@ -8,9 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Mogra&display=swap" rel="stylesheet">
     <title>LIST'ME</title>
     <link rel="stylesheet" href="style.css">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
     <style>
         /* Force l'affichage des flèches pour les champs quantité */
         input[type="number"]::-webkit-inner-spin-button,
@@ -110,10 +107,7 @@
                     🛒 Voir ma liste ⬇️
                 </button>
                 <button onclick="openCustomShoppingListShareModal()" class="btn-primary" style="padding: 10px 18px; font-size: 0.9rem; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: var(--primary); color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    🤝 Partager
-                </button>
-                <button onclick="exportShoppingListToPDF()" class="btn-secondary" style="padding: 10px 18px; font-size: 0.9rem; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: var(--card-bg); color: var(--primary); border: 1px solid rgba(128,128,128,0.3); font-weight: bold; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    📄 Exporter PDF
+                    🤝 Partager ma liste de course
                 </button>
             </div>
 
@@ -168,19 +162,21 @@
                 <div class="theme-option ocean" onclick="changeTheme('ocean')">Océan</div>
             </div>
         </section>
-    </main> <div id="toast-notification" class="toast-hidden"></div>
+    </main>
 
-    <div id="welcome-modal" class="modal modal-center" style="z-index: 10001;"><div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;"><h3 id="welcome-message-text" style="color: var(--primary-dark); text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3><div id="today-summary-zone"></div><button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn-secondary btn-validated-click" style="margin-top: 15px; width: 100%;">C'est parti !</button></div></div>
+    <div id="toast-notification" class="toast-hidden"></div>
+
+    <div id="welcome-modal" class="modal modal-center" style="display: none; z-index: 10001;"><div class="modal-content content-center" style="max-height: 80vh; overflow-y: auto;"><h3 id="welcome-message-text" style="color: var(--primary-dark); text-align: center; margin-bottom: 10px;">Welcome back ! 👋</h3><div id="today-summary-zone"></div><button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn-secondary btn-validated-click" style="margin-top: 15px; width: 100%;">C'est parti !</button></div></div>
     
-    <div id="task-modal" class="modal modal-center"><div class="modal-content content-center"><h3 id="modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">Nouvelle Tâche</h3><label>Nom de la tâche</label><input type="text" id="task-name" placeholder="Ex: Aller courir..."><label style="margin-top: 5px;">Descriptif (Optionnel)</label><textarea id="task-desc" placeholder="Détails, notes, adresse..." style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; min-height: 80px; resize: vertical; font-family: inherit; margin-bottom: 5px;"></textarea><div style="display: flex; gap: 15px; width: 100%; margin-top: 5px;"><div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><label id="date-input-label">Date</label><input type="date" id="task-date"></div><div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><label>Heure</label><div class="custom-time-container"><input type="number" id="task-time-h" placeholder="-- " min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('task-time-m').focus(); }"><span style="font-weight:bold; opacity:0.5;">:</span><input type="number" id="task-time-m" placeholder="-- " min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);"></div></div></div><div id="duplicate-dates-tags" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: -5px;"></div><label style="margin-top: 5px;">Rappels de notification</label><div class="reminder-badges-container"><div class="reminder-badge" data-value="5">5 min</div><div class="reminder-badge" data-value="15">15 min</div><div class="reminder-badge" data-value="60">1h</div></div><label style="margin-top: 5px;">Importance</label><select id="task-importance"><option value="high">Haute</option><option value="medium">Moyenne</option><option value="low">Faible</option></select><div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;"><button id="save-task" class="btn-primary btn-validated-click" style="flex:1;">Enregistrer</button><button id="close-modal" class="btn-secondary" style="flex:1;">Annuler</button></div></div></div>
+    <div id="task-modal" class="modal modal-center" style="display: none;"><div class="modal-content content-center"><h3 id="modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">Nouvelle Tâche</h3><label>Nom de la tâche</label><input type="text" id="task-name" placeholder="Ex: Aller courir..."><label style="margin-top: 5px;">Descriptif (Optionnel)</label><textarea id="task-desc" placeholder="Détails, notes, adresse..." style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; min-height: 80px; resize: vertical; font-family: inherit; margin-bottom: 5px;"></textarea><div style="display: flex; gap: 15px; width: 100%; margin-top: 5px;"><div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><label id="date-input-label">Date</label><input type="date" id="task-date"></div><div style="flex: 1; display: flex; flex-direction: column; gap: 5px;"><label>Heure</label><div class="custom-time-container"><input type="number" id="task-time-h" placeholder="-- " min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('task-time-m').focus(); }"><span style="font-weight:bold; opacity:0.5;">:</span><input type="number" id="task-time-m" placeholder="-- " min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);"></div></div></div><div id="duplicate-dates-tags" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: -5px;"></div><label style="margin-top: 5px;">Rappels de notification</label><div class="reminder-badges-container"><div class="reminder-badge" data-value="5">5 min</div><div class="reminder-badge" data-value="15">15 min</div><div class="reminder-badge" data-value="60">1h</div></div><label style="margin-top: 5px;">Importance</label><select id="task-importance"><option value="high">Haute</option><option value="medium">Moyenne</option><option value="low">Faible</option></select><div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;"><button id="save-task" class="btn-primary btn-validated-click" style="flex:1;">Enregistrer</button><button id="close-modal" class="btn-secondary" style="flex:1;">Annuler</button></div></div></div>
 
-    <div id="todo-modal" class="modal modal-center"><div class="modal-content content-center"><h3 id="todo-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">To-Do List</h3><div id="todo-day-selector-block" style="display:none; flex-direction:column; gap:5px;"><label>Jour de la semaine</label><select id="todo-day-select"><option value="1">Lundi</option><option value="2">Mardi</option><option value="3">Mercredi</option><option value="4">Jeudi</option><option value="5">Vendredi</option><option value="6">Samedi</option><option value="0">Dimanche</option></select></div><label style="margin-top: 5px;">Heure</label><div class="custom-time-container"><input type="number" id="todo-time-h" placeholder="-- " min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('todo-time-m').focus(); }"><span style="font-weight:bold; opacity:0.5;">:</span><input type="number" id="todo-time-m" placeholder="-- " min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);"></div><label style="margin-top: 5px;">Activité</label><input type="text" id="todo-task-name" placeholder="Tâche..."><div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;"><button id="save-todo" class="btn-primary btn-validated-click" style="flex:1;">Ajouter</button><button id="close-todo-modal" class="btn-secondary" style="flex:1;">Annuler</button></div></div></div>
+    <div id="todo-modal" class="modal modal-center" style="display: none;"><div class="modal-content content-center"><h3 id="todo-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 5px;">To-Do List</h3><div id="todo-day-selector-block" style="display:none; flex-direction:column; gap:5px;"><label>Jour de la semaine</label><select id="todo-day-select"><option value="1">Lundi</option><option value="2">Mardi</option><option value="3">Mercredi</option><option value="4">Jeudi</option><option value="5">Vendredi</option><option value="6">Samedi</option><option value="0">Dimanche</option></select></div><label style="margin-top: 5px;">Heure</label><div class="custom-time-container"><input type="number" id="todo-time-h" placeholder="-- " min="0" max="23" oninput="if(this.value.length>=2) { this.value = this.value.slice(0,2); document.getElementById('todo-time-m').focus(); }"><span style="font-weight:bold; opacity:0.5;">:</span><input type="number" id="todo-time-m" placeholder="-- " min="0" max="59" oninput="if(this.value.length>2) this.value = this.value.slice(0,2);"></div><label style="margin-top: 5px;">Activité</label><input type="text" id="todo-task-name" placeholder="Tâche..."><div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;"><button id="save-todo" class="btn-primary btn-validated-click" style="flex:1;">Ajouter</button><button id="close-todo-modal" class="btn-secondary" style="flex:1;">Annuler</button></div></div></div>
 
-    <div id="birthday-modal" class="modal modal-center"><div class="modal-content content-center"><h3 style="text-align: center; color: var(--birthday-color); margin-bottom: 5px;">Ajouter un Anniversaire 🎂</h3><label>Prénom / Nom</label><input type="text" id="birthday-name" placeholder="Ex: Maman, Thomas..."><label style="margin-top: 5px;">Date de naissance</label><input type="date" id="birthday-date"><div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;"><button id="save-birthday" class="btn-primary btn-validated-click" style="flex:1; background:var(--birthday-color);">Enregistrer</button><button onclick="document.getElementById('birthday-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button></div></div></div>
+    <div id="birthday-modal" class="modal modal-center" style="display: none;"><div class="modal-content content-center"><h3 style="text-align: center; color: var(--birthday-color); margin-bottom: 5px;">Ajouter un Anniversaire 🎂</h3><label>Prénom / Nom</label><input type="text" id="birthday-name" placeholder="Ex: Maman, Thomas..."><label style="margin-top: 5px;">Date de naissance</label><input type="date" id="birthday-date"><div class="modal-buttons" style="display:flex; gap:10px; margin-top:10px;"><button id="save-birthday" class="btn-primary btn-validated-click" style="flex:1; background:var(--birthday-color);">Enregistrer</button><button onclick="document.getElementById('birthday-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button></div></div></div>
 
-    <div id="calendar-day-modal" class="modal modal-center"><div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto;"><h3 id="cal-modal-date-title" style="color: var(--primary); text-align: center; margin-bottom: 5px;"></h3><div id="cal-modal-tasks-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;"></div><button onclick="document.getElementById('calendar-day-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button></div></div>
+    <div id="calendar-day-modal" class="modal modal-center" style="display: none;"><div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto;"><h3 id="cal-modal-date-title" style="color: var(--primary); text-align: center; margin-bottom: 5px;"></h3><div id="cal-modal-tasks-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;"></div><button onclick="document.getElementById('calendar-day-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button></div></div>
 
-    <div id="shopping-item-modal" class="modal modal-center">
+    <div id="shopping-item-modal" class="modal modal-center" style="display: none;">
         <div class="modal-content content-center">
             <h3 id="shopping-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;"></h3>
             
@@ -203,7 +199,7 @@
         </div>
     </div>
 
-    <div id="custom-card-modal" class="modal modal-center">
+    <div id="custom-card-modal" class="modal modal-center" style="display: none;">
         <div class="modal-content content-center">
             <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Nouveau Produit ✏️</h3>
             
@@ -235,7 +231,7 @@
         </div>
     </div>
 
-    <div id="share-modal" class="modal modal-center" style="justify-content: center; align-items: center; z-index: 10005;">
+    <div id="share-modal" class="modal modal-center" style="display: none; justify-content: center; align-items: center; z-index: 10005;">
         <div class="modal-content content-center">
             <h3 id="share-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Partage</h3>
             <div>
@@ -257,7 +253,7 @@
         </div>
     </div>
 
-    <div id="shopping-list-multi-share-modal" class="modal modal-center" style="z-index: 10006;">
+    <div id="shopping-list-multi-share-modal" class="modal modal-center" style="display: none; z-index: 10006;">
         <div class="modal-content content-center" style="max-height: 85vh; overflow-y: auto;">
             <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Listes Partagées 🛒</h3>
             
@@ -283,7 +279,7 @@
         </div>
     </div>
 
-    <div id="share-success-modal" class="modal modal-center" style="z-index: 10007;">
+    <div id="share-success-modal" class="modal modal-center" style="display: none; z-index: 10007;">
         <div class="modal-content content-center">
             <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">🎉 Liste Créée !</h3>
             <p style="text-align: center; margin-bottom: 15px; font-weight: bold; font-size: 1.1rem;" id="success-list-name"></p>
@@ -304,6 +300,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="script.js?v=pdf_fix"></script>
+    <script src="script.js?v=calendar_fix"></script>
 </body>
 </html>
