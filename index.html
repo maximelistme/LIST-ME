@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Mogra&display=swap" rel="stylesheet">
     <title>LIST'ME</title>
     <link rel="stylesheet" href="style.css">
+    
     <style>
         /* Force l'affichage des flèches pour les champs quantité */
         input[type="number"]::-webkit-inner-spin-button,
@@ -125,17 +126,13 @@
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%; border-bottom: 2px solid var(--primary); padding: 0 10px 0 10px; margin-bottom: 15px; box-sizing: border-box; flex-wrap: wrap; gap: 10px;">
-                
-                <div id="shopping-tabs-dynamic" style="display: none; gap: 6px; overflow-x: auto; white-space: nowrap; flex: 1;">
-                    </div>
-                
+                <div id="shopping-tabs-dynamic" style="display: none; gap: 6px; overflow-x: auto; white-space: nowrap; flex: 1;"></div>
                 <select id="shopping-sort-filter" onchange="renderShoppingList()" style="padding: 6px 10px; font-size: 0.8rem; border-radius: 12px; font-weight: bold; cursor: pointer; background: var(--card-bg); color: var(--text-color); border: 1px solid rgba(128,128,128,0.3); outline: none; margin-left: auto; margin-bottom: 5px;">
                     <option value="date">✨ Tri par Ajout</option>
                     <option value="alpha">🔤 Alphabétique</option>
                     <option value="rayon">🏬 Par Rayon</option>
                     <option value="owner" id="sort-opt-owner">👤 Par Personne</option>
                 </select>
-                
             </div>
             
             <div id="shopping-list-content"></div>
@@ -158,12 +155,12 @@
                 
                 <div class="share-code-box" style="background: transparent; border: 2px dashed rgba(128,128,128,0.3); color: var(--primary); text-align: center; padding: 10px; border-radius: 10px;">
                     <span style="font-size: 0.85rem; opacity: 0.7; display: block;">Mon Code Utilisateur :</span>
-                    <span id="my-share-code-profile" style="font-size: 1.5rem; font-weight: bold; letter-spacing: 1px;">------</span>
-                    <button onclick="copyShareCodeProfile()" style="background:none; border:none; cursor:pointer; font-size:1.2rem; margin-left: 10px;" title="Copier le code">📋</button>
+                    <span id="my-user-code" style="font-size: 1.5rem; font-weight: bold; letter-spacing: 1px;">------</span>
+                    <button onclick="copyUserCode()" style="background:none; border:none; cursor:pointer; font-size:1.2rem; margin-left: 10px;" title="Copier le code">📋</button>
                 </div>
                 
                 <div style="display:flex; gap:10px; margin-top:15px;">
-                    <input type="text" id="add-friend-input" placeholder="Ajouter un ami (Code)..." style="flex:1; text-transform:uppercase; margin-bottom: 0; padding: 10px; font-size: 0.85rem;">
+                    <input type="text" id="add-friend-input" placeholder="Ajouter un ami (Code)..." style="flex:1; text-transform:uppercase; margin-bottom: 0;">
                     <button class="btn-primary btn-validated-click" onclick="addGlobalFriend()" style="padding: 0 15px;">Ajouter</button>
                 </div>
                 
@@ -273,35 +270,41 @@
     </div>
 
     <div id="shopping-list-multi-share-modal" class="modal modal-center" style="display: none; z-index: 10006;">
-        <div class="modal-content content-center" style="max-height: 85vh; overflow-y: auto; padding: 15px;">
-            <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 10px; font-size: 1.2rem;">🛒 Listes Partagées</h3>
+        <div class="modal-content content-center" style="max-height: 85vh; overflow-y: auto;">
+            <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Listes Partagées 🛒</h3>
             
-            <div style="background: rgba(128,128,128,0.05); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(128,128,128,0.1);">
-                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
-                    <select id="new-list-type" style="padding: 6px; font-size: 0.85rem; border-radius: 6px; flex: 1; outline: none; border: 1px solid rgba(128,128,128,0.3);">
+            <div style="background: rgba(128,128,128,0.05); padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px solid rgba(128,128,128,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <label style="font-weight: bold; margin: 0;">Créer une liste :</label>
+                    <select id="new-list-type" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 8px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); outline: none;">
                         <option value="standard">🤝 Partage classique</option>
-                        <option value="event">🎉 Liste Événement</option>
+                        <option value="event">🎉 Événement (Attribution)</option>
                     </select>
                 </div>
-                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                    <input type="text" id="new-shared-list-name" placeholder="Nom de la liste..." style="flex: 1; padding: 6px; font-size: 0.85rem; margin-bottom: 0;">
-                    <button onclick="createNewSharedShoppingList()" class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem;">Créer</button>
+                <input type="text" id="new-shared-list-name" placeholder="Ex: Courses Coloc, Weekend..." style="margin-bottom: 10px;">
+                
+                <div id="create-list-friends-container" style="display: none; background: var(--card-bg); padding: 10px; border-radius: 8px; border: 1px dashed rgba(128,128,128,0.2);">
+                    <label style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark); display: block; margin-bottom: 5px;">Inviter des amis directement :</label>
+                    <div id="create-list-friends-checkboxes" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                        </div>
                 </div>
-                <div id="create-list-friends-container" style="display: none; margin-top: 5px;">
-                    <span style="font-size: 0.8rem; font-weight: bold; color: var(--primary-dark);">Inviter des amis :</span>
-                    <div id="create-list-friends-checkboxes" style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px;"></div>
+
+                <button onclick="createNewSharedShoppingList()" class="btn-primary" style="width: 100%; padding: 10px; margin-top: 10px;">Créer la liste</button>
+            </div>
+
+            <div style="background: rgba(128,128,128,0.05); padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px solid rgba(128,128,128,0.1);">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Rejoindre une liste (Code) :</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="join-shared-list-code" placeholder="CODE..." style="flex: 1; text-transform: uppercase; margin-bottom: 0; min-width: 0;">
+                    <button onclick="joinSharedShoppingList()" class="btn-primary" style="padding: 0 15px; flex-shrink: 0;">Lier</button>
                 </div>
             </div>
 
-            <div style="background: rgba(128,128,128,0.05); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(128,128,128,0.1); display: flex; gap: 8px; align-items: center;">
-                <input type="text" id="join-shared-list-code" placeholder="CODE..." style="flex: 1; text-transform: uppercase; margin-bottom: 0; padding: 6px; font-size: 0.85rem; min-width: 0;">
-                <button onclick="joinSharedShoppingList()" class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem; flex-shrink: 0;">Rejoindre</button>
-            </div>
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Vos listes partagées actives :</label>
+            <div id="my-shared-lists-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; width: 100%;">
+                </div>
 
-            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 5px;">Vos listes actives :</label>
-            <div id="my-shared-lists-container" style="display: flex; flex-direction: column; gap: 5px; max-height: 150px; overflow-y: auto;"></div>
-
-            <button onclick="document.getElementById('shopping-list-multi-share-modal').style.display='none'" class="btn-secondary" style="margin-top: 10px; width: 100%; padding: 8px;">Fermer</button>
+            <button onclick="document.getElementById('shopping-list-multi-share-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
         </div>
     </div>
 
@@ -326,6 +329,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="script.js?v=v2_stable_event"></script>
+    <script src="script.js?v=final_friends_event"></script>
 </body>
 </html>
