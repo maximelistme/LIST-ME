@@ -502,6 +502,8 @@ function syncCurrentShoppingItems() {
             }
         });
         if (document.getElementById('shopping-page').style.display === 'block') { renderShoppingList(); }
+    }, (error) => {
+        showToast("Erreur liste produits: " + error.message);
     });
 }
 
@@ -590,7 +592,21 @@ function scrollToTopShopping() {
 function openCustomShoppingListShareModal() {
     document.getElementById('new-shared-list-name').value = '';
     document.getElementById('join-shared-list-code').value = '';
-    renderMySharedListsInModal();
+    
+    // BYPASS MANUEL : Force Firebase à lire le serveur pour contourner tout bug de cache mobile
+    if (currentUser) {
+        db.collection("shoppingLists").where("members", "arrayContains", currentUser.uid).get().then(snap => {
+            mySharedLists = [];
+            snap.forEach(doc => { let d = doc.data(); d.id = doc.id; mySharedLists.push(d); });
+            renderMySharedListsInModal();
+            renderShoppingTabs();
+        }).catch(err => {
+            showToast("Erreur de chargement: " + err.message);
+        });
+    } else {
+        renderMySharedListsInModal();
+    }
+    
     document.getElementById('shopping-list-multi-share-modal').style.display = 'flex';
 }
 
@@ -633,7 +649,6 @@ function createNewSharedShoppingList() {
         
         nameInput.value = '';
         
-        // Ajout MANUEL IMMÉDIAT pour éviter les latences de Firebase
         if (!mySharedLists.some(l => l.id === docRef.id)) {
             newList.id = docRef.id;
             mySharedLists.push(newList);
@@ -645,8 +660,7 @@ function createNewSharedShoppingList() {
         renderMySharedListsInModal();
         
     }).catch(error => {
-        console.error("Erreur Firebase:", error);
-        showToast("Erreur lors de la création de la liste.");
+        showToast("Erreur création : " + error.message);
     });
 }
 
@@ -664,7 +678,6 @@ function joinSharedShoppingList() {
             showToast(`Vous avez rejoint "${data.name}" ! 🛒`);
             document.getElementById('join-shared-list-code').value = '';
             
-            // Ajout MANUEL IMMÉDIAT
             if (!mySharedLists.some(l => l.id === doc.id)) {
                 data.id = doc.id;
                 data.members = updatedMembers;
@@ -675,8 +688,8 @@ function joinSharedShoppingList() {
             renderShoppingTabs();
             syncCurrentShoppingItems();
             renderMySharedListsInModal();
-        });
-    });
+        }).catch(err => showToast("Erreur raccordement : " + err.message));
+    }).catch(err => showToast("Erreur recherche : " + err.message));
 }
 
 function leaveSharedList(listId) {
@@ -692,7 +705,6 @@ function leaveSharedList(listId) {
         }
         showToast("Liste quittée !");
         
-        // Retrait manuel immédiat
         mySharedLists = mySharedLists.filter(l => l.id !== listId);
         if (currentShoppingListId === listId) { 
             currentShoppingListId = "personal"; 
@@ -773,7 +785,7 @@ function startRealtimeSync(userId) {
     unsubscribeRoutine = db.collection("routineTodo").where("userId", "==", userId).onSnapshot((snapshot) => { routineTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; routineTodo.push(data); }); renderTodo(); });
     unsubscribeBirthdays = db.collection("birthdays").where("userId", "==", userId).onSnapshot((snapshot) => { birthdays = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; birthdays.push(data); }); if(viewState === 'day') renderCalendar(); });
     
-    // ÉCOUTE DES GROUPES DE COURSES MULTIPLES
+    // ÉCOUTE DES GROUPES DE COURSES MULTIPLES (Avec feedback visuel d'erreur)
     sharedListsUnsubscribe = db.collection("shoppingLists").where("members", "arrayContains", userId).onSnapshot((snapshot) => {
         mySharedLists = [];
         snapshot.forEach((doc) => {
@@ -788,7 +800,7 @@ function startRealtimeSync(userId) {
             renderMySharedListsInModal();
         }
     }, (error) => {
-        console.error("Erreur Snapshot shoppingLists:", error);
+        showToast("Erreur Liste Partagée : " + error.message);
     });
 
     friends.forEach(f => startFriendSync(f.uid, f.nickname, 'agenda'));
