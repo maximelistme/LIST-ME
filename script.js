@@ -249,7 +249,6 @@ function renderShoppingCategories() {
     // --- SÉCURITÉ LISTE ÉVÉNEMENT ---
     if (currentShoppingListId !== 'personal') {
         const listObj = mySharedLists.find(l => l.id === currentShoppingListId);
-        // Si c'est un événement ET que l'utilisateur N'EST PAS l'organisateur (créateur)
         if (listObj && listObj.type === 'event' && listObj.createdBy !== currentUser.uid) {
             breadcrumb.innerText = "Accès restreint";
             container.innerHTML = `
@@ -258,7 +257,7 @@ function renderShoppingCategories() {
                     <strong style="color: var(--primary-dark); font-size: 1.1rem; display:block; margin-bottom: 5px;">Mode Événement</strong>
                     <span style="font-style: italic; opacity: 0.8; font-size: 0.9rem;">Vous êtes invité à cet événement. Seul l'organisateur peut dresser la liste et ajouter des produits.</span>
                 </div>`;
-            return; // Bloque complètement l'affichage des rayons
+            return; 
         }
     }
 
@@ -422,7 +421,6 @@ function openShoppingItemModal(identifier, isCustom) {
     tempShoppingProduct = productName;
     document.getElementById('shopping-modal-title').innerHTML = formatProductDisplay(productName);
     document.getElementById('shopping-qty').value = "1";
-    
     const unitSelect = document.getElementById('shopping-unit'); unitSelect.innerHTML = ''; 
     units.forEach(u => {
         let opt = document.createElement('option'); opt.value = u.v; opt.innerText = u.l; unitSelect.appendChild(opt);
@@ -566,7 +564,7 @@ function renderShoppingTabs() {
 function switchShoppingListTab(listId) {
     currentShoppingListId = listId;
     renderShoppingTabs();
-    renderShoppingCategories();
+    renderShoppingCategories(); 
     syncCurrentShoppingItems();
     updateParticipantsDisplay();
 }
@@ -801,7 +799,7 @@ function renderFriendsCheckboxesForNewList() {
     
     container.style.display = 'block';
     checkboxDiv.innerHTML = friends.map(f => `
-        <label style="display:flex; align-items:center; gap:5px; background:rgba(128,128,128,0.1); padding:5px 10px; border-radius:20px; font-size:0.85rem; cursor:pointer;">
+        <label style="display:flex; align-items:center; gap:5px; background:rgba(128,128,128,0.1); padding:4px 8px; border-radius:15px; font-size:0.8rem; cursor:pointer;">
             <input type="checkbox" class="friend-invite-cb" value="${f.uid}"> ${f.nickname}
         </label>
     `).join('');
@@ -926,8 +924,8 @@ function leaveSharedList(listId) {
 }
 
 // --- SYSTÈME D'AMIS GLOBAL (PROFIL) ---
-function copyUserCode() {
-    const code = document.getElementById('my-user-code').innerText;
+function copyShareCodeProfile() {
+    const code = document.getElementById('my-share-code-profile').innerText;
     navigator.clipboard.writeText(code).then(() => showToast("Code copié ! Donnez-le à vos amis. 📋"));
 }
 
@@ -987,7 +985,7 @@ function renderGlobalFriends() {
 function processMidnightAutoArchive() {
     if(isArchiving || !currentUser) return; isArchiving = true;
     const today = new Date().toISOString().split('T')[0]; let operations = [];
-    tasks.forEach(t => { if (t.completed) return; let ghosts = Array.isArray(t.duplicateDays) ? t.duplicateDays : []; ghosts = ghosts.map(g => typeof g === 'string' ? {date: g, time: t.time} : g); if (ghosts.length > 0) { let allOccurrences = [{date: t.date, time: t.time || ""}, ...ghosts]; allOccurrences.sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.time || "").localeCompare(b.time || "")); let pastDates = allOccurrences.filter(o => o.date < today); let remainingDates = allOccurrences.filter(o => o.date >= today); if (pastDates.length > 0) { pastDates.forEach(pastOcc => { operations.push(db.collection("tasks").add({ name: t.name, desc: t.desc || "", date: pastOcc.date, time: pastOcc.time, reminders: t.reminders || [], importance: t.importance, completed: true, completedAtStr: pastOcc.date, userId: t.userId, createdAt: t.createdAt || Date.now(), duplicateDays: [] })); }); if (remainingDates.length > 0) { let nextMain = remainingDates.shift(); operations.push(db.collection("tasks").doc(t.id).update({ date: nextMain.date, time: nextMain.time, duplicateDays: remainingDates })); } else { operations.push(db.collection("tasks").doc(t.id).delete()); } } } else { if (t.date < today) operations.push(db.collection("tasks").doc(t.id).update({ completed: true, completedAtStr: t.date })); } });
+    tasks.forEach(t => { if (t.completed) return; let ghosts = Array.isArray(t.duplicateDays) ? t.duplicateDays : []; ghosts = ghosts.map(g => typeof g === 'string' ? {date: g, time: t.time} : g); if (ghosts.length > 0) { let allOccurrences = [{date: t.date, time: t.time || ""}, ...ghosts]; allOccurrences.sort((a, b) => (a.date || "").localeCompare(b.date || "") !== 0 ? (a.date || "").localeCompare(b.date || "") : (a.time || "").localeCompare(b.time || "")); let pastDates = allOccurrences.filter(o => o.date < today); let remainingDates = allOccurrences.filter(o => o.date >= today); if (pastDates.length > 0) { pastDates.forEach(pastOcc => { operations.push(db.collection("tasks").add({ name: t.name, desc: t.desc || "", date: pastOcc.date, time: pastOcc.time, reminders: t.reminders || [], importance: t.importance, completed: true, completedAtStr: pastOcc.date, userId: t.userId, createdAt: t.createdAt || Date.now(), duplicateDays: [] })); }); if (remainingDates.length > 0) { let nextMain = remainingDates.shift(); operations.push(db.collection("tasks").doc(t.id).update({ date: nextMain.date, time: nextMain.time, duplicateDays: remainingDates })); } else { operations.push(db.collection("tasks").doc(t.id).delete()); } } } else { if (t.date < today) operations.push(db.collection("tasks").doc(t.id).update({ completed: true, completedAtStr: t.date })); } });
     Promise.all(operations).then(() => { isArchiving = false; }).catch(() => { isArchiving = false; });
 }
 
@@ -997,7 +995,7 @@ function runNotificationEngine() {
     const hour = now.getHours(), minute = now.getMinutes(), dayOfWeek = now.getDay(); let todayMD = todayStr.substring(5), tomorrow = new Date(); tomorrow.setDate(now.getDate() + 1); let tomorrowMD = tomorrow.toISOString().split('T')[0].substring(5);
     if (hour === 9 && minute === 0) { let todayBirthdays = birthdays.filter(b => (b.date||"").endsWith(todayMD)); todayBirthdays.forEach(b => { let key = `bday-j-${b.id}-${todayStr.substring(0,4)}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("🎂 Joyeux Anniversaire !", `C'est l'anniversaire de ${b.name} aujourd'hui !`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } }); let tomorrowBirthdays = birthdays.filter(b => (b.date||"").endsWith(tomorrowMD)); tomorrowBirthdays.forEach(b => { let key = `bday-v-${b.id}-${todayStr.substring(0,4)}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("🎁 Bientôt un anniversaire", `C'est l'anniversaire de ${b.name} demain !`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } }); if (todayStr.endsWith('-01')) { let thisMonthBirthdays = birthdays.filter(b => (b.date||"").substring(5,7) === todayStr.substring(5,7)); if (thisMonthBirthdays.length > 0) { let key = `bday-m-${todayStr.substring(0,7)}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("🗓️ Anniversaires du mois", `Il y a ${thisMonthBirthdays.length} anniversaire(s) prévu(s) ce mois-ci.`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } } } }
     if (dayOfWeek === 0 && hour === 18 && minute === 0) { const key = `recap-${todayStr}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { const activeTasksCount = tasks.filter(t => !t.completed).length; sendNotification("📋 LIST'ME : Récap de ta semaine", activeTasksCount > 0 ? `Tu as ${activeTasksCount} tâches prévues cette semaine.` : "Aucune tâche critique de planifiée."); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } }
-    tasks.forEach(t => { if (t.completed) return; let displayDate = t.date, displayTime = t.time; if (t.duplicateDays && t.duplicateDays.length > 0) { let allOcc = [{date: t.date, time: t.time || ""}]; t.duplicateDays.forEach(g => { if (typeof g === 'string') allOcc.push({date: g, time: t.time || ""}); else allOcc.push(g); }); allOcc.sort((a,b) => a.date !== b.date ? (a.date||"").localeCompare(b.date||"") : (a.time||"").localeCompare(b.time||"")); let futureOcc = allOcc.filter(o => o.date >= todayStr); let currentOcc = futureOcc.length > 0 ? futureOcc[0] : allOcc[allOcc.length - 1]; displayDate = currentOcc.date; displayTime = currentOcc.time; } if (displayDate === todayStr && displayTime) { const [tHour, tMin] = displayTime.split(':').map(Number); const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0); if ((now - taskTimeObj) / 60000 >= 30) { toggleTaskCheck(t.id, false, displayDate); return; } } const diffDays = Math.ceil((new Date(displayDate) - now) / (1000 * 60 * 60 * 24)); if (diffDays === 1 && hour === 20 && minute === 0) { const key = `veille-${t.id}-${displayDate}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("⏰ Rappel : C'est pour demain !", `Ne pas oublier : "${t.name}" prévu demain.`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } } if (displayTime && t.reminders && t.reminders.length > 0) { const [tHour, tMin] = displayTime.split(':').map(Number); const taskDateTime = new Date(displayDate); taskDateTime.setHours(tHour, tMin, 0, 0); const minutesRemaining = Math.round((taskDateTime - now) / 60000); t.reminders.forEach(r => { if (minutesRemaining === Number(r)) { const key = `custom-${t.id}-${displayDate}-${r}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification(`🔔 Rappel : ${t.name}`, `Commence dans ${r} minutes.`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } } }); } });
+    tasks.forEach(t => { if (t.completed) return; let displayDate = t.date, displayTime = t.time; if (t.duplicateDays && t.duplicateDays.length > 0) { let allOcc = [{date: t.date, time: t.time || ""}]; t.duplicateDays.forEach(g => { if (typeof g === 'string') allOcc.push({date: g, time: t.time || ""}); else allOcc.push(g); }); allOcc.sort((a,b) => (a.date||"").localeCompare(b.date||"") !== 0 ? (a.date||"").localeCompare(b.date||"") : (a.time||"").localeCompare(b.time||"")); let futureOcc = allOcc.filter(o => o.date >= todayStr); let currentOcc = futureOcc.length > 0 ? futureOcc[0] : allOcc[allOcc.length - 1]; displayDate = currentOcc.date; displayTime = currentOcc.time; } if (displayDate === todayStr && displayTime) { const [tHour, tMin] = displayTime.split(':').map(Number); const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0); if ((now - taskTimeObj) / 60000 >= 30) { toggleTaskCheck(t.id, false, displayDate); return; } } const diffDays = Math.ceil((new Date(displayDate) - now) / (1000 * 60 * 60 * 24)); if (diffDays === 1 && hour === 20 && minute === 0) { const key = `veille-${t.id}-${displayDate}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("⏰ Rappel : C'est pour demain !", `Ne pas oublier : "${t.name}" prévu demain.`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } } if (displayTime && t.reminders && t.reminders.length > 0) { const [tHour, tMin] = displayTime.split(':').map(Number); const taskDateTime = new Date(displayDate); taskDateTime.setHours(tHour, tMin, 0, 0); const minutesRemaining = Math.round((taskDateTime - now) / 60000); t.reminders.forEach(r => { if (minutesRemaining === Number(r)) { const key = `custom-${t.id}-${displayDate}-${r}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification(`🔔 Rappel : ${t.name}`, `Commence dans ${r} minutes.`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } } }); } });
     if(document.getElementById('tasks-page').style.display === 'block') { renderTasks(); }
 }
 setInterval(runNotificationEngine, 30000);
@@ -1027,8 +1025,8 @@ auth.onAuthStateChanged((user) => {
                 if(!myAgendaCode) { myAgendaCode = Math.random().toString(36).substring(2, 8).toUpperCase(); updateData.shareCode = myAgendaCode; updateData.sharedWith = []; }
                 if(Object.keys(updateData).length > 0) { db.collection("users").doc(user.uid).set(updateData, {merge: true}); }
 
-                if(document.getElementById('my-user-code')) {
-                    document.getElementById('my-user-code').innerText = myAgendaCode;
+                if(document.getElementById('my-share-code-profile')) {
+                    document.getElementById('my-share-code-profile').innerText = myAgendaCode;
                 }
                 
                 friends = data.following || [];
