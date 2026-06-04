@@ -411,6 +411,24 @@ function openShoppingItemModal(identifier, isCustom) {
     currentShoppingPath = []; renderShoppingCategories();
 }
 
+// Helper pour trouver automatiquement le rayon d'un produit dans le dictionnaire
+function findRayonForProduct(productName) {
+    const pLower = productName.toLowerCase();
+    for (let rayon in foodCategories) {
+        if (JSON.stringify(foodCategories[rayon]).toLowerCase().includes(pLower)) {
+            return rayon;
+        }
+    }
+    return "✨ Produits Custom / Autres";
+}
+
+// Helper pour formater le nom du créateur pour l'algorithme de tri
+function itemOwnerNameForSort(item) {
+    if (currentShoppingListId === 'personal') return 'Moi';
+    if (item.userId === currentUser.uid) return 'A_Moi'; // Force "Moi" en haut du tri alphabétique
+    return item.ownerName || 'Z_Inconnu';
+}
+
 function saveShoppingItem() {
     const qty = document.getElementById('shopping-qty').value;
     const unit = document.getElementById('shopping-unit').value;
@@ -512,7 +530,30 @@ function renderShoppingList() {
     const scrollUpBtn = document.getElementById('shopping-scroll-up-btn');
     if (!c) return; c.innerHTML = '';
 
-    shoppingItems.sort((a, b) => a.createdAt - b.createdAt);
+    // --- LOGIQUE COMPLÈTE DE TRI FILTRÉ DYNAMIQUE ---
+    const sortVal = document.getElementById('shopping-sort-filter') ? document.getElementById('shopping-sort-filter').value : 'date';
+    
+    if (sortVal === 'alpha') {
+        shoppingItems.sort((a, b) => a.name.localeCompare(b.name, 'fr', {sensitivity: 'base'}));
+    } else if (sortVal === 'owner') {
+        shoppingItems.sort((a, b) => {
+            const ownerA = itemOwnerNameForSort(a);
+            const ownerB = itemOwnerNameForSort(b);
+            if (ownerA !== ownerB) return ownerA.localeCompare(ownerB, 'fr', {sensitivity: 'base'});
+            return (a.createdAt || 0) - (b.createdAt || 0);
+        });
+    } else if (sortVal === 'rayon') {
+        shoppingItems.sort((a, b) => {
+            const rayonA = findRayonForProduct(a.name);
+            const rayonB = findRayonForProduct(b.name);
+            if (rayonA !== rayonB) return rayonA.localeCompare(rayonB, 'fr');
+            return a.name.localeCompare(b.name, 'fr', {sensitivity: 'base'});
+        });
+    } else {
+        // 'date' (par défaut)
+        shoppingItems.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    }
+
     const actives = shoppingItems.filter(item => !item.completed);
     const completeds = shoppingItems.filter(item => item.completed);
 
@@ -531,9 +572,9 @@ function renderShoppingList() {
         return '';
     };
 
+    // Rendu des produits actifs
     actives.forEach(item => {
         const d = document.createElement('div'); d.className = `task-card`; d.style.borderLeft = "6px solid var(--primary)"; 
-        // MODIFICATION ICI : On n'utilise plus formatProductDisplay, donc l'animal entre () s'affiche
         const nameToDisplay = item.name;
         d.innerHTML = `
             <div style="flex:1; display:flex; align-items:center; min-width:0;">
@@ -557,6 +598,7 @@ function renderShoppingList() {
         </div>`;
     }
 
+    // Rendu des produits cochés
     completeds.forEach(item => {
         const d = document.createElement('div'); d.className = `task-card completed-bubble`; 
         const nameToDisplay = item.name;
@@ -594,7 +636,6 @@ function openCustomShoppingListShareModal() {
     document.getElementById('new-shared-list-name').value = '';
     document.getElementById('join-shared-list-code').value = '';
     
-    // BYPASS MANUEL : Force Firebase à lire le serveur pour contourner tout bug de cache mobile
     if (currentUser) {
         db.collection("shoppingLists").where("members", "array-contains", currentUser.uid).get().then(snap => {
             mySharedLists = [];
@@ -644,13 +685,12 @@ function createNewSharedShoppingList() {
     };
 
     db.collection("shoppingLists").add(newList).then((docRef) => {
+        document.getElementById('share-success-modal').style.display = 'flex';
         document.getElementById('success-list-name').innerText = `"${name}"`;
         document.getElementById('success-list-code').innerText = uniqueCode;
-        document.getElementById('share-success-modal').style.display = 'flex';
         
         nameInput.value = '';
         
-        // Ajout MANUEL IMMÉDIAT pour éviter les latences de Firebase
         if (!mySharedLists.some(l => l.id === docRef.id)) {
             newList.id = docRef.id;
             mySharedLists.push(newList);
@@ -681,7 +721,6 @@ function joinSharedShoppingList() {
             showToast(`Vous avez rejoint "${data.name}" ! 🛒`);
             document.getElementById('join-shared-list-code').value = '';
             
-            // Ajout MANUEL IMMÉDIAT
             if (!mySharedLists.some(l => l.id === doc.id)) {
                 data.id = doc.id;
                 data.members = updatedMembers;
@@ -709,7 +748,6 @@ function leaveSharedList(listId) {
         }
         showToast("Liste quittée !");
         
-        // Retrait manuel immédiat
         mySharedLists = mySharedLists.filter(l => l.id !== listId);
         if (currentShoppingListId === listId) { 
             currentShoppingListId = "personal"; 
@@ -790,7 +828,6 @@ function startRealtimeSync(userId) {
     unsubscribeRoutine = db.collection("routineTodo").where("userId", "==", userId).onSnapshot((snapshot) => { routineTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; routineTodo.push(data); }); renderTodo(); });
     unsubscribeBirthdays = db.collection("birthdays").where("userId", "==", userId).onSnapshot((snapshot) => { birthdays = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; birthdays.push(data); }); if(viewState === 'day') renderCalendar(); });
     
-    // ÉCOUTE DES GROUPES DE COURSES MULTIPLES (Avec bonne syntaxe Firebase)
     sharedListsUnsubscribe = db.collection("shoppingLists").where("members", "array-contains", userId).onSnapshot((snapshot) => {
         mySharedLists = [];
         snapshot.forEach((doc) => {
@@ -889,11 +926,6 @@ function toggleTodo(id, currentStatus) { db.collection("dailyTodo").doc(id).upda
 function deleteTask(id) { db.collection("tasks").doc(id).delete().then(() => { showToast("Tâche supprimée ! 🗑️"); }); } function deleteWeeklyTodo(id) { db.collection("weeklyTodo").doc(id).delete().then(() => showToast("Supprimé !")); } function deleteDailyTodo(id) { db.collection("dailyTodo").doc(id).delete().then(() => showToast("Supprimé !")); } function deleteRoutineTodo(id) { db.collection("routineTodo").doc(id).delete().then(() => showToast("Supprimé de la semaine type !")); }
 function editTask(id) { const task = tasks.find(t => t.id === id); if(task) { editingId = id; unlockModalFields(); if(document.getElementById('task-name')) document.getElementById('task-name').value = task.name; if(document.getElementById('task-desc')) document.getElementById('task-desc').value = task.desc || ""; if(document.getElementById('task-date')) document.getElementById('task-date').value = task.date; setCustomTime('task-time', task.time || ""); setSelectedRemindersToBadges(task.reminders || []); if(document.getElementById('task-importance')) document.getElementById('task-importance').value = task.importance; document.getElementById('modal-title').innerText = "Modifier la tâche"; document.getElementById('task-modal').style.display = 'flex'; } }
 function duplicateTask(id) { const task = tasks.find(t => t.id === id); if(task) { editingId = id; unlockModalFields(); if(document.getElementById('task-name')) document.getElementById('task-name').value = task.name; if(document.getElementById('task-desc')) document.getElementById('task-desc').value = task.desc || ""; if(document.getElementById('task-date')) document.getElementById('task-date').value = ""; setCustomTime('task-time', ""); if(document.getElementById('task-importance')) document.getElementById('task-importance').value = task.importance; setSelectedRemindersToBadges(task.reminders || []); if(document.getElementById('task-name')) document.getElementById('task-name').disabled = true; if(document.getElementById('task-desc')) document.getElementById('task-desc').disabled = true; if(document.getElementById('task-importance')) document.getElementById('task-importance').disabled = true; if(document.getElementById('date-input-label')) document.getElementById('date-input-label').innerText = "Nouvelle Date Prévue"; document.querySelectorAll('.reminder-badge').forEach(b => { b.style.pointerEvents = 'none'; b.classList.add('disabled-frozen'); }); document.getElementById('modal-title').innerText = "Dupliquer la tâche"; document.getElementById('task-modal').style.display = 'flex'; } }
-
-// --- RENDER CALENDAR ---
-function setViewState(s) { viewState = s; renderCalendar(); }
-function renderCalendar() { const c = document.getElementById('calendar-content'); const t = document.getElementById('calendar-title'); c.innerHTML = ''; if (!c) return; document.querySelectorAll('#calendar-page .bubble').forEach(b => b.classList.remove('active')); document.getElementById(`btn-${viewState}`).classList.add('active'); const btnBday = document.getElementById('btn-add-birthday'), legend = document.getElementById('calendar-legend'); if (viewState === 'day') { if (btnBday) btnBday.style.display = 'block'; if (legend) legend.style.display = 'flex'; } else { if (btnBday) btnBday.style.display = 'none'; if (legend) legend.style.display = 'none'; } if (viewState === 'year') { c.className = 'grid-years'; t.innerText = "Années"; for (let i = selectedYear - 4; i <= selectedYear + 4; i++) { const d = document.createElement('div'); d.className = `grid-item ${i === selectedYear ? 'selected' : ''}`; d.innerText = i; d.onclick = () => { selectedYear = i; setViewState('month'); }; c.appendChild(d); } } else if (viewState === 'month') { c.className = 'grid-months'; t.innerText = selectedYear; monthNames.forEach((n, i) => { const d = document.createElement('div'); d.className = `grid-item ${i === selectedMonth ? 'selected' : ''}`; d.innerText = n; d.onclick = () => { selectedMonth = i; setViewState('day'); }; c.appendChild(d); }); } else { c.className = 'calendar-grid'; t.innerText = `${monthNames[selectedMonth]} ${selectedYear}`; const days = new Date(selectedYear, selectedMonth + 1, 0).getDate(), yearHolidays = getFrenchHolidays(selectedYear); for (let i = 1; i <= days; i++) { const ds = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`, md = `${String(selectedMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`; const holiday = yearHolidays.find(h => h.date === ds), dayBirthdays = birthdays.filter(b => b.date.endsWith(md)); const myDayTasks = tasks.filter(tk => { if (tk.date === ds) return true; if (tk.duplicateDays) return tk.duplicateDays.some(g => (typeof g === 'string' ? g : g.date) === ds); return false; }); const friendDayTasks = sharedTasks.filter(tk => { if (tk.date === ds) return true; if (tk.duplicateDays) return tk.duplicateDays.some(g => (typeof g === 'string' ? g : g.date) === ds); return false; }); const totalTasks = [...myDayTasks, ...friendDayTasks]; let dayColors = []; if (totalTasks.length > 0) { const imps = totalTasks.map(tk => tk.importance); if(imps.includes('high')) dayColors.push('var(--danger)'); if(imps.includes('medium')) dayColors.push('var(--warning)'); if(imps.includes('low')) dayColors.push('var(--success)'); } if (holiday) dayColors.push('var(--holiday-color)'); if (dayBirthdays.length > 0) dayColors.push('var(--birthday-color)'); dayColors = [...new Set(dayColors)]; let bottomLineHtml = ''; if (dayColors.length > 0) { let bgStyle = ""; if (dayColors.length === 1) bgStyle = dayColors[0]; else { let stops = [], step = 100 / dayColors.length; dayColors.forEach((color, idx) => { stops.push(`${color} ${idx * step}%`, `${color} ${(idx+1) * step}%`); }); bgStyle = `linear-gradient(to right, ${stops.join(', ')})`; } bottomLineHtml = `<div style="position:absolute; bottom:0; left:0; width:100%; height:6px; background:${bgStyle}; border-radius: 0 0 10px 10px;"></div>`; } const div = document.createElement('div'); div.className = `day-card ${ds === todayStr ? 'is-today' : ''}`; let countHtml = ""; if(totalTasks.length > 0) countHtml = `<span style="position:absolute; top:4px; right:4px; font-size:0.65rem; font-weight:bold; color:var(--primary-dark); background:rgba(0, 206, 209, 0.15); border-radius:10px; padding:2px 5px;">+${totalTasks.length}</span>`; div.onclick = () => openCalendarDayModal(i, monthNames[selectedMonth], selectedYear, totalTasks, ds, holiday, dayBirthdays); div.innerHTML = `${countHtml}<span style="font-size:0.6rem; opacity:0.5; display:block; margin-top: ${totalTasks.length>0 ? '10px' : '4px'};">${dayInitials[new Date(selectedYear, selectedMonth, i).getDay()]}</span><b>${i}</b>${bottomLineHtml}`; c.appendChild(div); } } }
-function openCalendarDayModal(day, monthName, year, totalDayTasks, currentFullDate, holiday, dayBirthdays) { document.getElementById('cal-modal-date-title').innerText = `${day} ${monthName} ${year}`; const container = document.getElementById('cal-modal-tasks-container'); container.innerHTML = ''; if (holiday) container.innerHTML += `<div style="padding: 12px; border-radius: 12px; border-left: 6px solid var(--holiday-color); background: rgba(52, 152, 219, 0.05); margin-bottom: 5px;"><strong style="color:var(--holiday-color);">🏖️ ${holiday.name}</strong></div>`; if (dayBirthdays && dayBirthdays.length > 0) { dayBirthdays.forEach(b => { container.innerHTML += `<div style="padding: 12px; border-radius: 12px; border-left: 6px solid var(--birthday-color); background: rgba(232, 67, 147, 0.05); margin-bottom: 5px; display:flex; justify-content:space-between; align-items:center;"><strong style="color:var(--birthday-color);">🎂 Anniv. de ${b.name}</strong><button onclick="event.stopPropagation(); deleteBirthday('${b.id}')" style="background:none; border:none; color:var(--danger); font-size:1.2rem; cursor:pointer;">×</button></div>`; }); } if(totalDayTasks.length === 0 && !holiday && (!dayBirthdays || dayBirthdays.length === 0)) { container.innerHTML = '<p style="text-align:center; opacity:0.5; font-style:italic;">Rien de prévu</p>'; } else { totalDayTasks.forEach(t => { let specificTime = t.time, isCopy = false; if (t.date !== currentFullDate) { isCopy = true; let ghost = t.duplicateDays.find(g => (typeof g === 'string' ? g : g.date) === currentFullDate); if (ghost && ghost.time) specificTime = ghost.time; } const isCopyTag = isCopy ? ' <small style="opacity:0.6; font-size:0.75rem;">(Prévu 🗓️)</small>' : ''; const ownerTag = t.ownerName ? ` <small style="opacity:0.5; font-style:italic; margin-left:5px;">(par ${t.ownerName})</small>` : ''; container.innerHTML += `<div style="padding: 12px; border-radius: 12px; border-left: 6px solid var(--${t.importance === 'high'?'danger':t.importance==='medium'?'warning':'success'}); background: rgba(128,128,128,0.05); text-align:left;"><strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}; word-break: break-word; overflow-wrap: anywhere;">${t.name}</strong>${ownerTag}${isCopyTag}${specificTime ? `<span style="float:right; font-size:0.85rem; opacity:0.7;">⏰ ${specificTime}</span>`:''}</div>`; }); } document.getElementById('calendar-day-modal').style.display = 'flex'; }
 
 // --- RENDER TODO ---
 function setTodoMode(m) { todoMode = m; renderTodo(); }
