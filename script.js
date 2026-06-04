@@ -511,6 +511,48 @@ function switchShoppingListTab(listId) {
     currentShoppingListId = listId;
     renderShoppingTabs();
     syncCurrentShoppingItems();
+    updateParticipantsDisplay();
+}
+
+async function updateParticipantsDisplay() {
+    const pDiv = document.getElementById('shopping-list-participants');
+    if (!pDiv) return;
+
+    if (currentShoppingListId === 'personal') {
+        pDiv.style.display = 'none';
+    } else {
+        const listObj = mySharedLists.find(l => l.id === currentShoppingListId);
+        if (listObj && listObj.members) {
+            pDiv.innerHTML = `👥 <b>Participants :</b> Chargement...`;
+            pDiv.style.display = 'block';
+
+            let names = [];
+            for (let uid of listObj.members) {
+                if (uid === currentUser.uid) {
+                    names.push("Moi");
+                } else {
+                    let f = friends.find(friend => friend.uid === uid);
+                    if (f) {
+                        names.push(f.nickname);
+                    } else {
+                        try {
+                            let doc = await db.collection('users').doc(uid).get();
+                            if (doc.exists && doc.data().nickname) {
+                                names.push(doc.data().nickname);
+                            } else {
+                                names.push("Un membre");
+                            }
+                        } catch(e) {
+                            names.push("Un membre");
+                        }
+                    }
+                }
+            }
+            pDiv.innerHTML = `👥 <b>Participants :</b> ${names.join(', ')}`;
+        } else {
+            pDiv.style.display = 'none';
+        }
+    }
 }
 
 function syncCurrentShoppingItems() {
@@ -590,7 +632,6 @@ function renderShoppingList() {
 
     // Rendu des produits actifs
     actives.forEach(item => {
-        // Affichage du rayon comme séparateur si tri par rayon
         if (sortVal === 'rayon') {
             const itemRayon = findRayonForProduct(item.name);
             if (itemRayon !== lastRayonRendered) {
@@ -602,7 +643,7 @@ function renderShoppingList() {
         }
 
         const d = document.createElement('div'); d.className = `task-card`; d.style.borderLeft = "6px solid var(--primary)"; 
-        const nameToDisplay = item.name;
+        const nameToDisplay = item.name; // Les parenthèses s'affichent toujours pour les viandes
         d.innerHTML = `
             <div style="flex:1; display:flex; align-items:center; min-width:0;">
                 <div onclick="toggleShoppingCheck('${item.id}', false)" style="width:20px; height:20px; border:2px solid var(--primary); border-radius:5px; margin-right:10px; cursor:pointer;"></div>
@@ -658,12 +699,67 @@ function scrollToTopShopping() {
     if (marketHeader) { marketHeader.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 }
 
+// --- GÉNÉRATION DU PDF ---
+function exportShoppingListToPDF() {
+    if (shoppingItems.length === 0) {
+        showToast("La liste est vide ! Rien à exporter. ❌");
+        return;
+    }
+    
+    let listName = "Ma Liste de Courses";
+    if (currentShoppingListId !== 'personal') {
+        const listObj = mySharedLists.find(l => l.id === currentShoppingListId);
+        if (listObj) listName = listObj.name;
+    }
+
+    const dateStr = new Date().toLocaleDateString('fr-FR');
+    let printContent = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+            <h1 style="text-align: center; color: #E84393; font-family: 'Mogra', cursive;">${listName}</h1>
+            <p style="text-align: center; opacity: 0.7; font-size: 0.9rem;">Généré le ${dateStr}</p>
+            <hr style="border: 1px solid #eee; margin-bottom: 20px;">
+            <ul style="list-style-type: none; padding: 0; font-size: 1.1rem;">
+    `;
+
+    const actives = shoppingItems.filter(i => !i.completed);
+    
+    if (actives.length === 0) {
+        printContent += `<li><em>Aucun article à acheter pour le moment.</em></li>`;
+    }
+
+    actives.forEach(item => {
+        const ownerTag = item.ownerName && currentShoppingListId !== 'personal' ? ` <span style="font-size:0.8rem; color:#888;">(par ${item.ownerName})</span>` : '';
+        printContent += `<li style="margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-radius: 8px; border-left: 5px solid #E84393;">
+            <input type="checkbox" style="margin-right: 10px;"> 
+            <strong>${item.name}</strong> <span style="color: #666;">- ${item.info}</span>${ownerTag}
+        </li>`;
+    });
+
+    printContent += `</ul></div>`;
+
+    const opt = {
+        margin:       0.5,
+        filename:     `${listName.replace(/\s+/g, '_')}_${dateStr.replace(/\//g, '-')}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = printContent;
+    html2pdf().set(opt).from(tempDiv).save().then(() => {
+        showToast("PDF téléchargé avec succès ! 📄");
+    }).catch(err => {
+        console.error(err);
+        showToast("Erreur lors de la création du PDF.");
+    });
+}
+
 // --- CREATION & REJOINDRE DES GROUPES DE COURSES MULTIPLES ---
 function openCustomShoppingListShareModal() {
     document.getElementById('new-shared-list-name').value = '';
     document.getElementById('join-shared-list-code').value = '';
     
-    // BYPASS MANUEL : Force Firebase à lire le serveur pour contourner tout bug de cache mobile
     if (currentUser) {
         db.collection("shoppingLists").where("members", "array-contains", currentUser.uid).get().then(snap => {
             mySharedLists = [];
@@ -719,7 +815,6 @@ function createNewSharedShoppingList() {
         
         nameInput.value = '';
         
-        // Ajout MANUEL IMMÉDIAT pour éviter les latences de Firebase
         if (!mySharedLists.some(l => l.id === docRef.id)) {
             newList.id = docRef.id;
             mySharedLists.push(newList);
@@ -728,6 +823,7 @@ function createNewSharedShoppingList() {
         
         renderShoppingTabs();
         syncCurrentShoppingItems();
+        updateParticipantsDisplay();
         renderMySharedListsInModal();
         
     }).catch(error => {
@@ -750,7 +846,6 @@ function joinSharedShoppingList() {
             showToast(`Vous avez rejoint "${data.name}" ! 🛒`);
             document.getElementById('join-shared-list-code').value = '';
             
-            // Ajout MANUEL IMMÉDIAT
             if (!mySharedLists.some(l => l.id === doc.id)) {
                 data.id = doc.id;
                 data.members = updatedMembers;
@@ -760,6 +855,7 @@ function joinSharedShoppingList() {
             
             renderShoppingTabs();
             syncCurrentShoppingItems();
+            updateParticipantsDisplay();
             renderMySharedListsInModal();
         }).catch(err => showToast("Erreur raccordement : " + err.message));
     }).catch(err => showToast("Erreur recherche : " + err.message));
@@ -778,13 +874,13 @@ function leaveSharedList(listId) {
         }
         showToast("Liste quittée !");
         
-        // Retrait manuel immédiat
         mySharedLists = mySharedLists.filter(l => l.id !== listId);
         if (currentShoppingListId === listId) { 
             currentShoppingListId = "personal"; 
         }
         renderShoppingTabs(); 
         syncCurrentShoppingItems();
+        updateParticipantsDisplay();
         if (document.getElementById('shopping-list-multi-share-modal').style.display === 'flex') {
             renderMySharedListsInModal();
         }
@@ -859,7 +955,6 @@ function startRealtimeSync(userId) {
     unsubscribeRoutine = db.collection("routineTodo").where("userId", "==", userId).onSnapshot((snapshot) => { routineTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; routineTodo.push(data); }); renderTodo(); });
     unsubscribeBirthdays = db.collection("birthdays").where("userId", "==", userId).onSnapshot((snapshot) => { birthdays = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; birthdays.push(data); }); if(viewState === 'day') renderCalendar(); });
     
-    // ÉCOUTE DES GROUPES DE COURSES MULTIPLES (Avec bonne syntaxe Firebase)
     sharedListsUnsubscribe = db.collection("shoppingLists").where("members", "array-contains", userId).onSnapshot((snapshot) => {
         mySharedLists = [];
         snapshot.forEach((doc) => {
@@ -870,6 +965,7 @@ function startRealtimeSync(userId) {
         }
         renderShoppingTabs();
         syncCurrentShoppingItems();
+        updateParticipantsDisplay();
         if (document.getElementById('shopping-list-multi-share-modal') && document.getElementById('shopping-list-multi-share-modal').style.display === 'flex') {
             renderMySharedListsInModal();
         }
