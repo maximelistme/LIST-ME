@@ -260,7 +260,7 @@
         </div>
     </div>
 
-    <!-- NOUVEAU MODAL : GESTION DES LISTES DE COURSES MULTIPLES -->
+    <!-- MODAL : GESTION DES LISTES DE COURSES MULTIPLES -->
     <div id="shopping-list-multi-share-modal" class="modal modal-center" style="z-index: 10006;">
         <div class="modal-content content-center" style="max-height: 85vh; overflow-y: auto;">
             <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Listes Partagées 🛒</h3>
@@ -288,6 +288,25 @@
             </div>
 
             <button onclick="document.getElementById('shopping-list-multi-share-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
+        </div>
+    </div>
+
+    <!-- MODAL : SUCCÈS CRÉATION LISTE PARTAGÉE -->
+    <div id="share-success-modal" class="modal modal-center" style="z-index: 10007;">
+        <div class="modal-content content-center">
+            <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">🎉 Liste Créée !</h3>
+            <p style="text-align: center; margin-bottom: 15px; font-weight: bold; font-size: 1.1rem;" id="success-list-name"></p>
+            
+            <div class="share-code-box" style="background: rgba(128,128,128,0.05); border: 2px dashed var(--primary); padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px;">
+                <span style="font-size: 0.85rem; opacity: 0.7; display: block; margin-bottom: 5px; font-weight: bold;">CODE DE PARTAGE :</span>
+                <span id="success-list-code" style="font-size: 2rem; font-weight: bold; color: var(--primary); letter-spacing: 2px;"></span>
+            </div>
+            
+            <p style="font-size: 0.9rem; text-align: center; opacity: 0.7; margin-bottom: 15px; line-height: 1.4;">
+                Donnez ce code à vos proches pour qu'ils rejoignent la liste.<br><br>Vous pourrez le retrouver à tout moment dans le bouton <b>"Partager ma liste de course"</b>.
+            </p>
+            
+            <button onclick="document.getElementById('share-success-modal').style.display='none'" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem;">C'est compris !</button>
         </div>
     </div>
 
