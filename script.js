@@ -453,7 +453,7 @@ function renderShoppingTabs() {
 
     container.innerHTML = '';
 
-    // 1. Onglet Personnel Fini
+    // 1. Onglet Personnel
     const personalBtn = document.createElement('button');
     personalBtn.className = `sub-menu-tab ${currentShoppingListId === 'personal' ? 'active' : ''}`;
     personalBtn.style.cssText = currentShoppingListId === 'personal' 
@@ -488,7 +488,6 @@ function syncCurrentShoppingItems() {
 
     let query = db.collection("shopping").where("listId", "==", currentShoppingListId);
     
-    // Si personnel, on récupère les siens
     if (currentShoppingListId === "personal") {
         query = db.collection("shopping").where("userId", "==", currentUser.uid);
     }
@@ -533,7 +532,6 @@ function renderShoppingList() {
 
     actives.forEach(item => {
         const d = document.createElement('div'); d.className = `task-card`; d.style.borderLeft = "6px solid var(--primary)"; 
-        // Affiche l'animal entre parenthèses uniquement si partagé
         const nameToDisplay = currentShoppingListId === 'personal' ? formatProductDisplay(item.name) : item.name;
         d.innerHTML = `
             <div style="flex:1; display:flex; align-items:center; min-width:0;">
@@ -628,12 +626,19 @@ function createNewSharedShoppingList() {
     db.collection("shoppingLists").add({
         name: name, code: uniqueCode, createdBy: currentUser.uid, members: [currentUser.uid], createdAt: Date.now()
     }).then((docRef) => {
-        showToast(`Liste "${name}" créée ! 🎉`);
+        // CORRECTION 1 : Alerte immédiate affichant le code à l'écran
+        alert(`🎉 Liste "${name}" créée avec succès !\n\n🔑 CODE DE PARTAGE : ${uniqueCode}\n\nDonnez ce code à vos proches pour qu'ils rejoignent la liste. Vous pourrez le retrouver à tout moment en bas de cette fenêtre.`);
+        
         nameInput.value = '';
-        currentShoppingListId = docRef.id; 
+        currentShoppingListId = docRef.id; // Bascule sur la nouvelle liste
+        
+        // CORRECTION 2 : Forcer les rendus immédiats pour contrer les latences de snapshot
+        renderShoppingTabs();
+        syncCurrentShoppingItems();
+        renderMySharedListsInModal();
     }).catch(error => {
         console.error("Erreur Firebase:", error);
-        showToast("Erreur de permission base de données.");
+        showToast("Erreur lors de la création de la liste.");
     });
 }
 
@@ -651,6 +656,11 @@ function joinSharedShoppingList() {
             showToast(`Vous avez rejoint "${data.name}" ! 🛒`);
             document.getElementById('join-shared-list-code').value = '';
             currentShoppingListId = doc.id; 
+            
+            // Forcer les rendus immédiats
+            renderShoppingTabs();
+            syncCurrentShoppingItems();
+            renderMySharedListsInModal();
         });
     });
 }
@@ -771,8 +781,6 @@ function stopRealtimeSync() {
     Object.values(friendUnsubscribes).forEach(u => u()); friendUnsubscribes = {};
     tasks = []; sharedTasks = []; dailyTodo = []; weeklyTodo = []; routineTodo = []; birthdays = []; friends = []; shoppingItems = []; mySharedLists = [];
 }
-
-function triggerWelcomeModal() { const wModal = document.getElementById('welcome-modal'); const summaryZone = document.getElementById('today-summary-zone'); if(!wModal) return; document.getElementById('welcome-message-text').innerText = `Welcome back, ${userNickname ? userNickname : "toi"} ! 👋`; let todayTasks = tasks.filter(t => t.date === todayStr && !t.completed); summaryZone.innerHTML = ''; if(todayTasks.length === 0) { summaryZone.innerHTML = `<p style="font-size: 0.95rem; font-style: italic; opacity: 0.8; margin-top: 10px; text-align:center;">Aucune tâche urgente au programme pour aujourd'hui ! ✨</p>`; } else { summaryZone.innerHTML = `<p style="font-size: 0.95rem; font-weight: bold; margin-bottom: 12px; color: var(--primary-dark);">Voici tes tâches de la journée :</p>`; todayTasks.forEach(t => { summaryZone.innerHTML += `<div class="welcome-summary-item">📌 <b>${t.time ? t.time : 'Pas d\'heure'}</b> - ${t.name} <span style="float: right; font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 8px; background: rgba(128,128,128,0.1); color: var(--${t.importance === 'high'?'danger':t.importance==='medium'?'warning':'success'});">${t.importance === 'high' ? 'Haute' : t.importance === 'medium' ? 'Moyenne' : 'Faible'}</span></div>`; }); } wModal.style.display = 'flex'; }
 
 // --- PARTAGE AGENDA ---
 function autoSaveNickname() { const nick = document.getElementById('profile-nickname').value.trim(); if (currentUser) { db.collection("users").doc(currentUser.uid).set({ nickname: nick }, { merge: true }).then(() => { userNickname = nick; showToast("Surnom mis à jour ! ✨"); }); } }
