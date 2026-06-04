@@ -533,7 +533,8 @@ function renderShoppingList() {
 
     actives.forEach(item => {
         const d = document.createElement('div'); d.className = `task-card`; d.style.borderLeft = "6px solid var(--primary)"; 
-        const nameToDisplay = currentShoppingListId === 'personal' ? formatProductDisplay(item.name) : item.name;
+        // MODIFICATION ICI : On n'utilise plus formatProductDisplay, donc l'animal entre () s'affiche
+        const nameToDisplay = item.name;
         d.innerHTML = `
             <div style="flex:1; display:flex; align-items:center; min-width:0;">
                 <div onclick="toggleShoppingCheck('${item.id}', false)" style="width:20px; height:20px; border:2px solid var(--primary); border-radius:5px; margin-right:10px; cursor:pointer;"></div>
@@ -558,7 +559,7 @@ function renderShoppingList() {
 
     completeds.forEach(item => {
         const d = document.createElement('div'); d.className = `task-card completed-bubble`; 
-        const nameToDisplay = currentShoppingListId === 'personal' ? formatProductDisplay(item.name) : item.name;
+        const nameToDisplay = item.name;
         d.innerHTML = `
             <div style="flex:1; display:flex; align-items:center; min-width:0;">
                 <div onclick="toggleShoppingCheck('${item.id}', true)" style="width:20px; height:20px; background:var(--success); border-radius:5px; margin-right:10px; display:flex; align-items:center; justify-content:center; color:white; font-size:0.8rem; cursor:pointer;">✓</div>
