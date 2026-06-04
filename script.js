@@ -24,7 +24,7 @@ let currentUser = null, userNickname = "", hasShownWelcomeThisSession = false, t
 let currentShoppingListId = "personal"; 
 let myAgendaCode = ""; 
 
-window.currentListMemberNames = {}; // Dictionnaire des pseudos
+window.currentListMemberNames = {}; // Utilisé pour stocker les pseudos des participants de la liste active
 
 // --- VARIABLES DE CONTRÔLE ET RECHERCHE ---
 let currentShoppingPath = []; 
@@ -201,7 +201,7 @@ function disableCustomTime(prefix, disable) { let h = document.getElementById(pr
 function getFrenchHolidays(year) { const holidays = []; const addDate = (m, d, name) => holidays.push({ date: `${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`, name: name }); addDate(1, 1, "Jour de l'An"); addDate(5, 1, "Fête du Travail"); addDate(5, 8, "Victoire 1945"); addDate(7, 14, "Fête Nationale"); addDate(8, 15, "Assomption"); addDate(11, 1, "Toussaint"); addDate(11, 11, "Armistice 1918"); addDate(12, 25, "Noël"); const a = year % 19, b = Math.floor(year / 100), c = year % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), n0 = (h + l + 7 * m + 114), n = Math.floor(n0 / 31) - 1, p = n0 % 31 + 1; let easter = new Date(year, n, p); let lundiPaques = new Date(easter); lundiPaques.setDate(easter.getDate() + 1); addDate(lundiPaques.getMonth() + 1, lundiPaques.getDate(), "Lundi de Pâques"); let ascension = new Date(easter); ascension.setDate(easter.getDate() + 39); addDate(ascension.getMonth() + 1, ascension.getDate(), "Ascension"); let lundiPentecote = new Date(easter); lundiPentecote.setDate(easter.getDate() + 50); addDate(lundiPentecote.getMonth() + 1, lundiPentecote.getDate(), "Lundi de Pentecôte"); return holidays; }
 function showToast(message) { const toast = document.getElementById('toast-notification'); if (!toast) return; toast.innerText = message; toast.className = "toast-show"; setTimeout(() => { toast.className = "toast-hidden"; }, 3000); }
 function changeTheme(t) { document.body.className = `theme-${t}`; localStorage.setItem('listme_theme', t); }
-function unlockModalFields() { const nameF = document.getElementById('task-name'), descF = document.getElementById('task-desc'), impF = document.getElementById('task-importance'), labelF = document.getElementById('date-input-label'); if(nameF) nameF.disabled = false; if(descF) descF.disabled = false; if(impF) impF.disabled = false; if(labelF) labelF.innerText = "Date"; disableCustomTime('task-time', false); disableCustomTime('todo-time', false); document.querySelectorAll('.reminder-badge').forEach(b => { b.style.pointerEvents = 'auto'; b.classList.remove('disabled-frozen'); }); const duplicateTags = document.getElementById('duplicate-dates-tags'); if(duplicateTags) document.getElementById('duplicate-dates-tags').innerHTML = ""; }
+function unlockModalFields() { const nameF = document.getElementById('task-name'), descF = document.getElementById('task-desc'), impF = document.getElementById('task-importance'), labelF = document.getElementById('date-input-label'); if(nameF) nameF.disabled = false; if(descF) descF.disabled = false; if(impF) impF.disabled = false; if(labelF) labelF.innerText = "Date"; disableCustomTime('task-time', false); disableCustomTime('todo-time', false); document.querySelectorAll('.reminder-badge').forEach(b => { b.style.pointerEvents = 'auto'; b.classList.remove('disabled-frozen'); }); const duplicateTags = document.getElementById('duplicate-dates-tags'); if(duplicateTags) duplicateTags.innerHTML = ""; }
 
 function showPage(p) {
     document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
@@ -244,21 +244,6 @@ function renderShoppingCategories() {
     const container = document.getElementById('shopping-categories');
     const breadcrumb = document.getElementById('shopping-breadcrumb');
     if(!container || !breadcrumb) return;
-
-    // --- SÉCURITÉ LISTE ÉVÉNEMENT ---
-    if (currentShoppingListId !== 'personal') {
-        const listObj = mySharedLists.find(l => l.id === currentShoppingListId);
-        if (listObj && listObj.type === 'event' && listObj.createdBy !== currentUser.uid) {
-            breadcrumb.innerText = "Accès restreint";
-            container.innerHTML = `
-                <div style="grid-column: 1 / -1; background: rgba(128,128,128,0.05); border: 2px dashed var(--warning); padding: 25px 15px; border-radius: 12px; text-align: center;">
-                    <span style="font-size: 2rem; display:block; margin-bottom: 10px;">🛡️</span>
-                    <strong style="color: var(--primary-dark); font-size: 1.1rem; display:block; margin-bottom: 5px;">Mode Événement</strong>
-                    <span style="font-style: italic; opacity: 0.8; font-size: 0.9rem;">Vous êtes invité à cet événement. Seul l'organisateur peut dresser la liste et ajouter des produits.</span>
-                </div>`;
-            return;
-        }
-    }
 
     let isFocused = (document.activeElement && document.activeElement.id === 'shopping-search');
     container.innerHTML = '';
@@ -434,6 +419,7 @@ function openShoppingItemModal(identifier, isCustom) {
 
     if (currentShoppingListId !== 'personal') {
         const listObj = mySharedLists.find(l => l.id === currentShoppingListId);
+        // Si c'est un événement ET que l'utilisateur est le créateur
         if (listObj && listObj.type === 'event' && listObj.createdBy === currentUser.uid) {
             assignContainer.style.display = 'block';
             assignSelect.innerHTML = '<option value="">-- Non attribué --</option>';
@@ -452,7 +438,7 @@ function openShoppingItemModal(identifier, isCustom) {
     currentShoppingPath = []; renderShoppingCategories();
 }
 
-// Helper pour trouver automatiquement le rayon d'un produit
+// Helper pour trouver automatiquement le rayon d'un produit dans le dictionnaire
 function findRayonForProduct(productName) {
     const pLower = productName.toLowerCase();
     for (let rayon in foodCategories) {
@@ -463,10 +449,10 @@ function findRayonForProduct(productName) {
     return "✨ Produits Custom / Autres";
 }
 
-// Helper pour trier par personne
+// Helper pour formater le nom du créateur pour l'algorithme de tri
 function itemOwnerNameForSort(item) {
     if (currentShoppingListId === 'personal') return 'Moi';
-    if (item.assignedToName) return item.assignedToName; 
+    if (item.assignedToName) return item.assignedToName; // Tri par la personne assignée si événement
     if (item.userId === currentUser.uid) return 'A_Moi'; 
     return item.ownerName || 'Z_Inconnu';
 }
@@ -477,6 +463,7 @@ function saveShoppingItem() {
     const finalName = tempShoppingProduct;
     const displayInfo = unit === "" ? `x${qty}` : `${qty} ${unit}`;
     
+    // Récperation de l'assignation si c'est un événement
     let assignedToUid = null;
     let assignedToName = null;
     const assignContainer = document.getElementById('assignee-container');
@@ -521,6 +508,7 @@ function renderShoppingTabs() {
     const container = document.getElementById('shopping-tabs-dynamic');
     if (!container) return;
     
+    // Gestion conditionnelle de l'option de tri "Personne"
     const ownerOpt = document.getElementById('sort-opt-owner');
     const sortSelect = document.getElementById('shopping-sort-filter');
     if (ownerOpt && sortSelect) {
@@ -543,6 +531,7 @@ function renderShoppingTabs() {
 
     container.innerHTML = '';
 
+    // 1. Onglet Personnel
     const personalBtn = document.createElement('button');
     personalBtn.className = `sub-menu-tab ${currentShoppingListId === 'personal' ? 'active' : ''}`;
     personalBtn.style.cssText = currentShoppingListId === 'personal' 
@@ -552,6 +541,7 @@ function renderShoppingTabs() {
     personalBtn.onclick = () => switchShoppingListTab("personal");
     container.appendChild(personalBtn);
 
+    // 2. Onglets Partagés Dynamiques
     mySharedLists.forEach(list => {
         const listBtn = document.createElement('button');
         listBtn.className = `sub-menu-tab ${currentShoppingListId === list.id ? 'active' : ''}`;
@@ -567,7 +557,6 @@ function renderShoppingTabs() {
 function switchShoppingListTab(listId) {
     currentShoppingListId = listId;
     renderShoppingTabs();
-    renderShoppingCategories(); // Met à jour la sécurité "Event" immédiatement
     syncCurrentShoppingItems();
     updateParticipantsDisplay();
 }
@@ -576,7 +565,7 @@ async function updateParticipantsDisplay() {
     const pDiv = document.getElementById('shopping-list-participants');
     if (!pDiv) return;
 
-    window.currentListMemberNames = {}; 
+    window.currentListMemberNames = {}; // On vide le dictionnaire global
 
     if (currentShoppingListId === 'personal') {
         pDiv.style.display = 'none';
@@ -651,6 +640,7 @@ function renderShoppingList() {
     const scrollUpBtn = document.getElementById('shopping-scroll-up-btn');
     if (!c) return; c.innerHTML = '';
 
+    // --- LOGIQUE COMPLÈTE DE TRI FILTRÉ DYNAMIQUE ---
     const sortVal = document.getElementById('shopping-sort-filter') ? document.getElementById('shopping-sort-filter').value : 'date';
     
     if (sortVal === 'alpha') {
@@ -670,6 +660,7 @@ function renderShoppingList() {
             return a.name.localeCompare(b.name, 'fr', {sensitivity: 'base'});
         });
     } else {
+        // 'date' (par défaut)
         shoppingItems.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     }
 
@@ -684,6 +675,7 @@ function renderShoppingList() {
     if(scrollUpBtn && shoppingItems.length > 0) scrollUpBtn.style.display = 'flex';
     else if(scrollUpBtn) scrollUpBtn.style.display = 'none';
 
+    // Ajout du badge d'attribution pour le mode Événement
     const getOwnerTag = (item) => {
         if (currentShoppingListId === 'personal') return '';
         if (item.assignedToName) {
@@ -697,6 +689,7 @@ function renderShoppingList() {
 
     let lastRayonRendered = null;
 
+    // Rendu des produits actifs
     actives.forEach(item => {
         if (sortVal === 'rayon') {
             const itemRayon = findRayonForProduct(item.name);
@@ -732,6 +725,7 @@ function renderShoppingList() {
         </div>`;
     }
 
+    // Rendu des produits cochés
     completeds.forEach(item => {
         const d = document.createElement('div'); d.className = `task-card completed-bubble`; 
         const nameToDisplay = item.name;
@@ -774,7 +768,6 @@ function openCustomShoppingListShareModal() {
             mySharedLists = [];
             snap.forEach(doc => { let d = doc.data(); d.id = doc.id; mySharedLists.push(d); });
             renderMySharedListsInModal();
-            renderFriendsCheckboxesForNewList();
             renderShoppingTabs();
         }).catch(err => {
             showToast("Erreur de chargement: " + err.message);
@@ -784,24 +777,6 @@ function openCustomShoppingListShareModal() {
     }
     
     document.getElementById('shopping-list-multi-share-modal').style.display = 'flex';
-}
-
-function renderFriendsCheckboxesForNewList() {
-    const container = document.getElementById('create-list-friends-container');
-    const checkboxDiv = document.getElementById('create-list-friends-checkboxes');
-    if (!container || !checkboxDiv) return;
-
-    if (friends.length === 0) {
-        container.style.display = 'none';
-        return;
-    }
-    
-    container.style.display = 'block';
-    checkboxDiv.innerHTML = friends.map(f => `
-        <label style="display:flex; align-items:center; gap:5px; background:rgba(128,128,128,0.1); padding:5px 10px; border-radius:20px; font-size:0.85rem; cursor:pointer;">
-            <input type="checkbox" class="friend-invite-cb" value="${f.uid}"> ${f.nickname}
-        </label>
-    `).join('');
 }
 
 function renderMySharedListsInModal() {
@@ -830,14 +805,11 @@ function createNewSharedShoppingList() {
     const name = nameInput.value.trim();
     if (!name) { showToast("Veuillez donner un nom à la liste ! ❌"); return; }
     if (!currentUser) { showToast("Erreur: Utilisateur non connecté."); return; }
-    
     const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     const listType = document.getElementById('new-list-type').value;
 
-    let selectedFriends = Array.from(document.querySelectorAll('.friend-invite-cb:checked')).map(cb => cb.value);
-
     const newList = {
-        name: name, code: uniqueCode, createdBy: currentUser.uid, members: [currentUser.uid, ...selectedFriends], type: listType, createdAt: Date.now()
+        name: name, code: uniqueCode, createdBy: currentUser.uid, members: [currentUser.uid], type: listType, createdAt: Date.now()
     };
 
     db.collection("shoppingLists").add(newList).then((docRef) => {
@@ -854,7 +826,6 @@ function createNewSharedShoppingList() {
         currentShoppingListId = docRef.id; 
         
         renderShoppingTabs();
-        renderShoppingCategories();
         syncCurrentShoppingItems();
         updateParticipantsDisplay();
         renderMySharedListsInModal();
@@ -887,7 +858,6 @@ function joinSharedShoppingList() {
             currentShoppingListId = doc.id; 
             
             renderShoppingTabs();
-            renderShoppingCategories();
             syncCurrentShoppingItems();
             updateParticipantsDisplay();
             renderMySharedListsInModal();
@@ -913,7 +883,6 @@ function leaveSharedList(listId) {
             currentShoppingListId = "personal"; 
         }
         renderShoppingTabs(); 
-        renderShoppingCategories();
         syncCurrentShoppingItems();
         updateParticipantsDisplay();
         if (document.getElementById('shopping-list-multi-share-modal').style.display === 'flex') {
@@ -921,57 +890,6 @@ function leaveSharedList(listId) {
         }
     });
 }
-
-// --- SYSTÈME D'AMIS GLOBAL (PROFIL) ---
-function copyUserCode() {
-    const code = document.getElementById('my-user-code').innerText;
-    navigator.clipboard.writeText(code).then(() => showToast("Code copié ! Donnez-le à vos amis. 📋"));
-}
-
-function addGlobalFriend() {
-    const code = document.getElementById('add-friend-input').value.trim().toUpperCase(); 
-    if(!code || code === myAgendaCode) return; 
-    
-    db.collection("users").where("shareCode", "==", code).get().then(snapshot => { 
-        if(snapshot.empty) { showToast("Code introuvable ! ❌"); return; } 
-        let friendDoc = snapshot.docs[0], friendUid = friendDoc.id, friendData = friendDoc.data(); 
-        let friendName = friendData.nickname || "Inconnu"; 
-        
-        if(friends.some(f => f.uid === friendUid)) { showToast("Déjà dans vos amis ! 🤝"); return; } 
-        
-        friends.push({uid: friendUid, nickname: friendName}); 
-        db.collection("users").doc(currentUser.uid).update({following: friends}).then(() => {
-            // Lier l'agenda automatiquement comme avant
-            let sharedWith = friendData.sharedWith || []; 
-            if(!sharedWith.includes(currentUser.uid)) { 
-                sharedWith.push(currentUser.uid); 
-                db.collection("users").doc(friendUid).update({sharedWith: sharedWith}); 
-            } 
-            startFriendSync(friendUid, friendName, 'agenda'); 
-            showToast(`${friendName} ajouté à vos amis ! ✨`);
-            document.getElementById('add-friend-input').value = ""; 
-            renderGlobalFriends();
-        });
-    }); 
-}
-
-function renderGlobalFriends() {
-    const container = document.getElementById('global-friends-list');
-    if(!container) return;
-    
-    if (friends.length === 0) { 
-        container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center;'>Vous n'avez pas encore ajouté d'amis.</p>`; 
-        return; 
-    }
-    
-    container.innerHTML = friends.map(f => `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;">
-            <span style="font-weight:bold; color:var(--primary-dark);">👤 ${f.nickname}</span>
-            <button onclick="removeFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:bold;">Retirer</button>
-        </div>
-    `).join('');
-}
-
 
 // --- NOTIFS ET ARCHIVAGE ---
 function processMidnightAutoArchive() {
@@ -1017,12 +935,11 @@ auth.onAuthStateChanged((user) => {
                 if(!myAgendaCode) { myAgendaCode = Math.random().toString(36).substring(2, 8).toUpperCase(); updateData.shareCode = myAgendaCode; updateData.sharedWith = []; }
                 if(Object.keys(updateData).length > 0) { db.collection("users").doc(user.uid).set(updateData, {merge: true}); }
 
-                if(document.getElementById('my-user-code')) {
-                    document.getElementById('my-user-code').innerText = myAgendaCode;
+                if(document.getElementById('my-share-code') && document.getElementById('share-modal').style.display === 'flex') {
+                    document.getElementById('my-share-code').innerText = myAgendaCode;
                 }
                 
                 friends = data.following || [];
-                if(document.getElementById('profile-page').style.display === 'block') { renderGlobalFriends(); }
                 if(document.getElementById('shopping-page').style.display === 'block') { renderShoppingCategories(); }
             } catch (e) { console.error(e); }
         });
@@ -1077,6 +994,84 @@ function stopRealtimeSync() {
     tasks = []; sharedTasks = []; dailyTodo = []; weeklyTodo = []; routineTodo = []; birthdays = []; friends = []; shoppingItems = []; mySharedLists = [];
 }
 
+// --- PARTAGE AGENDA ---
+function autoSaveNickname() { const nick = document.getElementById('profile-nickname').value.trim(); if (currentUser) { db.collection("users").doc(currentUser.uid).set({ nickname: nick }, { merge: true }).then(() => { userNickname = nick; showToast("Surnom mis à jour ! ✨"); }); } }
+function openShareModal(mode) { currentShareMode = mode; document.getElementById('share-modal-title').innerText = "Partage Agenda 🤝"; document.getElementById('my-share-code').innerText = myAgendaCode; renderFriendsList(); document.getElementById('share-modal').style.display = 'flex'; }
+function copyShareCode() { const code = document.getElementById('my-share-code').innerText; navigator.clipboard.writeText(code).then(() => showToast("Code copié ! 📋")); }
+
+function renderFriendsList() { 
+    const container = document.getElementById('friends-list-container'); if(!container) return; 
+    if (friends.length === 0) { container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; margin-top: 10px; text-align: center; width: 100%;'>Aucun agenda lié pour le moment.</p>`; return; }
+    container.innerHTML = friends.map(f => `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; margin-top:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;"><span style="font-weight:bold; color:var(--primary-dark);">👤 ${f.nickname}</span><button onclick="removeFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:bold;">Retirer</button></div>`).join(''); 
+}
+
+function removeFriend(fUid) { 
+    friends = friends.filter(f => f.uid !== fUid); 
+    db.collection("users").doc(currentUser.uid).set({following: friends}, {merge: true}).then(() => { renderFriendsList(); if(friendUnsubscribes[fUid]) { friendUnsubscribes[fUid](); delete friendUnsubscribes[fUid]; } sharedTasks = sharedTasks.filter(t => t.userId !== fUid); renderCalendar(); showToast("Agenda retiré ! 🗑️"); }); 
+}
+
+let btnAddFriend = document.getElementById('btn-add-friend');
+if(btnAddFriend) { 
+    btnAddFriend.onclick = () => { 
+        const code = document.getElementById('friend-code-input').value.trim().toUpperCase(); if(!code || code === myAgendaCode) return; 
+        db.collection("users").where("shareCode", "==", code).get().then(snapshot => { 
+            if(snapshot.empty) { showToast("Code introuvable ! ❌"); return; } 
+            let friendDoc = snapshot.docs[0], friendUid = friendDoc.id, friendData = friendDoc.data(); let friendName = friendData.nickname || "Inconnu"; 
+            if(friends.some(f => f.uid === friendUid)) { showToast("Déjà lié ! 🤝"); return; } 
+            friends.push({uid: friendUid, nickname: friendName}); db.collection("users").doc(currentUser.uid).update({following: friends}); 
+            let sharedWith = friendData.sharedWith || []; if(!sharedWith.includes(currentUser.uid)) { sharedWith.push(currentUser.uid); db.collection("users").doc(friendUid).update({sharedWith: sharedWith}); } 
+            startFriendSync(friendUid, friendName, 'agenda'); showToast(`Agenda de ${friendName} lié ! ✨`);
+            renderFriendsList(); document.getElementById('friend-code-input').value = ""; 
+        }); 
+    }; 
+}
+
+// --- ANNIVERSAIRES ---
+function openBirthdayModal() { document.getElementById('birthday-name').value = ''; document.getElementById('birthday-date').value = ''; document.getElementById('birthday-modal').style.display = 'flex'; }
+function deleteBirthday(id) { db.collection("birthdays").doc(id).delete().then(() => { showToast("Anniversaire supprimé !"); document.getElementById('calendar-day-modal').style.display = 'none'; }); }
+
+// --- MODAL GHOST ---
+function openGhostModal(id) { const task = tasks.find(t => t.id === id); if(!task || !task.duplicateDays) return; let modal = document.getElementById('ghost-modal'); if(!modal) { modal = document.createElement('div'); modal.id = 'ghost-modal'; modal.className = 'modal modal-center'; modal.style.zIndex = "10005"; modal.innerHTML = `<div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto; padding: 20px;"><h3 style="color: var(--primary); text-align: center; margin-bottom: 15px;">🗓️ Dates Prévues</h3><div id="ghost-modal-list" style="display: flex; flex-direction: column; gap: 10px;"></div><button onclick="document.getElementById('ghost-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button></div>`; document.body.appendChild(modal); } const list = document.getElementById('ghost-modal-list'); list.innerHTML = ""; let ghosts = task.duplicateDays.map(g => typeof g === 'string' ? {date: g, time: task.time} : g); ghosts.sort((a,b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.time || "").localeCompare(b.time || "")); ghosts.forEach((g, index) => { const dFr = g.date.split('-').reverse().join('/'); list.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(128,128,128,0.08); border-radius:12px;"><span style="font-size: 0.95rem;">📅 <b>${dFr}</b> ${g.time ? `<span style="opacity:0.6; margin:0 5px;">|</span> ⏰ <b>${g.time}</b>` : ''}</span><button onclick="removeGhostDate('${task.id}', ${index})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:1.5rem; display:flex; align-items:center; line-height:1; padding:0 5px;">×</button></div>`; }); modal.style.display = 'flex'; }
+function removeGhostDate(taskId, ghostIndex) { const task = tasks.find(t => t.id === taskId); if(task && task.duplicateDays) { let ghosts = task.duplicateDays.map(g => typeof g === 'string' ? {date: g, time: task.time} : g); ghosts.splice(ghostIndex, 1); db.collection("tasks").doc(taskId).update({ duplicateDays: ghosts }).then(() => { showToast("Date supprimée ! 🗑️"); openGhostModal(taskId); if(ghosts.length === 0) document.getElementById('ghost-modal').style.display='none'; }); } }
+
+// --- RENDER TASKS ---
+function renderTasks() { 
+    const c = document.getElementById('task-list'); if (!c) return; c.innerHTML = ''; const now = new Date(); 
+    let activeList = [], archiveList = []; tasks.forEach(t => { if(t.completed) { if(t.completedAtStr && t.completedAtStr !== todayStr) { archiveList.push(t); } else { activeList.push(t); } } else { activeList.push(t); } }); 
+    let filteredList = (taskSubView === "active") ? activeList : archiveList; 
+    if (taskSubView === "archive") { const archiveSort = document.getElementById('archive-sort-filter').value; filteredList.sort((a,b) => { const dateA = a.completedAtStr || a.date, dateB = b.completedAtStr || b.date; if (archiveSort === 'desc') { if (dateA !== dateB) return dateB.localeCompare(dateA); return b.createdAt - a.createdAt; } else { if (dateA !== dateB) return dateA.localeCompare(dateB); return a.createdAt - b.createdAt; } }); } 
+    const isChronoSort = (taskSubView === "archive") || (document.getElementById('task-sort-filter') && document.getElementById('task-sort-filter').value === 'chrono');
+    if (taskSubView === "active") { const sortMode = document.getElementById('task-sort-filter') ? document.getElementById('task-sort-filter').value : 'chrono'; let imminentTasks = [], standardTasks = [], completedTodayTasks = []; filteredList.forEach(t => { t.currentDisplayDate = t.date; t.currentDisplayTime = t.time; if (!t.completed && t.duplicateDays && t.duplicateDays.length > 0) { let allOcc = [{date: t.date, time: t.time || ""}]; t.duplicateDays.forEach(g => { if (typeof g === 'string') allOcc.push({date: g, time: t.time || ""}); else allOcc.push(g); }); allOcc.sort((a,b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.time.localeCompare(b.time)); let futureOcc = allOcc.filter(o => o.date >= todayStr), currentOcc = futureOcc.length > 0 ? futureOcc[0] : allOcc[allOcc.length - 1]; t.currentDisplayDate = currentOcc.date; t.currentDisplayTime = currentOcc.time; } if(t.completed) { completedTodayTasks.push(t); return; } if(t.currentDisplayDate === todayStr && t.currentDisplayTime) { const [tHour, tMin] = t.currentDisplayTime.split(':').map(Number); const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0); const remainingMinutes = (taskTimeObj - now) / 60000; if(remainingMinutes > 0 && remainingMinutes <= 60) { t.isImminent = true; t.minutesLeft = Math.round(remainingMinutes); imminentTasks.push(t); return; } } t.isImminent = false; standardTasks.push(t); }); const chronoSort = (a, b) => { let dateA = a.currentDisplayDate || a.date, dateB = b.currentDisplayDate || b.date; if (dateA !== dateB) return dateA.localeCompare(dateB); let timeA = a.currentDisplayTime || "", timeB = b.currentDisplayTime || ""; if (!timeA) return -1; if (!timeB) return 1; return timeA.localeCompare(timeB); }; const creationSort = (a, b) => b.createdAt - a.createdAt; if (sortMode === 'chrono') { standardTasks.sort(chronoSort); completedTodayTasks.sort(chronoSort); } else { standardTasks.sort(creationSort); completedTodayTasks.sort(creationSort); } imminentTasks.sort((a,b) => a.minutesLeft - b.minutesLeft); filteredList = [...imminentTasks, ...standardTasks, ...completedTodayTasks]; } 
+    if(filteredList.length === 0) { c.innerHTML = `<p style="text-align:center; opacity:0.4; font-style:italic; margin-top:30px;">${taskSubView==='active'?'Aucune tâche active !':'Aucune archive ne correspond'}</p>`; return; } 
+    let separatorDrawn = false; let lastDateRendered = null;
+    filteredList.forEach(t => { 
+        if (t.completed && taskSubView === "active" && !separatorDrawn) { const separator = document.createElement('div'); separator.className = 'task-section-separator'; separator.innerHTML = '<span>Tâches terminées</span>'; c.appendChild(separator); separatorDrawn = true; lastDateRendered = null; } 
+        let ghosts = Array.isArray(t.duplicateDays) ? t.duplicateDays : []; const isMultiDate = (!t.completed && ghosts.length > 0); const displayDateStr = t.currentDisplayDate || t.date, displayTimeStr = t.currentDisplayTime || t.time || "", displayDateFR = displayDateStr ? displayDateStr.split('-').reverse().join('/') : ''; 
+        if (isChronoSort && displayDateStr !== lastDateRendered) { if (!t.completed || taskSubView === "archive") { const dateSep = document.createElement('div'); let dateLabel = displayDateStr === todayStr ? `Aujourd'hui (${displayDateFR})` : displayDateFR; dateSep.innerHTML = `<div style="text-align: center; margin: 18px 0 8px 0; font-size: 0.85rem; font-weight: bold; color: var(--primary); opacity: 0.7; letter-spacing: 1px;">— ${dateLabel} —</div>`; c.appendChild(dateSep); lastDateRendered = displayDateStr; } }
+        let descHtml = t.desc ? `<div class="task-desc-text" style="flex:1; min-width:0; font-size: 0.85rem; opacity: 0.7; font-style: italic; white-space: pre-wrap; line-height: 1.3; margin-left: 10px; padding-left: 10px; border-left: 1px dashed rgba(128,128,128,0.3); display: flex; align-items: center; word-break: break-word; overflow-wrap: anywhere;">${t.desc}</div>` : ''; let ghostHtml = isMultiDate ? `<span onclick="event.stopPropagation(); openGhostModal('${t.id}')" style="display:inline-block; margin-top:8px; font-size:0.75rem; color:var(--primary); background:rgba(0,206,209,0.1); padding:4px 10px; border-radius:12px; cursor:pointer; font-weight:bold;">🗓️ + ${ghosts.length} date(s) prévue(s)</span>` : ""; const d = document.createElement('div'); 
+        if (t.completed) { d.className = `task-card completed-bubble`; d.innerHTML = `<div style="flex:1; display:flex; align-items:center; min-width:0;" onclick="toggleTaskCheck('${t.id}', ${t.completed}, '${displayDateStr}')"><div style="flex:1; min-width:0; padding-right:8px;"><span class="badge-finished">✨ Fini !</span><br><strong style="text-decoration:line-through; opacity:0.5; display:block; word-break: break-word; overflow-wrap: anywhere;">${t.name}</strong><small style="display:block; opacity:0.5; margin-top:2px;">📅 ${displayDateFR} ${displayTimeStr ? '⏰ ' + displayTimeStr : ''}</small></div>${t.desc ? `<div class="task-desc-text" style="flex:1; min-width:0; font-size: 0.85rem; opacity: 0.4; font-style: italic; margin-left: 10px; padding-left: 10px; border-left: 1px dashed rgba(128,128,128,0.2); display: flex; align-items: center; text-decoration:line-through; word-break: break-word; overflow-wrap: anywhere;">${t.desc}</div>` : ''}</div><div class="task-actions" style="flex-shrink:0;"><button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button></div>`; } else { d.className = `${isMultiDate ? 'task-card stacked-task' : 'task-card'} ${t.importance} ${t.isImminent ? 'is-imminent' : ''}`; let remindersText = "Aucun"; if(t.reminders && t.reminders.length > 0) remindersText = t.reminders.map(r => `${r} min avant`).join(', '); d.innerHTML = `<div style="flex:1; display:flex; align-items:center; min-width:0;" onclick="toggleTaskCheck('${t.id}', ${t.completed}, '${displayDateStr}')"><div style="flex:${t.desc ? '1' : 'auto'}; min-width:0; padding-right:8px;"><strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''} display:block; word-break: break-word; overflow-wrap: anywhere;">${t.name}</strong><small style="display:block; margin-top:2px;">📅 ${displayDateFR} ${displayTimeStr ? '⏰ ' + displayTimeStr : ''}</small>${t.isImminent ? `<small class="time-alert" style="display:block; margin-top:2px;">⚠️ ÉCHÉANCE PROCHE : Reste ${t.minutesLeft} min !</small>` : `<small style="color:var(--primary-dark); display:block; margin-top:2px;">🔔 Rappels : ${remindersText}</small>`}${ghostHtml}</div>${descHtml}</div><div class="task-actions" style="flex-shrink:0;">${taskSubView === 'active' ? `<button onclick="duplicateTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.2rem; cursor:pointer; margin-right:5px;">📑</button>` : ''}${taskSubView === 'active' ? `<button onclick="editTask('${t.id}')" style="background:none; border:none; color:var(--primary); font-size:1.3rem; cursor:pointer;">✎</button>` : ''}<button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button></div>`; } c.appendChild(d); 
+    }); 
+}
+
+function toggleTaskCheck(id, currentStatus, specificDate) { const task = tasks.find(t => t.id === id); if(!task) return; if(!currentStatus) { let isMultiDate = (task.duplicateDays && task.duplicateDays.length > 0); if (isMultiDate && specificDate) { let allDates = [task.date, ...task.duplicateDays].sort(); let remainingDates = allDates.filter(d => typeof d === 'string' ? d !== specificDate : d.date !== specificDate); if (remainingDates.length > 0) { db.collection("tasks").add({ name: task.name, desc: task.desc || "", date: specificDate, time: task.time || "", reminders: task.reminders || [], importance: task.importance, completed: true, completedAtStr: todayStr, userId: task.userId, createdAt: task.createdAt || Date.now(), duplicateDays: [] }); let nextMainDate = remainingDates.shift(); db.collection("tasks").doc(id).update({ date: nextMainDate.date || nextMainDate, time: nextMainDate.time || task.time || "", duplicateDays: remainingDates }); showToast("Instance terminée et archivée ! ✨"); return; } } db.collection("tasks").doc(id).update({ completed: true, completedAtStr: todayStr }); } else { db.collection("tasks").doc(id).update({ completed: false, completedAtStr: firebase.firestore.FieldValue.delete() }); } }
+function toggleTodo(id, currentStatus) { db.collection("dailyTodo").doc(id).update({ completed: !currentStatus }); } function toggleWeeklyTodo(id, currentStatus) { db.collection("weeklyTodo").doc(id).update({ completed: !currentStatus }); } function toggleRoutineTodo(id, currentStatus) { db.collection("routineTodo").doc(id).update({ completed: !currentStatus }); }
+function deleteTask(id) { db.collection("tasks").doc(id).delete().then(() => { showToast("Tâche supprimée ! 🗑️"); }); } function deleteWeeklyTodo(id) { db.collection("weeklyTodo").doc(id).delete().then(() => showToast("Supprimé !")); } function deleteDailyTodo(id) { db.collection("dailyTodo").doc(id).delete().then(() => showToast("Supprimé !")); } function deleteRoutineTodo(id) { db.collection("routineTodo").doc(id).delete().then(() => showToast("Supprimé de la semaine type !")); }
+function editTask(id) { const task = tasks.find(t => t.id === id); if(task) { editingId = id; unlockModalFields(); if(document.getElementById('task-name')) document.getElementById('task-name').value = task.name; if(document.getElementById('task-desc')) document.getElementById('task-desc').value = task.desc || ""; if(document.getElementById('task-date')) document.getElementById('task-date').value = task.date; setCustomTime('task-time', task.time || ""); setSelectedRemindersToBadges(task.reminders || []); if(document.getElementById('task-importance')) document.getElementById('task-importance').value = task.importance; document.getElementById('modal-title').innerText = "Modifier la tâche"; document.getElementById('task-modal').style.display = 'flex'; } }
+function duplicateTask(id) { const task = tasks.find(t => t.id === id); if(task) { editingId = id; unlockModalFields(); if(document.getElementById('task-name')) document.getElementById('task-name').value = task.name; if(document.getElementById('task-desc')) document.getElementById('task-desc').value = task.desc || ""; if(document.getElementById('task-date')) document.getElementById('task-date').value = ""; setCustomTime('task-time', ""); if(document.getElementById('task-importance')) document.getElementById('task-importance').value = task.importance; setSelectedRemindersToBadges(task.reminders || []); if(document.getElementById('task-name')) document.getElementById('task-name').disabled = true; if(document.getElementById('task-desc')) document.getElementById('task-desc').disabled = true; if(document.getElementById('task-importance')) document.getElementById('task-importance').disabled = true; if(document.getElementById('date-input-label')) document.getElementById('date-input-label').innerText = "Nouvelle Date Prévue"; document.querySelectorAll('.reminder-badge').forEach(b => { b.style.pointerEvents = 'none'; b.classList.add('disabled-frozen'); }); document.getElementById('modal-title').innerText = "Dupliquer la tâche"; document.getElementById('task-modal').style.display = 'flex'; } }
+
+// --- RENDER TODO ---
+function setTodoMode(m) { todoMode = m; renderTodo(); }
+function renderTodo() { const c = document.getElementById('todo-content'); if (!c) return; document.querySelectorAll('#todo-page .bubble').forEach(b => b.classList.remove('active')); if (todoMode === 'daily') document.getElementById('btn-daily').classList.add('active'); else if (todoMode === 'weekly') document.getElementById('btn-weekly').classList.add('active'); else if (todoMode === 'routine') document.getElementById('btn-routine').classList.add('active'); if(todoMode === 'daily') { document.getElementById('todo-today-date').innerText = new Date().toLocaleDateString('fr-FR', {weekday: 'long', day: 'numeric', month: 'long'}); c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container'); for (let h = 8; h <= 20; h++) { const currentHourStr = `${h.toString().padStart(2, '0')}:00`; let items = dailyTodo.filter(it => it.date === todayStr && parseInt(it.time.split(':')[0]) === h), weeklyItems = weeklyTodo.filter(it => parseInt(it.dayOfWeek) === currentDayOfWeek && parseInt(it.time.split(':')[0]) === h), routineItems = routineTodo.filter(it => parseInt(it.dayOfWeek) === currentDayOfWeek && parseInt(it.time.split(':')[0]) === h); let combinedItems = [...items, ...weeklyItems, ...routineItems]; combinedItems.sort((a,b) => a.time.localeCompare(b.time)); const hourCard = document.createElement('div'); hourCard.className = 'weekly-day-card'; hourCard.innerHTML = `<div class="weekly-day-header"><span class="weekly-day-title">${currentHourStr}</span><button onclick="openTodoModal('${h.toString().padStart(2,'0')}:00', false, 0, false)" class="weekly-add-btn">+</button></div><div class="weekly-subtasks">${combinedItems.map(it => { const isWeekly = it.hasOwnProperty('dayOfWeek') && !it.hasOwnProperty('isRoutine'), isRoutine = it.hasOwnProperty('isRoutine'); let checkFunc = `toggleTodo('${it.id}', ${it.completed})`, delFunc = `deleteDailyTodo('${it.id}')`, labelSuffix = ''; if (isWeekly) { checkFunc = `toggleWeeklyTodo('${it.id}', ${it.completed})`; delFunc = `deleteWeeklyTodo('${it.id}')`; labelSuffix = ' <small style="opacity:0.5;">(Hebdo)</small>'; } else if (isRoutine) { checkFunc = `toggleRoutineTodo('${it.id}', ${it.completed})`; delFunc = `deleteRoutineTodo('${it.id}')`; labelSuffix = ' <small style="opacity:0.5; color:var(--primary-dark);">(Type ⚙️)</small>'; } return `<div class="weekly-item"><span onclick="event.stopPropagation(); ${checkFunc}" style="cursor:pointer;" class="weekly-item-text ${it.completed ? 'todo-completed' : ''}"><b>${it.time}</b> : ${it.name}${labelSuffix}</span><div class="weekly-item-actions"><button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', ${(isWeekly || isRoutine)}, ${(isWeekly || isRoutine) ? it.dayOfWeek : 0}, ${isRoutine})" style="color:var(--primary);">✎</button><button onclick="${delFunc}" style="color:var(--danger);">×</button></div></div>`; }).join('') || '<span class="empty-subtasks-msg">Aucun événement</span>'}</div>`; wc.appendChild(hourCard); } } else if (todoMode === 'weekly') { document.getElementById('todo-today-date').innerText = "Planification Hebdomadaire"; c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container'); const presidentialOrder = [1, 2, 3, 4, 5, 6, 0]; presidentialOrder.forEach(dayNum => { let combinedTasks = [...weeklyTodo.filter(it => parseInt(it.dayOfWeek) === dayNum), ...routineTodo.filter(it => parseInt(it.dayOfWeek) === dayNum)]; combinedTasks.sort((a,b) => a.time.localeCompare(b.time)); const dayCard = document.createElement('div'); dayCard.className = 'weekly-day-card'; dayCard.innerHTML = `<div class="weekly-day-header"><span class="weekly-day-title">${dayNamesFr[dayNum]}</span><button onclick="openTodoModal('12:00', true, ${dayNum}, false)" class="weekly-add-btn">+</button></div><div class="weekly-subtasks">${combinedTasks.map(it => { const isRoutine = it.hasOwnProperty('isRoutine') || routineTodo.some(r => r.id === it.id); const checkFunc = isRoutine ? `toggleRoutineTodo('${it.id}', ${it.completed})` : `toggleWeeklyTodo('${it.id}', ${it.completed})`, delFunc = isRoutine ? `deleteRoutineTodo('${it.id}')` : `deleteWeeklyTodo('${it.id}')`; return `<div class="weekly-item"><span onclick="${checkFunc}" style="cursor:pointer;" class="weekly-item-text ${it.completed ? 'todo-completed' : ''}"><b>${it.time}</b> : ${it.name} ${isRoutine ? '<small style="opacity:0.5; color:var(--primary-dark);">(Type ⚙️)</small>':''}</span><div class="weekly-item-actions"><button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, ${isRoutine})" style="color:var(--primary);">✎</button><button onclick="${delFunc}" style="color:var(--danger);">×</button></div></div>`; }).join('') || '<span class="empty-subtasks-msg">Aucune activité planifiée</span>'}</div>`; wc.appendChild(dayCard); }); } else if (todoMode === 'routine') { document.getElementById('todo-today-date').innerText = "Configuration de la Semaine Type ⚙️"; c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container'); const presidentialOrder = [1, 2, 3, 4, 5, 6, 0]; presidentialOrder.forEach(dayNum => { const dayTasks = routineTodo.filter(it => parseInt(it.dayOfWeek) === dayNum); dayTasks.sort((a,b) => a.time.localeCompare(b.time)); const dayCard = document.createElement('div'); dayCard.className = 'weekly-day-card'; dayCard.innerHTML = `<div class="weekly-day-header"><span class="weekly-day-title">${dayNamesFr[dayNum]}</span><button onclick="openTodoModal('12:00', true, ${dayNum}, true)" class="weekly-add-btn">+</button></div><div class="weekly-subtasks">${dayTasks.map(it => `<div class="weekly-item"><span class="weekly-item-text"><b>${it.time}</b> : ${it.name}</span><div class="weekly-item-actions"><button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, true)" style="color:var(--primary);">✎</button><button onclick="deleteRoutineTodo('${it.id}')" style="color:var(--danger);">×</button></div></div>`).join('') || '<span class="empty-subtasks-msg">Aucune tâche type définie</span>'}</div>`; wc.appendChild(dayCard); }); } }
+function openTodoModal(time, isWeeklyOrRoutine, dayNum = 1, isRoutine = false) { editingTodoId = null; setCustomTime('todo-time', time); document.getElementById('todo-task-name').value = ''; document.getElementById('todo-modal-title').innerText = isRoutine ? "Ajouter à la Semaine Type" : "Ajouter à la To-Do List"; if(isWeeklyOrRoutine) { document.getElementById('todo-day-selector-block').style.display = 'flex'; document.getElementById('todo-day-select').value = dayNum; } else { document.getElementById('todo-day-selector-block').style.display = 'none'; } document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeeklyOrRoutine && !isRoutine); document.getElementById('save-todo').setAttribute('data-routine-mode', isRoutine); document.getElementById('todo-modal').style.display = 'flex'; }
+function editTodoItem(id, name, time, isWeeklyOrRoutine, dayNum = 1, isRoutine = false) { editingTodoId = id; setCustomTime('todo-time', time); document.getElementById('todo-task-name').value = name; document.getElementById('todo-modal-title').innerText = isRoutine ? "Modifier la Semaine Type" : "Modifier la To-Do List"; if(isWeeklyOrRoutine) { document.getElementById('todo-day-selector-block').style.display = 'flex'; document.getElementById('todo-day-select').value = dayNum; } else { document.getElementById('todo-day-selector-block').style.display = 'none'; } document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeeklyOrRoutine && !isRoutine); document.getElementById('save-todo').setAttribute('data-routine-mode', isRoutine); document.getElementById('todo-modal').style.display = 'flex'; }
+
+// --- EVENEMENTS CLICK (SAVE & MODALS) ---
+let btnSaveTask = document.getElementById('save-task'); if (btnSaveTask) { btnSaveTask.onclick = () => { const n = document.getElementById('task-name').value.trim(), dStr = document.getElementById('task-desc').value.trim(), singleDate = document.getElementById('task-date').value, time = getCustomTime('task-time'), imp = document.getElementById('task-importance').value, reminders = getSelectedRemindersFromBadges(); if(n && currentUser) { if(document.getElementById('modal-title').innerText === "Dupliquer la tâche" && editingId) { const task = tasks.find(t => t.id === editingId); if (task && singleDate) { let allOccurrences = [{date: task.date, time: task.time || ""}], currentGhosts = Array.isArray(task.duplicateDays) ? task.duplicateDays : []; currentGhosts.forEach(g => { allOccurrences.push(typeof g === 'string' ? {date: g, time: task.time} : g); }); allOccurrences.push({date: singleDate, time: time}); allOccurrences.sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.time || "").localeCompare(b.time || "")); let nextMain = allOccurrences.shift(); db.collection("tasks").doc(editingId).update({ date: nextMain.date, time: nextMain.time || "", desc: task.desc || "", duplicateDays: allOccurrences }); editingId = null; showToast("Date planifiée avec succès ! 🗓️"); } } else if(editingId && singleDate) { db.collection("tasks").doc(editingId).update({ name: n, desc: dStr, date: singleDate, time: time, reminders: reminders, importance: imp }); editingId = null; showToast("Tâche modifiée ! ✎"); } else if (singleDate) { db.collection("tasks").add({ name: n, desc: dStr, date: singleDate, time: time, reminders: reminders, importance: imp, completed: false, userId: currentUser.uid, createdAt: Date.now(), duplicateDays: [] }); showToast("Tâche enregistrée ! ✨"); } unlockModalFields(); document.getElementById('task-modal').style.display = 'none'; } }; }
+let btnSaveTodo = document.getElementById('save-todo'); if (btnSaveTodo) { btnSaveTodo.onclick = () => { const n = document.getElementById('todo-task-name').value.trim(), t = getCustomTime('todo-time'), isWeekly = document.getElementById('save-todo').getAttribute('data-weekly-mode') === 'true', isRoutine = document.getElementById('save-todo').getAttribute('data-routine-mode') === 'true'; if(n && t && currentUser) { let targetCollection = "dailyTodo"; if (isWeekly) targetCollection = "weeklyTodo"; else if (isRoutine) targetCollection = "routineTodo"; if(editingTodoId) { let updateData = { name: n, time: t }; if(isWeekly || isRoutine) updateData.dayOfWeek = document.getElementById('todo-day-select').value; db.collection(targetCollection).doc(editingTodoId).update(updateData).then(() => { showToast(isRoutine ? "Semaine type modifiée ! ⚙️" : "Activité modifiée ! ✎"); }); editingTodoId = null; } else { if(isRoutine) { db.collection("routineTodo").add({ name: n, time: t, dayOfWeek: document.getElementById('todo-day-select').value, completed: false, isRoutine: true, userId: currentUser.uid }).then(() => { showToast("Ajouté à la semaine type ! ⚙️"); }); } else if(isWeekly) { db.collection("weeklyTodo").add({ name: n, time: t, dayOfWeek: document.getElementById('todo-day-select').value, completed: false, userId: currentUser.uid }).then(() => { showToast("Activité hebdomadaire ajoutée ! 🗓️"); }); } else { db.collection("dailyTodo").add({ name: n, time: t, date: todayStr, completed: false, userId: currentUser.uid }).then(() => { showToast("Activité ajoutée ! ✨"); }); } } document.getElementById('todo-modal').style.display = 'none'; document.getElementById('todo-task-name').value = ''; } }; }
+let btnSaveBirthday = document.getElementById('save-birthday'); if (btnSaveBirthday) { btnSaveBirthday.onclick = () => { const n = document.getElementById('birthday-name').value.trim(), d = document.getElementById('birthday-date').value; if (n && d && currentUser) { db.collection("birthdays").add({ name: n, date: d, userId: currentUser.uid, createdAt: Date.now() }).then(() => { showToast("Anniversaire enregistré ! 🎂"); document.getElementById('birthday-modal').style.display = 'none'; }); } }; }
+let btnAddTask = document.getElementById('add-task-btn'); if (btnAddTask) { btnAddTask.onclick = () => { editingId = null; unlockModalFields(); if(document.getElementById('task-name')) document.getElementById('task-name').value = ""; if(document.getElementById('task-desc')) document.getElementById('task-desc').value = ""; setCustomTime('task-time', ""); setSelectedRemindersToBadges([]); if(document.getElementById('task-date')) document.getElementById('task-date').value = todayStr; document.getElementById('modal-title').innerText = "Nouvelle Tâche"; document.getElementById('task-modal').style.display = 'flex'; }; }
+let btnCloseTaskModal = document.getElementById('close-modal'); if (btnCloseTaskModal) { btnCloseTaskModal.onclick = () => { unlockModalFields(); document.getElementById('task-modal').style.display = 'none'; }; }
+let btnCloseTodoModal = document.getElementById('close-todo-modal'); if (btnCloseTodoModal) { btnCloseTodoModal.onclick = () => { document.getElementById('todo-modal').style.display = 'none'; } }
 let btnLogin = document.getElementById('btn-login'); if (btnLogin) { btnLogin.onclick = () => { const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-pass').value; if(email && pass) auth.signInWithEmailAndPassword(email, pass).then(() => { showToast("Ravi de vous revoir ! 👋"); }).catch(err => showToast("Erreur : " + err.message)); }; }
 let btnRegister = document.getElementById('btn-register'); if (btnRegister) { btnRegister.onclick = () => { const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-pass').value; if(email && pass) auth.createUserWithEmailAndPassword(email, pass).then(() => showToast("Compte créé avec succès ! 🎉")).catch(err => showToast("Erreur : " + err.message)); }; }
 let btnGoogle = document.getElementById('btn-google'); if (btnGoogle) { btnGoogle.onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => { showToast("Connexion Google réussie ! 🚀"); }).catch((err) => { showToast("Erreur Google : " + err.message); }); }; }
