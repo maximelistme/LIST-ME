@@ -461,6 +461,20 @@ function renderShoppingTabs() {
     const container = document.getElementById('shopping-tabs-dynamic');
     if (!container) return;
     
+    // Gestion conditionnelle de l'option de tri "Personne"
+    const ownerOpt = document.getElementById('sort-opt-owner');
+    const sortSelect = document.getElementById('shopping-sort-filter');
+    if (ownerOpt && sortSelect) {
+        if (currentShoppingListId === 'personal') {
+            ownerOpt.style.display = 'none';
+            ownerOpt.disabled = true; 
+            if (sortSelect.value === 'owner') sortSelect.value = 'date';
+        } else {
+            ownerOpt.style.display = 'block';
+            ownerOpt.disabled = false;
+        }
+    }
+    
     if (mySharedLists.length === 0) {
         container.style.display = 'none';
         return;
@@ -474,7 +488,7 @@ function renderShoppingTabs() {
     const personalBtn = document.createElement('button');
     personalBtn.className = `sub-menu-tab ${currentShoppingListId === 'personal' ? 'active' : ''}`;
     personalBtn.style.cssText = currentShoppingListId === 'personal' 
-        ? "border-bottom: 3px solid transparent; background: var(--primary); color: white; border-radius: 10px 10px 0 0; padding: 8px 16px; font-weight: bold; cursor: pointer; border:none; font-family: inherit;"
+        ? "background: var(--primary); color: white; border-radius: 10px 10px 0 0; padding: 8px 16px; font-weight: bold; cursor: pointer; border:none; font-family: inherit;"
         : "background: rgba(128,128,128,0.1); color: var(--text-color); border-radius: 10px 10px 0 0; padding: 8px 16px; font-weight: bold; cursor: pointer; border: none; opacity: 0.7; font-family: inherit;";
     personalBtn.innerText = "Ma liste";
     personalBtn.onclick = () => switchShoppingListTab("personal");
@@ -485,7 +499,7 @@ function renderShoppingTabs() {
         const listBtn = document.createElement('button');
         listBtn.className = `sub-menu-tab ${currentShoppingListId === list.id ? 'active' : ''}`;
         listBtn.style.cssText = currentShoppingListId === list.id 
-            ? "border-bottom: 3px solid transparent; background: var(--primary); color: white; border-radius: 10px 10px 0 0; padding: 8px 16px; font-weight: bold; cursor: pointer; border:none; font-family: inherit;"
+            ? "background: var(--primary); color: white; border-radius: 10px 10px 0 0; padding: 8px 16px; font-weight: bold; cursor: pointer; border:none; font-family: inherit;"
             : "background: rgba(128,128,128,0.1); color: var(--text-color); border-radius: 10px 10px 0 0; padding: 8px 16px; font-weight: bold; cursor: pointer; border: none; opacity: 0.7; font-family: inherit;";
         listBtn.innerText = list.name;
         listBtn.onclick = () => switchShoppingListTab(list.id);
@@ -572,8 +586,21 @@ function renderShoppingList() {
         return '';
     };
 
+    let lastRayonRendered = null;
+
     // Rendu des produits actifs
     actives.forEach(item => {
+        // Affichage du rayon comme séparateur si tri par rayon
+        if (sortVal === 'rayon') {
+            const itemRayon = findRayonForProduct(item.name);
+            if (itemRayon !== lastRayonRendered) {
+                const rayonSep = document.createElement('div');
+                rayonSep.innerHTML = `<div style="text-align: left; margin: 18px 0 8px 10px; font-size: 0.85rem; font-weight: bold; color: var(--primary); opacity: 0.7; letter-spacing: 1px;">— ${itemRayon}</div>`;
+                c.appendChild(rayonSep);
+                lastRayonRendered = itemRayon;
+            }
+        }
+
         const d = document.createElement('div'); d.className = `task-card`; d.style.borderLeft = "6px solid var(--primary)"; 
         const nameToDisplay = item.name;
         d.innerHTML = `
@@ -636,6 +663,7 @@ function openCustomShoppingListShareModal() {
     document.getElementById('new-shared-list-name').value = '';
     document.getElementById('join-shared-list-code').value = '';
     
+    // BYPASS MANUEL : Force Firebase à lire le serveur pour contourner tout bug de cache mobile
     if (currentUser) {
         db.collection("shoppingLists").where("members", "array-contains", currentUser.uid).get().then(snap => {
             mySharedLists = [];
@@ -691,6 +719,7 @@ function createNewSharedShoppingList() {
         
         nameInput.value = '';
         
+        // Ajout MANUEL IMMÉDIAT pour éviter les latences de Firebase
         if (!mySharedLists.some(l => l.id === docRef.id)) {
             newList.id = docRef.id;
             mySharedLists.push(newList);
@@ -721,6 +750,7 @@ function joinSharedShoppingList() {
             showToast(`Vous avez rejoint "${data.name}" ! 🛒`);
             document.getElementById('join-shared-list-code').value = '';
             
+            // Ajout MANUEL IMMÉDIAT
             if (!mySharedLists.some(l => l.id === doc.id)) {
                 data.id = doc.id;
                 data.members = updatedMembers;
@@ -748,6 +778,7 @@ function leaveSharedList(listId) {
         }
         showToast("Liste quittée !");
         
+        // Retrait manuel immédiat
         mySharedLists = mySharedLists.filter(l => l.id !== listId);
         if (currentShoppingListId === listId) { 
             currentShoppingListId = "personal"; 
@@ -828,6 +859,7 @@ function startRealtimeSync(userId) {
     unsubscribeRoutine = db.collection("routineTodo").where("userId", "==", userId).onSnapshot((snapshot) => { routineTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; routineTodo.push(data); }); renderTodo(); });
     unsubscribeBirthdays = db.collection("birthdays").where("userId", "==", userId).onSnapshot((snapshot) => { birthdays = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; birthdays.push(data); }); if(viewState === 'day') renderCalendar(); });
     
+    // ÉCOUTE DES GROUPES DE COURSES MULTIPLES (Avec bonne syntaxe Firebase)
     sharedListsUnsubscribe = db.collection("shoppingLists").where("members", "array-contains", userId).onSnapshot((snapshot) => {
         mySharedLists = [];
         snapshot.forEach((doc) => {
