@@ -14,21 +14,21 @@ const db = firebase.firestore(), auth = firebase.auth();
 
 // --- VARIABLES D'ÉTAT LOCALES ---
 let tasks = [], sharedTasks = [], dailyTodo = [], weeklyTodo = [], routineTodo = [], birthdays = [];
-let shoppingItems = [], sharedShoppingItems = [];
+let shoppingItems = []; // Contient uniquement les produits de la liste active sélectionnée
+let mySharedLists = []; // Liste des groupes/listes partagées de l'utilisateur
 let customShoppingCards = []; 
-let friends = [], shoppingFriends = []; 
-let friendUnsubscribes = {}, shoppingFriendUnsubscribes = {};
-let unsubscribeUser;
+let friends = []; 
+let friendUnsubscribes = {};
+let unsubscribeUser, sharedListsUnsubscribe, shoppingItemsUnsubscribe;
 let currentUser = null, userNickname = "", hasShownWelcomeThisSession = false, taskSubView = "active"; 
-let shoppingSubView = "personal"; // État pour l'onglet de la liste de courses
-let myAgendaCode = "", myShoppingCode = ""; 
-let unsubscribeTasks, unsubscribeDaily, unsubscribeWeekly, unsubscribeRoutine, unsubscribeBirthdays, unsubscribeShopping; 
+let currentShoppingListId = "personal"; // Stocke "personal" ou l'ID Firebase de la liste partagée active
+let myAgendaCode = ""; 
 
 // --- VARIABLES DE CONTRÔLE ET RECHERCHE ---
 let currentShoppingPath = []; 
 let currentShareMode = 'agenda';
 let isArchiving = false;
-let shoppingSearchQuery = ""; // Variable globale pour la recherche du Market
+let shoppingSearchQuery = ""; 
 
 let currentTheme = localStorage.getItem('listme_theme') || 'pink', viewState = 'day', todoMode = 'daily', editingId = null, editingTodoId = null; 
 let selectedYear = new Date().getFullYear(), selectedMonth = new Date().getMonth();
@@ -210,7 +210,7 @@ function showPage(p) {
     if(p === 'calendar') renderCalendar(); 
     if(p === 'todo') renderTodo(); 
     if(p === 'tasks') renderTasks();
-    if(p === 'shopping') { renderShoppingCategories(); renderShoppingList(); }
+    if(p === 'shopping') { renderShoppingCategories(); renderShoppingTabs(); syncCurrentShoppingItems(); }
 }
 
 function switchTaskSubView(view) {
@@ -223,18 +223,17 @@ function switchTaskSubView(view) {
 
 // --- LOGIQUE DES COURSES & CARTES CUSTOM MÈRES ---
 function shoppingNavigateTo(cat) { 
-    shoppingSearchQuery = ""; // Réinitialise la recherche à l'entrée d'un rayon
+    shoppingSearchQuery = ""; 
     currentShoppingPath.push(cat); 
     renderShoppingCategories(); 
 }
 
-// Fonction de formatage pour rendre transparentes les parenthèses sans briser l'alignement
 function formatProductDisplay(name) {
     return name.replace(/\(([^)]+)\)/g, '<span style="color:transparent; font-size:0; opacity:0; pointer-events:none;">($1)</span>');
 }
 
 function shoppingNavigateBack() { 
-    shoppingSearchQuery = ""; // Réinitialise la recherche au recul
+    shoppingSearchQuery = ""; 
     currentShoppingPath.pop(); 
     renderShoppingCategories(); 
 }
@@ -244,22 +243,15 @@ function renderShoppingCategories() {
     const breadcrumb = document.getElementById('shopping-breadcrumb');
     if(!container || !breadcrumb) return;
 
-    // Sauvegarde du focus avant effacement
     let isFocused = (document.activeElement && document.activeElement.id === 'shopping-search');
-
     container.innerHTML = '';
-
     const currentPathStr = currentShoppingPath.join('/');
 
-    if (currentShoppingPath.length === 0) {
-        breadcrumb.innerText = '';
-    } else {
-        breadcrumb.innerText = currentShoppingPath[currentShoppingPath.length - 1];
-    }
+    if (currentShoppingPath.length === 0) { breadcrumb.innerText = ''; } 
+    else { breadcrumb.innerText = currentShoppingPath[currentShoppingPath.length - 1]; }
 
     const isAtRoot = (currentShoppingPath.length === 0);
 
-    // --- BARRE DE NAVIGATION FIXE (RETOUR À GAUCHE, RECHERCHE À DROITE) ---
     let navRowHtml = `<div style="grid-column: 1 / -1; display: flex; gap: 10px; width: 100%; align-items: center; margin-bottom: 5px;">`;
     navRowHtml += `<div onclick="${isAtRoot ? '' : 'shoppingNavigateBack()'}" style="flex: 1; background:rgba(128,128,128,0.1); color:var(--text-color); padding:12px; border-radius:12px; text-align:center; font-weight:bold; white-space: nowrap; border: 1px dashed rgba(128,128,128,0.3); ${isAtRoot ? 'opacity: 0.3; cursor: default; pointer-events: none;' : 'cursor: pointer;'}-webkit-user-select: none; user-select: none;">⬅️ Retour</div>`;
     navRowHtml += `<input type="text" id="shopping-search" placeholder="🔍 Rechercher un produit..." oninput="handleShoppingSearch(this.value)" value="${shoppingSearchQuery}" style="flex: 2; padding: 12px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; font-weight: bold; outline: none;">`;
@@ -268,7 +260,6 @@ function renderShoppingCategories() {
     container.innerHTML += navRowHtml;
     container.innerHTML += `<div onclick="openCustomCardModal()" style="grid-column: 1 / -1; background:var(--primary); color:white; padding:10px; border-radius:20px; text-align:center; font-weight:bold; cursor:pointer; width: 70%; margin: 0 auto 10px auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);">+ Nouveau Produit</div>`;
 
-    // --- LOGIQUE D'AFFICHAGE : MODE RECHERCHE vs MODE NAVIGATION ---
     if (shoppingSearchQuery.trim() !== "") {
         let matches = [];
         let q = shoppingSearchQuery.toLowerCase().trim();
@@ -281,9 +272,7 @@ function renderShoppingCategories() {
                     }
                 });
             } else if (typeof obj === 'object' && obj !== null) {
-                for (let key in obj) {
-                    extractMatches(obj[key]);
-                }
+                for (let key in obj) { extractMatches(obj[key]); }
             }
         }
         extractMatches(foodCategories);
@@ -344,9 +333,7 @@ function renderShoppingCategories() {
         const input = document.getElementById('shopping-search');
         if (input) {
             input.focus();
-            const val = input.value;
-            input.value = '';
-            input.value = val; 
+            const val = input.value; input.value = ''; input.value = val; 
         }
     }
 }
@@ -358,19 +345,11 @@ function handleShoppingSearch(val) {
 
 function openCustomCardModal() {
     document.getElementById('custom-card-name').value = '';
-    const catSelect = document.getElementById('custom-card-category');
-    catSelect.innerHTML = '';
-    
+    const catSelect = document.getElementById('custom-card-category'); catSelect.innerHTML = '';
     Object.keys(foodCategories).forEach(cat => {
-        let opt = document.createElement('option');
-        opt.value = cat; opt.innerText = cat;
-        catSelect.appendChild(opt);
+        let opt = document.createElement('option'); opt.value = cat; opt.innerText = cat; catSelect.appendChild(opt);
     });
-
-    if (currentShoppingPath.length > 0) {
-        catSelect.value = currentShoppingPath[0];
-    }
-    
+    if (currentShoppingPath.length > 0) catSelect.value = currentShoppingPath[0];
     document.getElementById('custom-card-modal').style.display = 'flex';
 }
 
@@ -386,17 +365,9 @@ function saveCustomCard() {
     if (units.length === 0) units.push({ v: "", l: "Pièce(s)" }); 
 
     let calculatedPath = targetRayon;
-    if (currentShoppingPath.length > 0 && currentShoppingPath[0] === targetRayon) {
-        calculatedPath = currentShoppingPath.join('/');
-    }
+    if (currentShoppingPath.length > 0 && currentShoppingPath[0] === targetRayon) { calculatedPath = currentShoppingPath.join('/'); }
 
-    const newCard = {
-        id: Date.now().toString(),
-        path: calculatedPath, 
-        name: name,
-        units: units
-    };
-
+    const newCard = { id: Date.now().toString(), path: calculatedPath, name: name, units: units };
     customShoppingCards.push(newCard);
     db.collection("users").doc(currentUser.uid).update({ customCards: customShoppingCards }).then(() => {
         showToast("Produit créé avec succès ! ✨");
@@ -408,20 +379,13 @@ function saveCustomCard() {
 let tempShoppingProduct = "";
 
 function openShoppingItemModal(identifier, isCustom) {
-    let productName = identifier;
-    let units = [];
-
+    let productName = identifier; let units = [];
     if (isCustom) {
-        const customItem = customShoppingCards.find(c => c.id === identifier);
-        if (!customItem) return;
-        productName = customItem.name;
-        units = customItem.units;
+        const customItem = customShoppingCards.find(c => c.id === identifier); if (!customItem) return;
+        productName = customItem.name; units = customItem.units;
     } else {
-        let mainCat = currentShoppingPath.length > 0 ? currentShoppingPath[0] : "";
-        let pNameLower = productName.toLowerCase();
-
+        let mainCat = currentShoppingPath.length > 0 ? currentShoppingPath[0] : ""; let pNameLower = productName.toLowerCase();
         units.push({v: "", l: "Pièce(s)"});
-
         if (pNameLower.includes("papier") || pNameLower.includes("sopalin") || pNameLower.includes("mouchoir") || pNameLower.includes("couches")) {
             units.push({v: "Rouleau", l: "Rouleau(x)"}, {v: "Pack", l: "Pack(s)"}, {v: "Boîte", l: "Boîte(s)"});
         } else if (pNameLower.includes("lait ") || pNameLower.includes("douche") || pNameLower.includes("shampoing") || pNameLower.includes("vaisselle") || pNameLower.includes("lessive") || pNameLower.includes("eau") || pNameLower.includes("jus") || mainCat.includes("Boissons") || mainCat.includes("Cave")) {
@@ -436,27 +400,15 @@ function openShoppingItemModal(identifier, isCustom) {
             units.push({v: "g", l: "Grammes (g)"}, {v: "kg", l: "Kilos (kg)"}, {v: "L", l: "Litres (L)"}, {v: "cl", l: "Centilitres (cl)"}, {v: "Pack", l: "Pack(s)"}, {v: "Boîte", l: "Boîte(s)"}, {v: "Sachet", l: "Sachet(s)"});
         }
     }
-
     tempShoppingProduct = productName;
-    
-    // CORRECTION ICI : passage en innerHTML pour interpréter la balise HTML de formatProductDisplay
     document.getElementById('shopping-modal-title').innerHTML = formatProductDisplay(productName);
-    
     document.getElementById('shopping-qty').value = "1";
-
-    const unitSelect = document.getElementById('shopping-unit');
-    unitSelect.innerHTML = ''; 
-    
+    const unitSelect = document.getElementById('shopping-unit'); unitSelect.innerHTML = ''; 
     units.forEach(u => {
-        let opt = document.createElement('option');
-        opt.value = u.v; opt.innerText = u.l;
-        unitSelect.appendChild(opt);
+        let opt = document.createElement('option'); opt.value = u.v; opt.innerText = u.l; unitSelect.appendChild(opt);
     });
-
     document.getElementById('shopping-item-modal').style.display = 'flex';
-    
-    currentShoppingPath = [];
-    renderShoppingCategories();
+    currentShoppingPath = []; renderShoppingCategories();
 }
 
 function saveShoppingItem() {
@@ -471,7 +423,8 @@ function saveShoppingItem() {
             info: displayInfo,
             completed: false,
             userId: currentUser.uid,
-            listType: shoppingSubView, 
+            ownerName: userNickname || "Inconnu",
+            listId: currentShoppingListId, // Assigne l'id de la liste sélectionnée
             createdAt: Date.now()
         }).then(() => {
             showToast("Ajouté au panier ! 🛒");
@@ -480,83 +433,109 @@ function saveShoppingItem() {
     }
 }
 
-// --- FONCTIONS DE DÉFILEMENT (SCROLL) ---
 function scrollToShoppingList() {
     const listHeader = document.getElementById('shopping-list-header');
-    if (listHeader) {
-        listHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    if (listHeader) { listHeader.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 }
 
-// --- ONGLETS ET AFFICHAGE DE LA LISTE ---
-function switchShoppingSubView(view) {
-    shoppingSubView = view;
-    document.getElementById('sub-btn-shopping-personal').classList.toggle('active', view === 'personal');
-    document.getElementById('sub-btn-shopping-shared').classList.toggle('active', view === 'shared');
-    renderShoppingList();
+// --- LOGIQUE MULTI-ONGLETS MARQUE-PAGE & SYNCHRONISATION ---
+function renderShoppingTabs() {
+    const container = document.getElementById('shopping-tabs-dynamic');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // 1. Onglet Personnel Fini
+    const personalBtn = document.createElement('button');
+    personalBtn.className = `sub-menu-tab ${currentShoppingListId === 'personal' ? 'active' : ''}`;
+    personalBtn.style.cssText = currentShoppingListId === 'personal' 
+        ? "border-bottom: 3px solid transparent; background: var(--primary); color: white; border-radius: 10px 10px 0 0; padding: 8px 16px; font-weight: bold; cursor: pointer; border:none; font-family: inherit;"
+        : "background: rgba(128,128,128,0.1); color: var(--text-color); border-radius: 10px 10px 0 0; padding: 8px 16px; font-weight: bold; cursor: pointer; border: none; opacity: 0.7; font-family: inherit;";
+    personalBtn.innerText = "Ma liste";
+    personalBtn.onclick = () => switchShoppingListTab("personal");
+    container.appendChild(personalBtn);
+
+    // 2. Onglets Partagés Dynamiques
+    mySharedLists.forEach(list => {
+        const listBtn = document.createElement('button');
+        listBtn.className = `sub-menu-tab ${currentShoppingListId === list.id ? 'active' : ''}`;
+        listBtn.style.cssText = currentShoppingListId === list.id 
+            ? "border-bottom: 3px solid transparent; background: var(--primary); color: white; border-radius: 10px 10px 0 0; padding: 8px 16px; font-weight: bold; cursor: pointer; border:none; font-family: inherit;"
+            : "background: rgba(128,128,128,0.1); color: var(--text-color); border-radius: 10px 10px 0 0; padding: 8px 16px; font-weight: bold; cursor: pointer; border: none; opacity: 0.7; font-family: inherit;";
+        listBtn.innerText = list.name;
+        listBtn.onclick = () => switchShoppingListTab(list.id);
+        container.appendChild(listBtn);
+    });
+}
+
+function switchShoppingListTab(listId) {
+    currentShoppingListId = listId;
+    renderShoppingTabs();
+    syncCurrentShoppingItems();
+}
+
+function syncCurrentShoppingItems() {
+    if (shoppingItemsUnsubscribe) shoppingItemsUnsubscribe();
+    if (!currentUser) return;
+
+    let query = db.collection("shopping").where("listId", "==", currentShoppingListId);
+    
+    // Si personnel, on récupère les siens + support des anciens produits sans structure listId
+    if (currentShoppingListId === "personal") {
+        query = db.collection("shopping").where("userId", "==", currentUser.uid);
+    }
+
+    shoppingItemsUnsubscribe = query.onSnapshot((snapshot) => {
+        shoppingItems = [];
+        snapshot.forEach((doc) => {
+            let data = doc.data(); data.id = doc.id;
+            if (currentShoppingListId === "personal") {
+                if (!data.listId || data.listId === "personal") { shoppingItems.push(data); }
+            } else {
+                if (data.listId === currentShoppingListId) { shoppingItems.push(data); }
+            }
+        });
+        if (document.getElementById('shopping-page').style.display === 'block') { renderShoppingList(); }
+    });
 }
 
 function renderShoppingList() {
     const c = document.getElementById('shopping-list-content');
     const scrollUpBtn = document.getElementById('shopping-scroll-up-btn');
-    const tabsContainer = document.getElementById('shopping-tabs-container');
-    
-    if (!c) return; 
-    c.innerHTML = '';
+    if (!c) return; c.innerHTML = '';
 
-    if (shoppingFriends.length > 0) {
-        tabsContainer.style.display = 'flex';
-    } else {
-        tabsContainer.style.display = 'none';
-        shoppingSubView = 'personal'; 
-        if(document.getElementById('sub-btn-shopping-personal')) document.getElementById('sub-btn-shopping-personal').classList.add('active');
-        if(document.getElementById('sub-btn-shopping-shared')) document.getElementById('sub-btn-shopping-shared').classList.remove('active');
-    }
+    shoppingItems.sort((a, b) => a.createdAt - b.createdAt);
+    const actives = shoppingItems.filter(item => !item.completed);
+    const completeds = shoppingItems.filter(item => item.completed);
 
-    let currentList = [];
-    if (shoppingSubView === 'personal') {
-        currentList = shoppingItems.filter(item => item.listType !== 'shared');
-    } else {
-        let mySharedItems = shoppingItems.filter(item => item.listType === 'shared').map(item => ({ ...item, isMine: true }));
-        let friendsSharedItems = sharedShoppingItems.filter(item => item.listType === 'shared' || !item.listType);
-        currentList = [...mySharedItems, ...friendsSharedItems];
-    }
-    
-    currentList.sort((a, b) => a.createdAt - b.createdAt);
-    
-    const actives = currentList.filter(item => !item.completed);
-    const completeds = currentList.filter(item => item.completed);
-
-    if (currentList.length === 0) {
+    if (shoppingItems.length === 0) {
         c.innerHTML = '<p style="text-align:center; opacity:0.5; font-style:italic;">La liste est vide !</p>';
-        if(scrollUpBtn) scrollUpBtn.style.display = 'none';
-        return;
+        if(scrollUpBtn) scrollUpBtn.style.display = 'none'; return;
     }
 
-    if(scrollUpBtn && currentList.length > 0) scrollUpBtn.style.display = 'flex';
+    if(scrollUpBtn && shoppingItems.length > 0) scrollUpBtn.style.display = 'flex';
     else if(scrollUpBtn) scrollUpBtn.style.display = 'none';
 
     const getOwnerTag = (item) => {
-        if (shoppingSubView !== 'shared') return '';
-        if (item.isMine) return ` <small style="opacity:0.6; font-style:italic; color:var(--primary);">(Moi)</small>`;
+        if (currentShoppingListId === 'personal') return '';
+        if (item.userId === currentUser.uid) return ` <small style="opacity:0.6; font-style:italic; color:var(--primary);">(Moi)</small>`;
         if (item.ownerName) return ` <small style="opacity:0.6; font-style:italic;">(${item.ownerName})</small>`;
         return '';
     };
 
     actives.forEach(item => {
-        const d = document.createElement('div');
-        d.className = `task-card`; 
-        d.style.borderLeft = "6px solid var(--primary)"; 
+        const d = document.createElement('div'); d.className = `task-card`; d.style.borderLeft = "6px solid var(--primary)"; 
+        // Affiche l'animal entre parenthèses uniquement si partagé
+        const nameToDisplay = currentShoppingListId === 'personal' ? formatProductDisplay(item.name) : item.name;
         d.innerHTML = `
             <div style="flex:1; display:flex; align-items:center; min-width:0;">
                 <div onclick="toggleShoppingCheck('${item.id}', false)" style="width:20px; height:20px; border:2px solid var(--primary); border-radius:5px; margin-right:10px; cursor:pointer;"></div>
                 <div style="flex:1;">
-                    <strong style="display:block;">${item.name}${getOwnerTag(item)}</strong>
+                    <strong style="display:block;">${nameToDisplay}${getOwnerTag(item)}</strong>
                     <small style="color:var(--primary); font-weight:bold;">${item.info}</small>
                 </div>
             </div>
             <div class="task-actions" style="flex-shrink:0;">
-                ${item.isMine || shoppingSubView === 'personal' ? `<button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>` : ''}
+                <button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
             </div>`;
         c.appendChild(d);
     });
@@ -570,68 +549,111 @@ function renderShoppingList() {
     }
 
     completeds.forEach(item => {
-        const d = document.createElement('div');
-        d.className = `task-card completed-bubble`; 
+        const d = document.createElement('div'); d.className = `task-card completed-bubble`; 
+        const nameToDisplay = currentShoppingListId === 'personal' ? formatProductDisplay(item.name) : item.name;
         d.innerHTML = `
             <div style="flex:1; display:flex; align-items:center; min-width:0;">
                 <div onclick="toggleShoppingCheck('${item.id}', true)" style="width:20px; height:20px; background:var(--success); border-radius:5px; margin-right:10px; display:flex; align-items:center; justify-content:center; color:white; font-size:0.8rem; cursor:pointer;">✓</div>
                 <div style="flex:1; text-decoration:line-through; opacity:0.6;">
-                    <strong style="display:block;">${item.name}${getOwnerTag(item)}</strong>
+                    <strong style="display:block;">${nameToDisplay}${getOwnerTag(item)}</strong>
                     <small>${item.info}</small>
                 </div>
             </div>
             <div class="task-actions" style="flex-shrink:0;">
-                ${item.isMine || shoppingSubView === 'personal' ? `<button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>` : ''}
+                <button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
             </div>`;
         c.appendChild(d);
     });
 }
 
-function toggleShoppingCheck(id, isCompleted) { 
-    db.collection("shopping").doc(id).update({ completed: !isCompleted });
-}
-
-function deleteShoppingItem(id) { 
-    db.collection("shopping").doc(id).delete().then(() => showToast("Produit retiré !")); 
-}
+function toggleShoppingCheck(id, isCompleted) { db.collection("shopping").doc(id).update({ completed: !isCompleted }); }
+function deleteShoppingItem(id) { db.collection("shopping").doc(id).delete().then(() => showToast("Produit retiré !")); }
 
 function clearCompletedShopping() {
-    let currentList = [];
-    if (shoppingSubView === 'personal') {
-        currentList = shoppingItems.filter(item => item.listType !== 'shared');
-    } else {
-        let mySharedItems = shoppingItems.filter(item => item.listType === 'shared');
-        let friendsSharedItems = sharedShoppingItems.filter(item => item.listType === 'shared' || !item.listType);
-        currentList = [...mySharedItems, ...friendsSharedItems];
-    }
-    
-    let completeds = currentList.filter(item => item.completed);
-    if (completeds.length === 0) return;
-
-    let operations = [];
-    let skipCount = 0;
-
-    completeds.forEach(item => {
-        let deletePromise = db.collection("shopping").doc(item.id).delete().catch(() => {
-            skipCount++;
-        });
-        operations.push(deletePromise);
-    });
-
-    Promise.all(operations).then(() => {
-        if (skipCount > 0) {
-            showToast(`Cadie vidé ! (${skipCount} produits gérés par vos amis) 🗑️`);
-        } else {
-            showToast("Le chariot a été vidé d'un coup ! 🗑️");
-        }
-    });
+    let completeds = shoppingItems.filter(item => item.completed); if (completeds.length === 0) return;
+    let operations = completeds.map(item => db.collection("shopping").doc(item.id).delete());
+    Promise.all(operations).then(() => { showToast("Le chariot a été vidé ! 🗑️"); });
 }
 
 function scrollToTopShopping() {
     const marketHeader = document.getElementById('shopping-page');
-    if (marketHeader) {
-        marketHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (marketHeader) { marketHeader.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+}
+
+// --- CREATION & REJOINDRE DES GROUPES DE COURSES MULTIPLES ---
+function openCustomShoppingListShareModal() {
+    document.getElementById('new-shared-list-name').value = '';
+    document.getElementById('join-shared-list-code').value = '';
+    renderMySharedListsInModal();
+    document.getElementById('shopping-list-multi-share-modal').style.display = 'flex';
+}
+
+function renderMySharedListsInModal() {
+    const container = document.getElementById('my-shared-lists-container'); if (!container) return;
+    if (mySharedLists.length === 0) {
+        container.innerHTML = `<p style="font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center;">Aucune liste partagée active.</p>`; return;
     }
+    container.innerHTML = mySharedLists.map(l => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px; border-radius:8px; border: 1px solid rgba(128,128,128,0.1); width: 100%; gap: 10px;">
+            <div style="flex: 1; min-width: 0;">
+                <strong style="display:block; color:var(--primary-dark); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${l.name}</strong>
+                <small style="color:var(--primary); font-weight:bold; background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;">Code: ${l.code}</small>
+            </div>
+            <div style="display:flex; gap:8px; flex-shrink:0;">
+                <button onclick="copyListCode('${l.code}')" style="background:none; border:none; cursor:pointer; font-size:1.1rem;" title="Copier le code">📋</button>
+                <button onclick="leaveSharedList('${l.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:bold; font-family:inherit;">Quitter</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function copyListCode(code) { navigator.clipboard.writeText(code).then(() => showToast("Code de liste copié ! 📋")); }
+
+function createNewSharedShoppingList() {
+    const name = document.getElementById('new-shared-list-name').value.trim();
+    if (!name || !currentUser) { showToast("Veuillez donner un nom à la liste ! ❌"); return; }
+    const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    db.collection("shoppingLists").add({
+        name: name, code: uniqueCode, createdBy: currentUser.uid, members: [currentUser.uid], createdAt: Date.now()
+    }).then((docRef) => {
+        showToast(`Liste "${name}" créée ! 🎉`);
+        document.getElementById('new-shared-list-name').value = '';
+        currentShoppingListId = docRef.id; // Bascule automatiquement sur la nouvelle liste
+    });
+}
+
+function joinSharedShoppingList() {
+    const code = document.getElementById('join-shared-list-code').value.trim().toUpperCase();
+    if (!code || !currentUser) return;
+
+    db.collection("shoppingLists").where("code", "==", code).get().then(snapshot => {
+        if (snapshot.empty) { showToast("Code de liste introuvable ! ❌"); return; }
+        const doc = snapshot.docs[0]; const data = doc.data();
+        if (data.members.includes(currentUser.uid)) { showToast("Vous faites déjà partie de cette liste ! 😊"); return; }
+
+        let updatedMembers = [...data.members, currentUser.uid];
+        db.collection("shoppingLists").doc(doc.id).update({ members: updatedMembers }).then(() => {
+            showToast(`Vous avez rejoint "${data.name}" ! 🛒`);
+            document.getElementById('join-shared-list-code').value = '';
+            currentShoppingListId = doc.id; // Bascule sur la liste raccordée
+        });
+    });
+}
+
+function leaveSharedList(listId) {
+    if (!currentUser) return;
+    db.collection("shoppingLists").doc(listId).get().then(doc => {
+        if (!doc.exists) return;
+        const data = doc.data(); let updatedMembers = data.members.filter(m => m !== currentUser.uid);
+        if (updatedMembers.length === 0) {
+            db.collection("shoppingLists").doc(listId).delete();
+            db.collection("shopping").where("listId", "==", listId).get().then(snap => { snap.forEach(d => d.ref.delete()); });
+        } else {
+            db.collection("shoppingLists").doc(listId).update({ members: updatedMembers });
+        }
+        showToast("Liste quittée !");
+    });
 }
 
 // --- NOTIFS ET ARCHIVAGE ---
@@ -674,23 +696,16 @@ auth.onAuthStateChanged((user) => {
                 
                 let updateData = {};
                 myAgendaCode = data.shareCode;
-                myShoppingCode = data.shoppingShareCode;
 
                 if(!myAgendaCode) { myAgendaCode = Math.random().toString(36).substring(2, 8).toUpperCase(); updateData.shareCode = myAgendaCode; updateData.sharedWith = []; }
-                if(!myShoppingCode) { myShoppingCode = Math.random().toString(36).substring(2, 8).toUpperCase(); updateData.shoppingShareCode = myShoppingCode; updateData.shoppingSharedWith = []; }
-                
-                if(Object.keys(updateData).length > 0) {
-                    db.collection("users").doc(user.uid).set(updateData, {merge: true});
-                }
+                if(Object.keys(updateData).length > 0) { db.collection("users").doc(user.uid).set(updateData, {merge: true}); }
 
                 if(document.getElementById('my-share-code') && document.getElementById('share-modal').style.display === 'flex') {
-                    document.getElementById('my-share-code').innerText = currentShareMode === 'agenda' ? myAgendaCode : myShoppingCode;
+                    document.getElementById('my-share-code').innerText = myAgendaCode;
                 }
                 
                 friends = data.following || [];
-                shoppingFriends = data.shoppingFollowing || []; 
-                
-                if(document.getElementById('shopping-page').style.display === 'block') { renderShoppingCategories(); renderShoppingList(); }
+                if(document.getElementById('shopping-page').style.display === 'block') { renderShoppingCategories(); }
             } catch (e) { console.error(e); }
         });
 
@@ -708,85 +723,69 @@ function startRealtimeSync(userId) {
     unsubscribeWeekly = db.collection("weeklyTodo").where("userId", "==", userId).onSnapshot((snapshot) => { weeklyTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; weeklyTodo.push(data); }); renderTodo(); });
     unsubscribeRoutine = db.collection("routineTodo").where("userId", "==", userId).onSnapshot((snapshot) => { routineTodo = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; routineTodo.push(data); }); renderTodo(); });
     unsubscribeBirthdays = db.collection("birthdays").where("userId", "==", userId).onSnapshot((snapshot) => { birthdays = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; birthdays.push(data); }); if(viewState === 'day') renderCalendar(); });
-    unsubscribeShopping = db.collection("shopping").where("userId", "==", userId).onSnapshot((snapshot) => { shoppingItems = []; snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; shoppingItems.push(data); }); if(document.getElementById('shopping-page').style.display === 'block') renderShoppingList(); });
+    
+    // ÉCOUTE DES GROUPES DE COURSES MULTIPLES
+    sharedListsUnsubscribe = db.collection("shoppingLists").where("members", "arrayContains", userId).onSnapshot((snapshot) => {
+        mySharedLists = [];
+        snapshot.forEach((doc) => {
+            let data = doc.data(); data.id = doc.id; mySharedLists.push(data);
+        });
+        if (currentShoppingListId !== "personal" && !mySharedLists.some(l => l.id === currentShoppingListId)) {
+            currentShoppingListId = "personal";
+        }
+        renderShoppingTabs();
+        syncCurrentShoppingItems();
+        if (document.getElementById('shopping-list-multi-share-modal') && document.getElementById('shopping-list-multi-share-modal').style.display === 'flex') {
+            renderMySharedListsInModal();
+        }
+    });
 
     friends.forEach(f => startFriendSync(f.uid, f.nickname, 'agenda'));
-    shoppingFriends.forEach(f => startFriendSync(f.uid, f.nickname, 'shopping'));
 }
 
 function startFriendSync(fUid, fName, mode) {
     if (mode === 'agenda') {
         if(friendUnsubscribes[fUid]) return;
         friendUnsubscribes[fUid] = db.collection("tasks").where("userId", "==", fUid).onSnapshot((snapshot) => { sharedTasks = sharedTasks.filter(t => t.userId !== fUid); snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; data.ownerName = fName; if (!data.createdAt) { data.createdAt = 0; } else if (data.createdAt.seconds) { data.createdAt = data.createdAt.seconds * 1000; } sharedTasks.push(data); }); if(viewState === 'day') renderCalendar(); });
-    } else if (mode === 'shopping') {
-        if(shoppingFriendUnsubscribes[fUid]) return;
-        shoppingFriendUnsubscribes[fUid] = db.collection("shopping").where("userId", "==", fUid).onSnapshot((snapshot) => { sharedShoppingItems = sharedShoppingItems.filter(t => t.userId !== fUid); snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; data.ownerName = fName; sharedShoppingItems.push(data); }); if(document.getElementById('shopping-page').style.display === 'block') renderShoppingList(); });
     }
 }
 
 function stopRealtimeSync() { 
-    if (unsubscribeTasks) unsubscribeTasks(); if (unsubscribeDaily) unsubscribeDaily(); if (unsubscribeWeekly) unsubscribeWeekly(); if (unsubscribeRoutine) unsubscribeRoutine(); if (unsubscribeBirthdays) unsubscribeBirthdays(); if(unsubscribeShopping) unsubscribeShopping(); if(unsubscribeUser) unsubscribeUser();
+    if (unsubscribeTasks) unsubscribeTasks(); if (unsubscribeDaily) unsubscribeDaily(); if (unsubscribeWeekly) unsubscribeWeekly(); if (unsubscribeRoutine) unsubscribeRoutine(); if (unsubscribeBirthdays) unsubscribeBirthdays(); if(unsubscribeUser) unsubscribeUser();
+    if (sharedListsUnsubscribe) sharedListsUnsubscribe(); if (shoppingItemsUnsubscribe) shoppingItemsUnsubscribe();
     Object.values(friendUnsubscribes).forEach(u => u()); friendUnsubscribes = {};
-    Object.values(shoppingFriendUnsubscribes).forEach(u => u()); shoppingFriendUnsubscribes = {};
-    tasks = []; sharedTasks = []; dailyTodo = []; weeklyTodo = []; routineTodo = []; birthdays = []; friends = []; shoppingItems = []; sharedShoppingItems = []; shoppingFriends = [];
+    tasks = []; sharedTasks = []; dailyTodo = []; weeklyTodo = []; routineTodo = []; birthdays = []; friends = []; shoppingItems = []; mySharedLists = [];
 }
 
 function triggerWelcomeModal() { const wModal = document.getElementById('welcome-modal'); const summaryZone = document.getElementById('today-summary-zone'); if(!wModal) return; document.getElementById('welcome-message-text').innerText = `Welcome back, ${userNickname ? userNickname : "toi"} ! 👋`; let todayTasks = tasks.filter(t => t.date === todayStr && !t.completed); summaryZone.innerHTML = ''; if(todayTasks.length === 0) { summaryZone.innerHTML = `<p style="font-size: 0.95rem; font-style: italic; opacity: 0.8; margin-top: 10px; text-align:center;">Aucune tâche urgente au programme pour aujourd'hui ! ✨</p>`; } else { summaryZone.innerHTML = `<p style="font-size: 0.95rem; font-weight: bold; margin-bottom: 12px; color: var(--primary-dark);">Voici tes tâches de la journée :</p>`; todayTasks.forEach(t => { summaryZone.innerHTML += `<div class="welcome-summary-item">📌 <b>${t.time ? t.time : 'Pas d\'heure'}</b> - ${t.name} <span style="float: right; font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 8px; background: rgba(128,128,128,0.1); color: var(--${t.importance === 'high'?'danger':t.importance==='medium'?'warning':'success'});">${t.importance === 'high' ? 'Haute' : t.importance === 'medium' ? 'Moyenne' : 'Faible'}</span></div>`; }); } wModal.style.display = 'flex'; }
 
-// --- PARTAGE AGENDA ET COURSES ---
+// --- PARTAGE AGENDA ---
 function autoSaveNickname() { const nick = document.getElementById('profile-nickname').value.trim(); if (currentUser) { db.collection("users").doc(currentUser.uid).set({ nickname: nick }, { merge: true }).then(() => { userNickname = nick; showToast("Surnom mis à jour ! ✨"); }); } }
-
-function openShareModal(mode) { 
-    currentShareMode = mode;
-    document.getElementById('share-modal-title').innerText = mode === 'agenda' ? "Partage Agenda 🤝" : "Partage Courses 🛒";
-    document.getElementById('my-share-code').innerText = mode === 'agenda' ? myAgendaCode : myShoppingCode;
-    renderFriendsList();
-    document.getElementById('share-modal').style.display = 'flex'; 
-}
-
+function openShareModal(mode) { currentShareMode = mode; document.getElementById('share-modal-title').innerText = "Partage Agenda 🤝"; document.getElementById('my-share-code').innerText = myAgendaCode; renderFriendsList(); document.getElementById('share-modal').style.display = 'flex'; }
 function copyShareCode() { const code = document.getElementById('my-share-code').innerText; navigator.clipboard.writeText(code).then(() => showToast("Code copié ! 📋")); }
 
 function renderFriendsList() { 
     const container = document.getElementById('friends-list-container'); if(!container) return; 
-    let activeList = currentShareMode === 'agenda' ? friends : shoppingFriends;
-    if (activeList.length === 0) { container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; margin-top: 10px; text-align: center; width: 100%;'>Aucun ${currentShareMode === 'agenda' ? 'agenda' : 'panier'} lié pour le moment.</p>`; return; }
-    container.innerHTML = activeList.map(f => `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; margin-top:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;"><span style="font-weight:bold; color:var(--primary-dark);">👤 ${f.nickname}</span><button onclick="removeFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:bold;">Retirer</button></div>`).join(''); 
+    if (friends.length === 0) { container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; margin-top: 10px; text-align: center; width: 100%;'>Aucun agenda lié pour le moment.</p>`; return; }
+    container.innerHTML = friends.map(f => `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; margin-top:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;"><span style="font-weight:bold; color:var(--primary-dark);">👤 ${f.nickname}</span><button onclick="removeFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:bold;">Retirer</button></div>`).join(''); 
 }
 
 function removeFriend(fUid) { 
-    if (currentShareMode === 'agenda') {
-        friends = friends.filter(f => f.uid !== fUid); 
-        db.collection("users").doc(currentUser.uid).set({following: friends}, {merge: true}).then(() => { renderFriendsList(); if(friendUnsubscribes[fUid]) { friendUnsubscribes[fUid](); delete friendUnsubscribes[fUid]; } sharedTasks = sharedTasks.filter(t => t.userId !== fUid); renderCalendar(); showToast("Agenda retiré ! 🗑️"); }); 
-    } else {
-        shoppingFriends = shoppingFriends.filter(f => f.uid !== fUid); 
-        db.collection("users").doc(currentUser.uid).set({shoppingFollowing: shoppingFriends}, {merge: true}).then(() => { renderFriendsList(); if(shoppingFriendUnsubscribes[fUid]) { shoppingFriendUnsubscribes[fUid](); delete shoppingFriendUnsubscribes[fUid]; } sharedShoppingItems = sharedShoppingItems.filter(t => t.userId !== fUid); renderShoppingList(); showToast("Ami des courses retiré ! 🗑️"); }); 
-    }
+    friends = friends.filter(f => f.uid !== fUid); 
+    db.collection("users").doc(currentUser.uid).set({following: friends}, {merge: true}).then(() => { renderFriendsList(); if(friendUnsubscribes[fUid]) { friendUnsubscribes[fUid](); delete friendUnsubscribes[fUid]; } sharedTasks = sharedTasks.filter(t => t.userId !== fUid); renderCalendar(); showToast("Agenda retiré ! 🗑️"); }); 
 }
 
 let btnAddFriend = document.getElementById('btn-add-friend');
 if(btnAddFriend) { 
     btnAddFriend.onclick = () => { 
-        const code = document.getElementById('friend-code-input').value.trim().toUpperCase(); 
-        if(!code || code === myAgendaCode || code === myShoppingCode) return; 
-        
-        let searchField = currentShareMode === 'agenda' ? "shareCode" : "shoppingShareCode";
-        
-        db.collection("users").where(searchField, "==", code).get().then(snapshot => { 
+        const code = document.getElementById('friend-code-input').value.trim().toUpperCase(); if(!code || code === myAgendaCode) return; 
+        db.collection("users").where("shareCode", "==", code).get().then(snapshot => { 
             if(snapshot.empty) { showToast("Code introuvable ! ❌"); return; } 
-            let friendDoc = snapshot.docs[0], friendUid = friendDoc.id, friendData = friendDoc.data(); 
-            let friendName = friendData.nickname || "Inconnu"; 
-            
-            if (currentShareMode === 'agenda') {
-                if(friends.some(f => f.uid === friendUid)) { showToast("Déjà lié ! 🤝"); return; } 
-                friends.push({uid: friendUid, nickname: friendName}); db.collection("users").doc(currentUser.uid).update({following: friends}); 
-                let sharedWith = friendData.sharedWith || []; if(!sharedWith.includes(currentUser.uid)) { sharedWith.push(currentUser.uid); db.collection("users").doc(friendUid).update({sharedWith: sharedWith}); } 
-                startFriendSync(friendUid, friendName, 'agenda'); showToast(`Agenda de ${friendName} lié ! ✨`);
-            } else {
-                if(shoppingFriends.some(f => f.uid === friendUid)) { showToast("Déjà lié aux courses ! 🤝"); return; } 
-                shoppingFriends.push({uid: friendUid, nickname: friendName}); db.collection("users").doc(currentUser.uid).update({shoppingFollowing: shoppingFriends}); 
-                let shoppingSharedWith = friendData.shoppingSharedWith || []; if(!shoppingSharedWith.includes(currentUser.uid)) { shoppingSharedWith.push(currentUser.uid); db.collection("users").doc(friendUid).update({shoppingSharedWith: shoppingSharedWith}); }
-                startFriendSync(friendUid, friendName, 'shopping'); showToast(`Courses de ${friendName} liées ! ✨`);
-            }
+            let friendDoc = snapshot.docs[0], friendUid = friendDoc.id, friendData = friendDoc.data(); let friendName = friendData.nickname || "Inconnu"; 
+            if(friends.some(f => f.uid === friendUid)) { showToast("Déjà lié ! 🤝"); return; } 
+            friends.push({uid: friendUid, nickname: friendName}); db.collection("users").doc(currentUser.uid).update({following: friends}); 
+            let sharedWith = friendData.sharedWith || []; if(!sharedWith.includes(currentUser.uid)) { sharedWith.push(currentUser.uid); db.collection("users").doc(friendUid).update({sharedWith: sharedWith}); } 
+            startFriendSync(friendUid, friendName, 'agenda'); showToast(`Agenda de ${friendName} lié ! ✨`);
             renderFriendsList(); document.getElementById('friend-code-input').value = ""; 
         }); 
     }; 
@@ -803,8 +802,7 @@ function removeGhostDate(taskId, ghostIndex) { const task = tasks.find(t => t.id
 // --- RENDER TASKS ---
 function renderTasks() { 
     const c = document.getElementById('task-list'); if (!c) return; c.innerHTML = ''; const now = new Date(); 
-    let activeList = [], archiveList = []; 
-    tasks.forEach(t => { if(t.completed) { if(t.completedAtStr && t.completedAtStr !== todayStr) { archiveList.push(t); } else { activeList.push(t); } } else { activeList.push(t); } }); 
+    let activeList = [], archiveList = []; tasks.forEach(t => { if(t.completed) { if(t.completedAtStr && t.completedAtStr !== todayStr) { archiveList.push(t); } else { activeList.push(t); } } else { activeList.push(t); } }); 
     let filteredList = (taskSubView === "active") ? activeList : archiveList; 
     if (taskSubView === "archive") { const archiveSort = document.getElementById('archive-sort-filter').value; filteredList.sort((a,b) => { const dateA = a.completedAtStr || a.date, dateB = b.completedAtStr || b.date; if (archiveSort === 'desc') { if (dateA !== dateB) return dateB.localeCompare(dateA); return b.createdAt - a.createdAt; } else { if (dateA !== dateB) return dateA.localeCompare(dateB); return a.createdAt - b.createdAt; } }); } 
     const isChronoSort = (taskSubView === "archive") || (document.getElementById('task-sort-filter') && document.getElementById('task-sort-filter').value === 'chrono');
@@ -861,6 +859,7 @@ window.onclick = (e) => {
         if(document.getElementById('share-modal')) document.getElementById('share-modal').style.display = 'none'; 
         if(document.getElementById('shopping-item-modal')) document.getElementById('shopping-item-modal').style.display = 'none'; 
         if(document.getElementById('custom-card-modal')) document.getElementById('custom-card-modal').style.display = 'none'; 
+        if(document.getElementById('shopping-list-multi-share-modal')) document.getElementById('shopping-list-multi-share-modal').style.display = 'none'; 
     } 
 };
 
