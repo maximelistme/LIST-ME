@@ -14,14 +14,14 @@ const db = firebase.firestore(), auth = firebase.auth();
 
 // --- VARIABLES D'ÉTAT LOCALES ---
 let tasks = [], sharedTasks = [], dailyTodo = [], weeklyTodo = [], routineTodo = [], birthdays = [];
-let shoppingItems = []; // Contient uniquement les produits de la liste active sélectionnée
-let mySharedLists = []; // Liste des groupes/listes partagées de l'utilisateur
+let shoppingItems = []; 
+let mySharedLists = []; 
 let customShoppingCards = []; 
 let friends = []; 
 let friendUnsubscribes = {};
 let unsubscribeUser, sharedListsUnsubscribe, shoppingItemsUnsubscribe;
 let currentUser = null, userNickname = "", hasShownWelcomeThisSession = false, taskSubView = "active"; 
-let currentShoppingListId = "personal"; // Stocke "personal" ou l'ID Firebase de la liste partagée active
+let currentShoppingListId = "personal"; 
 let myAgendaCode = ""; 
 
 // --- VARIABLES DE CONTRÔLE ET RECHERCHE ---
@@ -445,7 +445,6 @@ function renderShoppingTabs() {
     
     if (mySharedLists.length === 0) {
         container.style.display = 'none';
-        currentShoppingListId = "personal"; 
         return;
     } else {
         container.style.display = 'flex';
@@ -626,16 +625,19 @@ function createNewSharedShoppingList() {
     db.collection("shoppingLists").add({
         name: name, code: uniqueCode, createdBy: currentUser.uid, members: [currentUser.uid], createdAt: Date.now()
     }).then((docRef) => {
-        // CORRECTION 1 : Alerte immédiate affichant le code à l'écran
-        alert(`🎉 Liste "${name}" créée avec succès !\n\n🔑 CODE DE PARTAGE : ${uniqueCode}\n\nDonnez ce code à vos proches pour qu'ils rejoignent la liste. Vous pourrez le retrouver à tout moment en bas de cette fenêtre.`);
+        // Affiche le super modal de succès
+        document.getElementById('success-list-name').innerText = `"${name}"`;
+        document.getElementById('success-list-code').innerText = uniqueCode;
+        document.getElementById('share-success-modal').style.display = 'flex';
         
         nameInput.value = '';
-        currentShoppingListId = docRef.id; // Bascule sur la nouvelle liste
+        currentShoppingListId = docRef.id; 
         
-        // CORRECTION 2 : Forcer les rendus immédiats pour contrer les latences de snapshot
-        renderShoppingTabs();
-        syncCurrentShoppingItems();
-        renderMySharedListsInModal();
+        // Sécurité pour forcer l'affichage si le snapshot traine un peu
+        if (mySharedLists.some(l => l.id === docRef.id)) {
+            renderShoppingTabs();
+            syncCurrentShoppingItems();
+        }
     }).catch(error => {
         console.error("Erreur Firebase:", error);
         showToast("Erreur lors de la création de la liste.");
@@ -656,11 +658,6 @@ function joinSharedShoppingList() {
             showToast(`Vous avez rejoint "${data.name}" ! 🛒`);
             document.getElementById('join-shared-list-code').value = '';
             currentShoppingListId = doc.id; 
-            
-            // Forcer les rendus immédiats
-            renderShoppingTabs();
-            syncCurrentShoppingItems();
-            renderMySharedListsInModal();
         });
     });
 }
@@ -883,6 +880,7 @@ window.onclick = (e) => {
         if(document.getElementById('shopping-item-modal')) document.getElementById('shopping-item-modal').style.display = 'none'; 
         if(document.getElementById('custom-card-modal')) document.getElementById('custom-card-modal').style.display = 'none'; 
         if(document.getElementById('shopping-list-multi-share-modal')) document.getElementById('shopping-list-multi-share-modal').style.display = 'none'; 
+        if(document.getElementById('share-success-modal')) document.getElementById('share-success-modal').style.display = 'none'; 
     } 
 };
 
