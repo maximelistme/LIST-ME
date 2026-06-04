@@ -622,22 +622,28 @@ function createNewSharedShoppingList() {
     if (!currentUser) { showToast("Erreur: Utilisateur non connecté."); return; }
     const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    db.collection("shoppingLists").add({
+    const newList = {
         name: name, code: uniqueCode, createdBy: currentUser.uid, members: [currentUser.uid], createdAt: Date.now()
-    }).then((docRef) => {
-        // Affiche le super modal de succès
+    };
+
+    db.collection("shoppingLists").add(newList).then((docRef) => {
         document.getElementById('success-list-name').innerText = `"${name}"`;
         document.getElementById('success-list-code').innerText = uniqueCode;
         document.getElementById('share-success-modal').style.display = 'flex';
         
         nameInput.value = '';
+        
+        // Ajout MANUEL IMMÉDIAT pour éviter les latences de Firebase
+        if (!mySharedLists.some(l => l.id === docRef.id)) {
+            newList.id = docRef.id;
+            mySharedLists.push(newList);
+        }
         currentShoppingListId = docRef.id; 
         
-        // Sécurité pour forcer l'affichage si le snapshot traine un peu
-        if (mySharedLists.some(l => l.id === docRef.id)) {
-            renderShoppingTabs();
-            syncCurrentShoppingItems();
-        }
+        renderShoppingTabs();
+        syncCurrentShoppingItems();
+        renderMySharedListsInModal();
+        
     }).catch(error => {
         console.error("Erreur Firebase:", error);
         showToast("Erreur lors de la création de la liste.");
@@ -657,7 +663,18 @@ function joinSharedShoppingList() {
         db.collection("shoppingLists").doc(doc.id).update({ members: updatedMembers }).then(() => {
             showToast(`Vous avez rejoint "${data.name}" ! 🛒`);
             document.getElementById('join-shared-list-code').value = '';
+            
+            // Ajout MANUEL IMMÉDIAT
+            if (!mySharedLists.some(l => l.id === doc.id)) {
+                data.id = doc.id;
+                data.members = updatedMembers;
+                mySharedLists.push(data);
+            }
             currentShoppingListId = doc.id; 
+            
+            renderShoppingTabs();
+            syncCurrentShoppingItems();
+            renderMySharedListsInModal();
         });
     });
 }
@@ -674,7 +691,17 @@ function leaveSharedList(listId) {
             db.collection("shoppingLists").doc(listId).update({ members: updatedMembers });
         }
         showToast("Liste quittée !");
-        if (currentShoppingListId === listId) { currentShoppingListId = "personal"; renderShoppingTabs(); syncCurrentShoppingItems(); }
+        
+        // Retrait manuel immédiat
+        mySharedLists = mySharedLists.filter(l => l.id !== listId);
+        if (currentShoppingListId === listId) { 
+            currentShoppingListId = "personal"; 
+        }
+        renderShoppingTabs(); 
+        syncCurrentShoppingItems();
+        if (document.getElementById('shopping-list-multi-share-modal').style.display === 'flex') {
+            renderMySharedListsInModal();
+        }
     });
 }
 
@@ -760,6 +787,8 @@ function startRealtimeSync(userId) {
         if (document.getElementById('shopping-list-multi-share-modal') && document.getElementById('shopping-list-multi-share-modal').style.display === 'flex') {
             renderMySharedListsInModal();
         }
+    }, (error) => {
+        console.error("Erreur Snapshot shoppingLists:", error);
     });
 
     friends.forEach(f => startFriendSync(f.uid, f.nickname, 'agenda'));
