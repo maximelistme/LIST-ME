@@ -874,7 +874,16 @@ auth.onAuthStateChanged((user) => {
                     document.getElementById('my-share-code').innerText = myAgendaCode;
                 }
                 
+                // NOUVEAU : Affiche le code dans l'onglet Profil
+                if(document.getElementById('my-user-code')) {
+                    document.getElementById('my-user-code').innerText = myAgendaCode;
+                }
+                
                 friends = data.following || [];
+                
+                // NOUVEAU : Met à jour la liste des amis si on est sur le profil
+                if(document.getElementById('profile-page').style.display === 'block') { renderGlobalFriends(); }
+                
                 if(document.getElementById('shopping-page').style.display === 'block') { renderShoppingCategories(); }
             } catch (e) { console.error(e); }
         });
