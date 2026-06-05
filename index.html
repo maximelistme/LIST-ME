@@ -295,7 +295,14 @@
                         <option value="event">🎉 Liste Événement</option>
                     </select>
                 </div>
-                <input type="text" id="new-shared-list-name" placeholder="Ex: Courses Coloc, Weekend..." style="margin-bottom: 10px; width: 100%; box-sizing: border-box;">
+                <input type="text" id="new-shared-list-name" placeholder="Ex: Courses Coloc, Weekend..." style="margin-top: 5px; margin-bottom: 5px; width: 100%; box-sizing: border-box;">
+                
+                <div id="create-list-friends-container" style="display: none; margin-top: 10px; margin-bottom: 10px;">
+                    <span style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark); display: block; margin-bottom: 5px;">Inviter des amis directement :</span>
+                    <div id="create-list-friends-checkboxes" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        </div>
+                </div>
+
                 <button onclick="createNewSharedShoppingList()" class="btn-primary" style="width: 100%; padding: 10px;">Créer & Générer un code</button>
             </div>
 
