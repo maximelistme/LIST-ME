@@ -674,8 +674,12 @@ function renderShoppingList() {
 
     const getOwnerTag = (item) => {
         if (currentShoppingListId === 'personal') return '';
-        if (item.userId === currentUser.uid) return ` <small style="opacity:0.6; font-style:italic; color:var(--primary);">(Moi)</small>`;
-        if (item.ownerName) return ` <small style="opacity:0.6; font-style:italic;">(${item.ownerName})</small>`;
+        if (item.assignedToName) {
+            const isMe = item.assignedToUid === currentUser.uid;
+            return ` <small style="opacity:0.8; font-weight:bold; color:white; background: ${isMe ? 'var(--danger)' : 'var(--warning)'}; padding: 2px 6px; border-radius: 6px; font-size: 0.7rem; margin-left: 5px;">🎯 Ramené par ${isMe ? 'Moi' : item.assignedToName}</small>`;
+        }
+        if (item.userId === currentUser.uid) return ` <small style="opacity:0.6; font-style:italic; color:var(--primary);">(Ajouté par Moi)</small>`;
+        if (item.ownerName) return ` <small style="opacity:0.6; font-style:italic;">(Ajouté par ${item.ownerName})</small>`;
         return '';
     };
 
