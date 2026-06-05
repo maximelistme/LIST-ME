@@ -799,8 +799,9 @@ function createNewSharedShoppingList() {
     if (!currentUser) { showToast("Erreur: Utilisateur non connecté."); return; }
     const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
+    const listType = document.getElementById('new-list-type') ? document.getElementById('new-list-type').value : 'standard';
     const newList = {
-        name: name, code: uniqueCode, createdBy: currentUser.uid, members: [currentUser.uid], createdAt: Date.now()
+        name: name, code: uniqueCode, createdBy: currentUser.uid, members: [currentUser.uid], type: listType, createdAt: Date.now()
     };
 
     db.collection("shoppingLists").add(newList).then((docRef) => {
