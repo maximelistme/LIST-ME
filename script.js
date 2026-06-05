@@ -24,6 +24,8 @@ let currentUser = null, userNickname = "", hasShownWelcomeThisSession = false, t
 let currentShoppingListId = "personal"; 
 let myAgendaCode = ""; 
 
+window.currentListMemberNames = {}; // Utilisé pour stocker les pseudos des participants de la liste active
+
 // --- VARIABLES DE CONTRÔLE ET RECHERCHE ---
 let currentShoppingPath = []; 
 let currentShareMode = 'agenda';
@@ -229,6 +231,7 @@ function shoppingNavigateTo(cat) {
 }
 
 function formatProductDisplay(name) {
+    if(!name) return "";
     return name.replace(/\(([^)]+)\)/g, '<span style="color:transparent; font-size:0; opacity:0; pointer-events:none;">($1)</span>');
 }
 
@@ -422,6 +425,8 @@ function openShoppingItemModal(identifier, isCustom) {
     units.forEach(u => {
         let opt = document.createElement('option'); opt.value = u.v; opt.innerText = u.l; unitSelect.appendChild(opt);
     });
+    
+    // Affichage conditionnel du menu d'assignation
     const assignContainer = document.getElementById('assignee-container');
     const assignSelect = document.getElementById('shopping-assignee');
     if(assignContainer && assignSelect) {
@@ -451,6 +456,7 @@ function openShoppingItemModal(identifier, isCustom) {
 
 // Helper pour trouver automatiquement le rayon d'un produit dans le dictionnaire
 function findRayonForProduct(productName) {
+    if (!productName) return "✨ Produits Custom / Autres";
     const pLower = productName.toLowerCase();
     for (let rayon in foodCategories) {
         if (JSON.stringify(foodCategories[rayon]).toLowerCase().includes(pLower)) {
@@ -463,6 +469,7 @@ function findRayonForProduct(productName) {
 // Helper pour formater le nom du créateur pour l'algorithme de tri
 function itemOwnerNameForSort(item) {
     if (currentShoppingListId === 'personal') return 'Moi';
+    if (item.assignedToName) return item.assignedToName;
     if (item.userId === currentUser.uid) return 'A_Moi'; // Force "Moi" en haut du tri alphabétique
     return item.ownerName || 'Z_Inconnu';
 }
@@ -566,6 +573,7 @@ function renderShoppingTabs() {
 function switchShoppingListTab(listId) {
     currentShoppingListId = listId;
     renderShoppingTabs();
+    renderShoppingCategories();
     syncCurrentShoppingItems();
     updateParticipantsDisplay();
 }
@@ -573,6 +581,8 @@ function switchShoppingListTab(listId) {
 async function updateParticipantsDisplay() {
     const pDiv = document.getElementById('shopping-list-participants');
     if (!pDiv) return;
+
+    window.currentListMemberNames = {};
 
     if (currentShoppingListId === 'personal') {
         pDiv.style.display = 'none';
@@ -586,16 +596,26 @@ async function updateParticipantsDisplay() {
             for (let uid of listObj.members) {
                 if (uid === currentUser.uid) {
                     names.push("Moi");
+                    window.currentListMemberNames[uid] = "Moi";
                 } else {
-                    try {
-                        let doc = await db.collection('users').doc(uid).get();
-                        if (doc.exists && doc.data().nickname) {
-                            names.push(doc.data().nickname);
-                        } else {
+                    let f = friends.find(friend => friend.uid === uid);
+                    if (f) {
+                        names.push(f.nickname);
+                        window.currentListMemberNames[uid] = f.nickname;
+                    } else {
+                        try {
+                            let doc = await db.collection('users').doc(uid).get();
+                            if (doc.exists && doc.data().nickname) {
+                                names.push(doc.data().nickname);
+                                window.currentListMemberNames[uid] = doc.data().nickname;
+                            } else {
+                                names.push("Un membre");
+                                window.currentListMemberNames[uid] = "Un membre";
+                            }
+                        } catch(e) {
                             names.push("Un membre");
+                            window.currentListMemberNames[uid] = "Un membre";
                         }
-                    } catch(e) {
-                        names.push("Un membre");
                     }
                 }
             }
@@ -633,111 +653,115 @@ function syncCurrentShoppingItems() {
 }
 
 function renderShoppingList() {
-    const c = document.getElementById('shopping-list-content');
-    const scrollUpBtn = document.getElementById('shopping-scroll-up-btn');
-    if (!c) return; c.innerHTML = '';
+    try {
+        const c = document.getElementById('shopping-list-content');
+        const scrollUpBtn = document.getElementById('shopping-scroll-up-btn');
+        if (!c) return; c.innerHTML = '';
 
-    // --- LOGIQUE COMPLÈTE DE TRI FILTRÉ DYNAMIQUE ---
-    const sortVal = document.getElementById('shopping-sort-filter') ? document.getElementById('shopping-sort-filter').value : 'date';
-    
-    if (sortVal === 'alpha') {
-        shoppingItems.sort((a, b) => a.name.localeCompare(b.name, 'fr', {sensitivity: 'base'}));
-    } else if (sortVal === 'owner') {
-        shoppingItems.sort((a, b) => {
-            const ownerA = itemOwnerNameForSort(a);
-            const ownerB = itemOwnerNameForSort(b);
-            if (ownerA !== ownerB) return ownerA.localeCompare(ownerB, 'fr', {sensitivity: 'base'});
-            return (a.createdAt || 0) - (b.createdAt || 0);
-        });
-    } else if (sortVal === 'rayon') {
-        shoppingItems.sort((a, b) => {
-            const rayonA = findRayonForProduct(a.name);
-            const rayonB = findRayonForProduct(b.name);
-            if (rayonA !== rayonB) return rayonA.localeCompare(rayonB, 'fr');
-            return a.name.localeCompare(b.name, 'fr', {sensitivity: 'base'});
-        });
-    } else {
-        // 'date' (par défaut)
-        shoppingItems.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-    }
-
-    const actives = shoppingItems.filter(item => !item.completed);
-    const completeds = shoppingItems.filter(item => item.completed);
-
-    if (shoppingItems.length === 0) {
-        c.innerHTML = '<p style="text-align:center; opacity:0.5; font-style:italic;">La liste est vide !</p>';
-        if(scrollUpBtn) scrollUpBtn.style.display = 'none'; return;
-    }
-
-    if(scrollUpBtn && shoppingItems.length > 0) scrollUpBtn.style.display = 'flex';
-    else if(scrollUpBtn) scrollUpBtn.style.display = 'none';
-
-    const getOwnerTag = (item) => {
-        if (currentShoppingListId === 'personal') return '';
-        if (item.assignedToName) {
-            const isMe = item.assignedToUid === currentUser.uid;
-            return ` <small style="opacity:0.8; font-weight:bold; color:white; background: ${isMe ? 'var(--danger)' : 'var(--warning)'}; padding: 2px 6px; border-radius: 6px; font-size: 0.7rem; margin-left: 5px;">🎯 Ramené par ${isMe ? 'Moi' : item.assignedToName}</small>`;
+        // --- LOGIQUE COMPLÈTE DE TRI FILTRÉ DYNAMIQUE ---
+        const sortVal = document.getElementById('shopping-sort-filter') ? document.getElementById('shopping-sort-filter').value : 'date';
+        
+        if (sortVal === 'alpha') {
+            shoppingItems.sort((a, b) => (a.name || "").localeCompare(b.name || "", 'fr', {sensitivity: 'base'}));
+        } else if (sortVal === 'owner') {
+            shoppingItems.sort((a, b) => {
+                const ownerA = itemOwnerNameForSort(a);
+                const ownerB = itemOwnerNameForSort(b);
+                if (ownerA !== ownerB) return ownerA.localeCompare(ownerB, 'fr', {sensitivity: 'base'});
+                return (a.createdAt || 0) - (b.createdAt || 0);
+            });
+        } else if (sortVal === 'rayon') {
+            shoppingItems.sort((a, b) => {
+                const rayonA = findRayonForProduct(a.name);
+                const rayonB = findRayonForProduct(b.name);
+                if (rayonA !== rayonB) return rayonA.localeCompare(rayonB, 'fr');
+                return (a.name || "").localeCompare(b.name || "", 'fr', {sensitivity: 'base'});
+            });
+        } else {
+            // 'date' (par défaut)
+            shoppingItems.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
         }
-        if (item.userId === currentUser.uid) return ` <small style="opacity:0.6; font-style:italic; color:var(--primary);">(Ajouté par Moi)</small>`;
-        if (item.ownerName) return ` <small style="opacity:0.6; font-style:italic;">(Ajouté par ${item.ownerName})</small>`;
-        return '';
-    };
 
-    let lastRayonRendered = null;
+        const actives = shoppingItems.filter(item => !item.completed);
+        const completeds = shoppingItems.filter(item => item.completed);
 
-    // Rendu des produits actifs
-    actives.forEach(item => {
-        if (sortVal === 'rayon') {
-            const itemRayon = findRayonForProduct(item.name);
-            if (itemRayon !== lastRayonRendered) {
-                const rayonSep = document.createElement('div');
-                rayonSep.innerHTML = `<div style="text-align: left; margin: 18px 0 8px 10px; font-size: 0.85rem; font-weight: bold; color: var(--primary); opacity: 0.7; letter-spacing: 1px;">— ${itemRayon}</div>`;
-                c.appendChild(rayonSep);
-                lastRayonRendered = itemRayon;
+        if (shoppingItems.length === 0) {
+            c.innerHTML = '<p style="text-align:center; opacity:0.5; font-style:italic;">La liste est vide !</p>';
+            if(scrollUpBtn) scrollUpBtn.style.display = 'none'; return;
+        }
+
+        if(scrollUpBtn && shoppingItems.length > 0) scrollUpBtn.style.display = 'flex';
+        else if(scrollUpBtn) scrollUpBtn.style.display = 'none';
+
+        const getOwnerTag = (item) => {
+            if (currentShoppingListId === 'personal') return '';
+            if (item.assignedToName) {
+                const isMe = item.assignedToUid === currentUser.uid;
+                return ` <small style="opacity:0.8; font-weight:bold; color:white; background: ${isMe ? 'var(--danger)' : 'var(--warning)'}; padding: 2px 6px; border-radius: 6px; font-size: 0.7rem; margin-left: 5px;">🎯 Ramené par ${isMe ? 'Moi' : item.assignedToName}</small>`;
             }
+            if (item.userId === currentUser.uid) return ` <small style="opacity:0.6; font-style:italic; color:var(--primary);">(Ajouté par Moi)</small>`;
+            if (item.ownerName) return ` <small style="opacity:0.6; font-style:italic;">(Ajouté par ${item.ownerName})</small>`;
+            return '';
+        };
+
+        let lastRayonRendered = null;
+
+        // Rendu des produits actifs
+        actives.forEach(item => {
+            if (sortVal === 'rayon') {
+                const itemRayon = findRayonForProduct(item.name);
+                if (itemRayon !== lastRayonRendered) {
+                    const rayonSep = document.createElement('div');
+                    rayonSep.innerHTML = `<div style="text-align: left; margin: 18px 0 8px 10px; font-size: 0.85rem; font-weight: bold; color: var(--primary); opacity: 0.7; letter-spacing: 1px;">— ${itemRayon}</div>`;
+                    c.appendChild(rayonSep);
+                    lastRayonRendered = itemRayon;
+                }
+            }
+
+            const d = document.createElement('div'); d.className = `task-card`; d.style.borderLeft = "6px solid var(--primary)"; 
+            const nameToDisplay = item.name || "Produit";
+            d.innerHTML = `
+                <div style="flex:1; display:flex; align-items:center; min-width:0;">
+                    <div onclick="toggleShoppingCheck('${item.id}', false)" style="width:20px; height:20px; border:2px solid var(--primary); border-radius:5px; margin-right:10px; cursor:pointer;"></div>
+                    <div style="flex:1;">
+                        <strong style="display:block;">${nameToDisplay}${getOwnerTag(item)}</strong>
+                        <small style="color:var(--primary); font-weight:bold;">${item.info || ""}</small>
+                    </div>
+                </div>
+                <div class="task-actions" style="flex-shrink:0;">
+                    <button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
+                </div>`;
+            c.appendChild(d);
+        });
+
+        if (completeds.length > 0) {
+            let marginStyle = actives.length === 0 ? "margin-top: 0;" : "";
+            c.innerHTML += `<div class="task-section-separator" style="display: flex; justify-content: space-between; align-items: center; padding-right: 5px; ${marginStyle}">
+                <span>Dans le chariot</span>
+                <button onclick="clearCompletedShopping()" style="background:none; border:none; color:var(--danger); font-size:0.85rem; font-weight:bold; cursor:pointer; text-decoration:underline;">Vider le cadie</button>
+            </div>`;
         }
 
-        const d = document.createElement('div'); d.className = `task-card`; d.style.borderLeft = "6px solid var(--primary)"; 
-        const nameToDisplay = item.name;
-        d.innerHTML = `
-            <div style="flex:1; display:flex; align-items:center; min-width:0;">
-                <div onclick="toggleShoppingCheck('${item.id}', false)" style="width:20px; height:20px; border:2px solid var(--primary); border-radius:5px; margin-right:10px; cursor:pointer;"></div>
-                <div style="flex:1;">
-                    <strong style="display:block;">${nameToDisplay}${getOwnerTag(item)}</strong>
-                    <small style="color:var(--primary); font-weight:bold;">${item.info}</small>
+        // Rendu des produits cochés
+        completeds.forEach(item => {
+            const d = document.createElement('div'); d.className = `task-card completed-bubble`; 
+            const nameToDisplay = item.name || "Produit";
+            d.innerHTML = `
+                <div style="flex:1; display:flex; align-items:center; min-width:0;">
+                    <div onclick="toggleShoppingCheck('${item.id}', true)" style="width:20px; height:20px; background:var(--success); border-radius:5px; margin-right:10px; display:flex; align-items:center; justify-content:center; color:white; font-size:0.8rem; cursor:pointer;">✓</div>
+                    <div style="flex:1; text-decoration:line-through; opacity:0.6;">
+                        <strong style="display:block;">${nameToDisplay}${getOwnerTag(item)}</strong>
+                        <small>${item.info || ""}</small>
+                    </div>
                 </div>
-            </div>
-            <div class="task-actions" style="flex-shrink:0;">
-                <button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
-            </div>`;
-        c.appendChild(d);
-    });
-
-    if (completeds.length > 0) {
-        let marginStyle = actives.length === 0 ? "margin-top: 0;" : "";
-        c.innerHTML += `<div class="task-section-separator" style="display: flex; justify-content: space-between; align-items: center; padding-right: 5px; ${marginStyle}">
-            <span>Dans le chariot</span>
-            <button onclick="clearCompletedShopping()" style="background:none; border:none; color:var(--danger); font-size:0.85rem; font-weight:bold; cursor:pointer; text-decoration:underline;">Vider le cadie</button>
-        </div>`;
+                <div class="task-actions" style="flex-shrink:0;">
+                    <button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
+                </div>`;
+            c.appendChild(d);
+        });
+    } catch (e) {
+        console.error("Erreur renderShoppingList : ", e);
     }
-
-    // Rendu des produits cochés
-    completeds.forEach(item => {
-        const d = document.createElement('div'); d.className = `task-card completed-bubble`; 
-        const nameToDisplay = item.name;
-        d.innerHTML = `
-            <div style="flex:1; display:flex; align-items:center; min-width:0;">
-                <div onclick="toggleShoppingCheck('${item.id}', true)" style="width:20px; height:20px; background:var(--success); border-radius:5px; margin-right:10px; display:flex; align-items:center; justify-content:center; color:white; font-size:0.8rem; cursor:pointer;">✓</div>
-                <div style="flex:1; text-decoration:line-through; opacity:0.6;">
-                    <strong style="display:block;">${nameToDisplay}${getOwnerTag(item)}</strong>
-                    <small>${item.info}</small>
-                </div>
-            </div>
-            <div class="task-actions" style="flex-shrink:0;">
-                <button onclick="deleteShoppingItem('${item.id}')" style="background:none; border:none; color:var(--danger); font-size:1.3rem; cursor:pointer;">×</button>
-            </div>`;
-        c.appendChild(d);
-    });
 }
 
 function toggleShoppingCheck(id, isCompleted) { db.collection("shopping").doc(id).update({ completed: !isCompleted }); }
@@ -764,6 +788,7 @@ function openCustomShoppingListShareModal() {
             mySharedLists = [];
             snap.forEach(doc => { let d = doc.data(); d.id = doc.id; mySharedLists.push(d); });
             renderMySharedListsInModal();
+            renderFriendsCheckboxesForNewList();
             renderShoppingTabs();
         }).catch(err => {
             showToast("Erreur de chargement: " + err.message);
@@ -773,6 +798,24 @@ function openCustomShoppingListShareModal() {
     }
     
     document.getElementById('shopping-list-multi-share-modal').style.display = 'flex';
+}
+
+function renderFriendsCheckboxesForNewList() {
+    const container = document.getElementById('create-list-friends-container');
+    const checkboxDiv = document.getElementById('create-list-friends-checkboxes');
+    if (!container || !checkboxDiv) return;
+
+    if (friends.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    checkboxDiv.innerHTML = friends.map(f => `
+        <label style="display:flex; align-items:center; gap:5px; background:rgba(128,128,128,0.1); padding:4px 8px; border-radius:15px; font-size:0.8rem; cursor:pointer;">
+            <input type="checkbox" class="friend-invite-cb" value="${f.uid}"> ${f.nickname}
+        </label>
+    `).join('');
 }
 
 function renderMySharedListsInModal() {
@@ -801,11 +844,14 @@ function createNewSharedShoppingList() {
     const name = nameInput.value.trim();
     if (!name) { showToast("Veuillez donner un nom à la liste ! ❌"); return; }
     if (!currentUser) { showToast("Erreur: Utilisateur non connecté."); return; }
+    
     const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
     const listType = document.getElementById('new-list-type') ? document.getElementById('new-list-type').value : 'standard';
+
+    let selectedFriends = Array.from(document.querySelectorAll('.friend-invite-cb:checked')).map(cb => cb.value);
+
     const newList = {
-        name: name, code: uniqueCode, createdBy: currentUser.uid, members: [currentUser.uid], type: listType, createdAt: Date.now()
+        name: name, code: uniqueCode, createdBy: currentUser.uid, members: [currentUser.uid, ...selectedFriends], type: listType, createdAt: Date.now()
     };
 
     db.collection("shoppingLists").add(newList).then((docRef) => {
@@ -822,8 +868,9 @@ function createNewSharedShoppingList() {
         currentShoppingListId = docRef.id; 
         
         renderShoppingTabs();
+        renderShoppingCategories();
         syncCurrentShoppingItems();
-        updateParticipantsDisplay();
+        if(typeof updateParticipantsDisplay === 'function') updateParticipantsDisplay();
         renderMySharedListsInModal();
         
     }).catch(error => {
@@ -854,6 +901,7 @@ function joinSharedShoppingList() {
             currentShoppingListId = doc.id; 
             
             renderShoppingTabs();
+            renderShoppingCategories();
             syncCurrentShoppingItems();
             updateParticipantsDisplay();
             renderMySharedListsInModal();
@@ -879,6 +927,7 @@ function leaveSharedList(listId) {
             currentShoppingListId = "personal"; 
         }
         renderShoppingTabs(); 
+        renderShoppingCategories();
         syncCurrentShoppingItems();
         updateParticipantsDisplay();
         if (document.getElementById('shopping-list-multi-share-modal').style.display === 'flex') {
@@ -891,7 +940,7 @@ function leaveSharedList(listId) {
 function processMidnightAutoArchive() {
     if(isArchiving || !currentUser) return; isArchiving = true;
     const today = new Date().toISOString().split('T')[0]; let operations = [];
-    tasks.forEach(t => { if (t.completed) return; let ghosts = Array.isArray(t.duplicateDays) ? t.duplicateDays : []; ghosts = ghosts.map(g => typeof g === 'string' ? {date: g, time: t.time} : g); if (ghosts.length > 0) { let allOccurrences = [{date: t.date, time: t.time || ""}, ...ghosts]; allOccurrences.sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.time || "").localeCompare(b.time || "")); let pastDates = allOccurrences.filter(o => o.date < today); let remainingDates = allOccurrences.filter(o => o.date >= today); if (pastDates.length > 0) { pastDates.forEach(pastOcc => { operations.push(db.collection("tasks").add({ name: t.name, desc: t.desc || "", date: pastOcc.date, time: pastOcc.time, reminders: t.reminders || [], importance: t.importance, completed: true, completedAtStr: pastOcc.date, userId: t.userId, createdAt: t.createdAt || Date.now(), duplicateDays: [] })); }); if (remainingDates.length > 0) { let nextMain = remainingDates.shift(); operations.push(db.collection("tasks").doc(t.id).update({ date: nextMain.date, time: nextMain.time, duplicateDays: remainingDates })); } else { operations.push(db.collection("tasks").doc(t.id).delete()); } } } else { if (t.date < today) operations.push(db.collection("tasks").doc(t.id).update({ completed: true, completedAtStr: t.date })); } });
+    tasks.forEach(t => { if (t.completed) return; let ghosts = Array.isArray(t.duplicateDays) ? t.duplicateDays : []; ghosts = ghosts.map(g => typeof g === 'string' ? {date: g, time: t.time} : g); if (ghosts.length > 0) { let allOccurrences = [{date: t.date, time: t.time || ""}, ...ghosts]; allOccurrences.sort((a, b) => (a.date||"").localeCompare(b.date||"") !== 0 ? (a.date||"").localeCompare(b.date||"") : (a.time||"").localeCompare(b.time||"")); let pastDates = allOccurrences.filter(o => o.date < today); let remainingDates = allOccurrences.filter(o => o.date >= today); if (pastDates.length > 0) { pastDates.forEach(pastOcc => { operations.push(db.collection("tasks").add({ name: t.name, desc: t.desc || "", date: pastOcc.date, time: pastOcc.time, reminders: t.reminders || [], importance: t.importance, completed: true, completedAtStr: pastOcc.date, userId: t.userId, createdAt: t.createdAt || Date.now(), duplicateDays: [] })); }); if (remainingDates.length > 0) { let nextMain = remainingDates.shift(); operations.push(db.collection("tasks").doc(t.id).update({ date: nextMain.date, time: nextMain.time, duplicateDays: remainingDates })); } else { operations.push(db.collection("tasks").doc(t.id).delete()); } } } else { if (t.date < today) operations.push(db.collection("tasks").doc(t.id).update({ completed: true, completedAtStr: t.date })); } });
     Promise.all(operations).then(() => { isArchiving = false; }).catch(() => { isArchiving = false; });
 }
 
@@ -899,9 +948,9 @@ function runNotificationEngine() {
     const now = new Date(); todayStr = now.toISOString().split('T')[0];
     if (todayStr !== lastCheckedDayStr) { lastCheckedDayStr = todayStr; processMidnightAutoArchive(); }
     const hour = now.getHours(), minute = now.getMinutes(), dayOfWeek = now.getDay(); let todayMD = todayStr.substring(5), tomorrow = new Date(); tomorrow.setDate(now.getDate() + 1); let tomorrowMD = tomorrow.toISOString().split('T')[0].substring(5);
-    if (hour === 9 && minute === 0) { let todayBirthdays = birthdays.filter(b => b.date.endsWith(todayMD)); todayBirthdays.forEach(b => { let key = `bday-j-${b.id}-${todayStr.substring(0,4)}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("🎂 Joyeux Anniversaire !", `C'est l'anniversaire de ${b.name} aujourd'hui !`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } }); let tomorrowBirthdays = birthdays.filter(b => b.date.endsWith(tomorrowMD)); tomorrowBirthdays.forEach(b => { let key = `bday-v-${b.id}-${todayStr.substring(0,4)}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("🎁 Bientôt un anniversaire", `C'est l'anniversaire de ${b.name} demain !`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } }); if (todayStr.endsWith('-01')) { let thisMonthBirthdays = birthdays.filter(b => b.date.substring(5,7) === todayStr.substring(5,7)); if (thisMonthBirthdays.length > 0) { let key = `bday-m-${todayStr.substring(0,7)}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("🗓️ Anniversaires du mois", `Il y a ${thisMonthBirthdays.length} anniversaire(s) prévu(s) ce mois-ci.`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } } } }
+    if (hour === 9 && minute === 0) { let todayBirthdays = birthdays.filter(b => (b.date||"").endsWith(todayMD)); todayBirthdays.forEach(b => { let key = `bday-j-${b.id}-${todayStr.substring(0,4)}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("🎂 Joyeux Anniversaire !", `C'est l'anniversaire de ${b.name} aujourd'hui !`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } }); let tomorrowBirthdays = birthdays.filter(b => (b.date||"").endsWith(tomorrowMD)); tomorrowBirthdays.forEach(b => { let key = `bday-v-${b.id}-${todayStr.substring(0,4)}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("🎁 Bientôt un anniversaire", `C'est l'anniversaire de ${b.name} demain !`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } }); if (todayStr.endsWith('-01')) { let thisMonthBirthdays = birthdays.filter(b => (b.date||"").substring(5,7) === todayStr.substring(5,7)); if (thisMonthBirthdays.length > 0) { let key = `bday-m-${todayStr.substring(0,7)}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("🗓️ Anniversaires du mois", `Il y a ${thisMonthBirthdays.length} anniversaire(s) prévu(s) ce mois-ci.`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } } } }
     if (dayOfWeek === 0 && hour === 18 && minute === 0) { const key = `recap-${todayStr}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { const activeTasksCount = tasks.filter(t => !t.completed).length; sendNotification("📋 LIST'ME : Récap de ta semaine", activeTasksCount > 0 ? `Tu as ${activeTasksCount} tâches prévues cette semaine.` : "Aucune tâche critique de planifiée."); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } }
-    tasks.forEach(t => { if (t.completed) return; let displayDate = t.date, displayTime = t.time; if (t.duplicateDays && t.duplicateDays.length > 0) { let allOcc = [{date: t.date, time: t.time || ""}]; t.duplicateDays.forEach(g => { if (typeof g === 'string') allOcc.push({date: g, time: t.time || ""}); else allOcc.push(g); }); allOcc.sort((a,b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.time.localeCompare(b.time)); let futureOcc = allOcc.filter(o => o.date >= todayStr); let currentOcc = futureOcc.length > 0 ? futureOcc[0] : allOcc[allOcc.length - 1]; displayDate = currentOcc.date; displayTime = currentOcc.time; } if (displayDate === todayStr && displayTime) { const [tHour, tMin] = displayTime.split(':').map(Number); const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0); if ((now - taskTimeObj) / 60000 >= 30) { toggleTaskCheck(t.id, false, displayDate); return; } } const diffDays = Math.ceil((new Date(displayDate) - now) / (1000 * 60 * 60 * 24)); if (diffDays === 1 && hour === 20 && minute === 0) { const key = `veille-${t.id}-${displayDate}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("⏰ Rappel : C'est pour demain !", `Ne pas oublier : "${t.name}" prévu demain.`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } } if (displayTime && t.reminders && t.reminders.length > 0) { const [tHour, tMin] = displayTime.split(':').map(Number); const taskDateTime = new Date(displayDate); taskDateTime.setHours(tHour, tMin, 0, 0); const minutesRemaining = Math.round((taskDateTime - now) / 60000); t.reminders.forEach(r => { if (minutesRemaining === Number(r)) { const key = `custom-${t.id}-${displayDate}-${r}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification(`🔔 Rappel : ${t.name}`, `Commence dans ${r} minutes.`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } } }); } });
+    tasks.forEach(t => { if (t.completed) return; let displayDate = t.date, displayTime = t.time; if (t.duplicateDays && t.duplicateDays.length > 0) { let allOcc = [{date: t.date, time: t.time || ""}]; t.duplicateDays.forEach(g => { if (typeof g === 'string') allOcc.push({date: g, time: t.time || ""}); else allOcc.push(g); }); allOcc.sort((a,b) => (a.date||"").localeCompare(b.date||"") !== 0 ? (a.date||"").localeCompare(b.date||"") : (a.time||"").localeCompare(b.time||"")); let futureOcc = allOcc.filter(o => o.date >= todayStr); let currentOcc = futureOcc.length > 0 ? futureOcc[0] : allOcc[allOcc.length - 1]; displayDate = currentOcc.date; displayTime = currentOcc.time; } if (displayDate === todayStr && displayTime) { const [tHour, tMin] = displayTime.split(':').map(Number); const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0); if ((now - taskTimeObj) / 60000 >= 30) { toggleTaskCheck(t.id, false, displayDate); return; } } const diffDays = Math.ceil((new Date(displayDate) - now) / (1000 * 60 * 60 * 24)); if (diffDays === 1 && hour === 20 && minute === 0) { const key = `veille-${t.id}-${displayDate}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification("⏰ Rappel : C'est pour demain !", `Ne pas oublier : "${t.name}" prévu demain.`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } } if (displayTime && t.reminders && t.reminders.length > 0) { const [tHour, tMin] = displayTime.split(':').map(Number); const taskDateTime = new Date(displayDate); taskDateTime.setHours(tHour, tMin, 0, 0); const minutesRemaining = Math.round((taskDateTime - now) / 60000); t.reminders.forEach(r => { if (minutesRemaining === Number(r)) { const key = `custom-${t.id}-${displayDate}-${r}`; let notifs = JSON.parse(localStorage.getItem('listme_sent_notifs')) || {}; if (!notifs[key]) { sendNotification(`🔔 Rappel : ${t.name}`, `Commence dans ${r} minutes.`); notifs[key] = true; localStorage.setItem('listme_sent_notifs', JSON.stringify(notifs)); } } }); } });
     if(document.getElementById('tasks-page').style.display === 'block') { renderTasks(); }
 }
 setInterval(runNotificationEngine, 30000);
@@ -935,16 +984,13 @@ auth.onAuthStateChanged((user) => {
                     document.getElementById('my-share-code').innerText = myAgendaCode;
                 }
                 
-                // NOUVEAU : Affiche le code dans l'onglet Profil
                 if(document.getElementById('my-user-code')) {
                     document.getElementById('my-user-code').innerText = myAgendaCode;
                 }
                 
                 friends = data.following || [];
                 
-                // NOUVEAU : Met à jour la liste des amis si on est sur le profil
                 if(document.getElementById('profile-page').style.display === 'block') { renderGlobalFriends(); }
-                
                 if(document.getElementById('shopping-page').style.display === 'block') { renderShoppingCategories(); }
             } catch (e) { console.error(e); }
         });
@@ -1036,7 +1082,7 @@ function openBirthdayModal() { document.getElementById('birthday-name').value = 
 function deleteBirthday(id) { db.collection("birthdays").doc(id).delete().then(() => { showToast("Anniversaire supprimé !"); document.getElementById('calendar-day-modal').style.display = 'none'; }); }
 
 // --- MODAL GHOST ---
-function openGhostModal(id) { const task = tasks.find(t => t.id === id); if(!task || !task.duplicateDays) return; let modal = document.getElementById('ghost-modal'); if(!modal) { modal = document.createElement('div'); modal.id = 'ghost-modal'; modal.className = 'modal modal-center'; modal.style.zIndex = "10005"; modal.innerHTML = `<div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto; padding: 20px;"><h3 style="color: var(--primary); text-align: center; margin-bottom: 15px;">🗓️ Dates Prévues</h3><div id="ghost-modal-list" style="display: flex; flex-direction: column; gap: 10px;"></div><button onclick="document.getElementById('ghost-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button></div>`; document.body.appendChild(modal); } const list = document.getElementById('ghost-modal-list'); list.innerHTML = ""; let ghosts = task.duplicateDays.map(g => typeof g === 'string' ? {date: g, time: task.time} : g); ghosts.sort((a,b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.time || "").localeCompare(b.time || "")); ghosts.forEach((g, index) => { const dFr = g.date.split('-').reverse().join('/'); list.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(128,128,128,0.08); border-radius:12px;"><span style="font-size: 0.95rem;">📅 <b>${dFr}</b> ${g.time ? `<span style="opacity:0.6; margin:0 5px;">|</span> ⏰ <b>${g.time}</b>` : ''}</span><button onclick="removeGhostDate('${task.id}', ${index})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:1.5rem; display:flex; align-items:center; line-height:1; padding:0 5px;">×</button></div>`; }); modal.style.display = 'flex'; }
+function openGhostModal(id) { const task = tasks.find(t => t.id === id); if(!task || !task.duplicateDays) return; let modal = document.getElementById('ghost-modal'); if(!modal) { modal = document.createElement('div'); modal.id = 'ghost-modal'; modal.className = 'modal modal-center'; modal.style.zIndex = "10005"; modal.innerHTML = `<div class="modal-content content-center" style="max-height: 75vh; overflow-y: auto; padding: 20px;"><h3 style="color: var(--primary); text-align: center; margin-bottom: 15px;">🗓️ Dates Prévues</h3><div id="ghost-modal-list" style="display: flex; flex-direction: column; gap: 10px;"></div><button onclick="document.getElementById('ghost-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button></div>`; document.body.appendChild(modal); } const list = document.getElementById('ghost-modal-list'); list.innerHTML = ""; let ghosts = task.duplicateDays.map(g => typeof g === 'string' ? {date: g, time: task.time} : g); ghosts.sort((a,b) => (a.date||"").localeCompare(b.date||"") !== 0 ? (a.date||"").localeCompare(b.date||"") : (a.time || "").localeCompare(b.time || "")); ghosts.forEach((g, index) => { const dFr = (g.date||"").split('-').reverse().join('/'); list.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(128,128,128,0.08); border-radius:12px;"><span style="font-size: 0.95rem;">📅 <b>${dFr}</b> ${g.time ? `<span style="opacity:0.6; margin:0 5px;">|</span> ⏰ <b>${g.time}</b>` : ''}</span><button onclick="removeGhostDate('${task.id}', ${index})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:1.5rem; display:flex; align-items:center; line-height:1; padding:0 5px;">×</button></div>`; }); modal.style.display = 'flex'; }
 function removeGhostDate(taskId, ghostIndex) { const task = tasks.find(t => t.id === taskId); if(task && task.duplicateDays) { let ghosts = task.duplicateDays.map(g => typeof g === 'string' ? {date: g, time: task.time} : g); ghosts.splice(ghostIndex, 1); db.collection("tasks").doc(taskId).update({ duplicateDays: ghosts }).then(() => { showToast("Date supprimée ! 🗑️"); openGhostModal(taskId); if(ghosts.length === 0) document.getElementById('ghost-modal').style.display='none'; }); } }
 
 // --- RENDER TASKS ---
@@ -1044,9 +1090,9 @@ function renderTasks() {
     const c = document.getElementById('task-list'); if (!c) return; c.innerHTML = ''; const now = new Date(); 
     let activeList = [], archiveList = []; tasks.forEach(t => { if(t.completed) { if(t.completedAtStr && t.completedAtStr !== todayStr) { archiveList.push(t); } else { activeList.push(t); } } else { activeList.push(t); } }); 
     let filteredList = (taskSubView === "active") ? activeList : archiveList; 
-    if (taskSubView === "archive") { const archiveSort = document.getElementById('archive-sort-filter').value; filteredList.sort((a,b) => { const dateA = a.completedAtStr || a.date, dateB = b.completedAtStr || b.date; if (archiveSort === 'desc') { if (dateA !== dateB) return dateB.localeCompare(dateA); return b.createdAt - a.createdAt; } else { if (dateA !== dateB) return dateA.localeCompare(dateB); return a.createdAt - b.createdAt; } }); } 
+    if (taskSubView === "archive") { const archiveSort = document.getElementById('archive-sort-filter').value; filteredList.sort((a,b) => { const dateA = a.completedAtStr || a.date || "", dateB = b.completedAtStr || b.date || ""; if (archiveSort === 'desc') { if (dateA !== dateB) return (dateB||"").localeCompare(dateA||""); return b.createdAt - a.createdAt; } else { if (dateA !== dateB) return (dateA||"").localeCompare(dateB||""); return a.createdAt - b.createdAt; } }); } 
     const isChronoSort = (taskSubView === "archive") || (document.getElementById('task-sort-filter') && document.getElementById('task-sort-filter').value === 'chrono');
-    if (taskSubView === "active") { const sortMode = document.getElementById('task-sort-filter') ? document.getElementById('task-sort-filter').value : 'chrono'; let imminentTasks = [], standardTasks = [], completedTodayTasks = []; filteredList.forEach(t => { t.currentDisplayDate = t.date; t.currentDisplayTime = t.time; if (!t.completed && t.duplicateDays && t.duplicateDays.length > 0) { let allOcc = [{date: t.date, time: t.time || ""}]; t.duplicateDays.forEach(g => { if (typeof g === 'string') allOcc.push({date: g, time: t.time || ""}); else allOcc.push(g); }); allOcc.sort((a,b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.time.localeCompare(b.time)); let futureOcc = allOcc.filter(o => o.date >= todayStr), currentOcc = futureOcc.length > 0 ? futureOcc[0] : allOcc[allOcc.length - 1]; t.currentDisplayDate = currentOcc.date; t.currentDisplayTime = currentOcc.time; } if(t.completed) { completedTodayTasks.push(t); return; } if(t.currentDisplayDate === todayStr && t.currentDisplayTime) { const [tHour, tMin] = t.currentDisplayTime.split(':').map(Number); const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0); const remainingMinutes = (taskTimeObj - now) / 60000; if(remainingMinutes > 0 && remainingMinutes <= 60) { t.isImminent = true; t.minutesLeft = Math.round(remainingMinutes); imminentTasks.push(t); return; } } t.isImminent = false; standardTasks.push(t); }); const chronoSort = (a, b) => { let dateA = a.currentDisplayDate || a.date, dateB = b.currentDisplayDate || b.date; if (dateA !== dateB) return dateA.localeCompare(dateB); let timeA = a.currentDisplayTime || "", timeB = b.currentDisplayTime || ""; if (!timeA) return -1; if (!timeB) return 1; return timeA.localeCompare(timeB); }; const creationSort = (a, b) => b.createdAt - a.createdAt; if (sortMode === 'chrono') { standardTasks.sort(chronoSort); completedTodayTasks.sort(chronoSort); } else { standardTasks.sort(creationSort); completedTodayTasks.sort(creationSort); } imminentTasks.sort((a,b) => a.minutesLeft - b.minutesLeft); filteredList = [...imminentTasks, ...standardTasks, ...completedTodayTasks]; } 
+    if (taskSubView === "active") { const sortMode = document.getElementById('task-sort-filter') ? document.getElementById('task-sort-filter').value : 'chrono'; let imminentTasks = [], standardTasks = [], completedTodayTasks = []; filteredList.forEach(t => { t.currentDisplayDate = t.date; t.currentDisplayTime = t.time; if (!t.completed && t.duplicateDays && t.duplicateDays.length > 0) { let allOcc = [{date: t.date, time: t.time || ""}]; t.duplicateDays.forEach(g => { if (typeof g === 'string') allOcc.push({date: g, time: t.time || ""}); else allOcc.push(g); }); allOcc.sort((a,b) => (a.date||"").localeCompare(b.date||"") !== 0 ? (a.date||"").localeCompare(b.date||"") : (a.time||"").localeCompare(b.time||"")); let futureOcc = allOcc.filter(o => o.date >= todayStr), currentOcc = futureOcc.length > 0 ? futureOcc[0] : allOcc[allOcc.length - 1]; t.currentDisplayDate = currentOcc.date; t.currentDisplayTime = currentOcc.time; } if(t.completed) { completedTodayTasks.push(t); return; } if(t.currentDisplayDate === todayStr && t.currentDisplayTime) { const [tHour, tMin] = t.currentDisplayTime.split(':').map(Number); const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0); const remainingMinutes = (taskTimeObj - now) / 60000; if(remainingMinutes > 0 && remainingMinutes <= 60) { t.isImminent = true; t.minutesLeft = Math.round(remainingMinutes); imminentTasks.push(t); return; } } t.isImminent = false; standardTasks.push(t); }); const chronoSort = (a, b) => { let dateA = a.currentDisplayDate || a.date || "", dateB = b.currentDisplayDate || b.date || ""; if (dateA !== dateB) return (dateA||"").localeCompare(dateB||""); let timeA = a.currentDisplayTime || "", timeB = b.currentDisplayTime || ""; if (!timeA) return -1; if (!timeB) return 1; return (timeA||"").localeCompare(timeB||""); }; const creationSort = (a, b) => b.createdAt - a.createdAt; if (sortMode === 'chrono') { standardTasks.sort(chronoSort); completedTodayTasks.sort(chronoSort); } else { standardTasks.sort(creationSort); completedTodayTasks.sort(creationSort); } imminentTasks.sort((a,b) => a.minutesLeft - b.minutesLeft); filteredList = [...imminentTasks, ...standardTasks, ...completedTodayTasks]; } 
     if(filteredList.length === 0) { c.innerHTML = `<p style="text-align:center; opacity:0.4; font-style:italic; margin-top:30px;">${taskSubView==='active'?'Aucune tâche active !':'Aucune archive ne correspond'}</p>`; return; } 
     let separatorDrawn = false; let lastDateRendered = null;
     filteredList.forEach(t => { 
@@ -1064,19 +1110,7 @@ function deleteTask(id) { db.collection("tasks").doc(id).delete().then(() => { s
 function editTask(id) { const task = tasks.find(t => t.id === id); if(task) { editingId = id; unlockModalFields(); if(document.getElementById('task-name')) document.getElementById('task-name').value = task.name; if(document.getElementById('task-desc')) document.getElementById('task-desc').value = task.desc || ""; if(document.getElementById('task-date')) document.getElementById('task-date').value = task.date; setCustomTime('task-time', task.time || ""); setSelectedRemindersToBadges(task.reminders || []); if(document.getElementById('task-importance')) document.getElementById('task-importance').value = task.importance; document.getElementById('modal-title').innerText = "Modifier la tâche"; document.getElementById('task-modal').style.display = 'flex'; } }
 function duplicateTask(id) { const task = tasks.find(t => t.id === id); if(task) { editingId = id; unlockModalFields(); if(document.getElementById('task-name')) document.getElementById('task-name').value = task.name; if(document.getElementById('task-desc')) document.getElementById('task-desc').value = task.desc || ""; if(document.getElementById('task-date')) document.getElementById('task-date').value = ""; setCustomTime('task-time', ""); if(document.getElementById('task-importance')) document.getElementById('task-importance').value = task.importance; setSelectedRemindersToBadges(task.reminders || []); if(document.getElementById('task-name')) document.getElementById('task-name').disabled = true; if(document.getElementById('task-desc')) document.getElementById('task-desc').disabled = true; if(document.getElementById('task-importance')) document.getElementById('task-importance').disabled = true; if(document.getElementById('date-input-label')) document.getElementById('date-input-label').innerText = "Nouvelle Date Prévue"; document.querySelectorAll('.reminder-badge').forEach(b => { b.style.pointerEvents = 'none'; b.classList.add('disabled-frozen'); }); document.getElementById('modal-title').innerText = "Dupliquer la tâche"; document.getElementById('task-modal').style.display = 'flex'; } }
 
-// --- RENDER CALENDAR ---
-function setViewState(s) { viewState = s; renderCalendar(); }
-function renderCalendar() { const c = document.getElementById('calendar-content'); const t = document.getElementById('calendar-title'); c.innerHTML = ''; if (!c) return; document.querySelectorAll('#calendar-page .bubble').forEach(b => b.classList.remove('active')); document.getElementById(`btn-${viewState}`).classList.add('active'); const btnBday = document.getElementById('btn-add-birthday'), legend = document.getElementById('calendar-legend'); if (viewState === 'day') { if (btnBday) btnBday.style.display = 'block'; if (legend) legend.style.display = 'flex'; } else { if (btnBday) btnBday.style.display = 'none'; if (legend) legend.style.display = 'none'; } if (viewState === 'year') { c.className = 'grid-years'; t.innerText = "Années"; for (let i = selectedYear - 4; i <= selectedYear + 4; i++) { const d = document.createElement('div'); d.className = `grid-item ${i === selectedYear ? 'selected' : ''}`; d.innerText = i; d.onclick = () => { selectedYear = i; setViewState('month'); }; c.appendChild(d); } } else if (viewState === 'month') { c.className = 'grid-months'; t.innerText = selectedYear; monthNames.forEach((n, i) => { const d = document.createElement('div'); d.className = `grid-item ${i === selectedMonth ? 'selected' : ''}`; d.innerText = n; d.onclick = () => { selectedMonth = i; setViewState('day'); }; c.appendChild(d); }); } else { c.className = 'calendar-grid'; t.innerText = `${monthNames[selectedMonth]} ${selectedYear}`; const days = new Date(selectedYear, selectedMonth + 1, 0).getDate(), yearHolidays = getFrenchHolidays(selectedYear); for (let i = 1; i <= days; i++) { const ds = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`, md = `${String(selectedMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`; const holiday = yearHolidays.find(h => h.date === ds), dayBirthdays = birthdays.filter(b => b.date.endsWith(md)); const myDayTasks = tasks.filter(tk => { if (tk.date === ds) return true; if (tk.duplicateDays) return tk.duplicateDays.some(g => (typeof g === 'string' ? g : g.date) === ds); return false; }); const friendDayTasks = sharedTasks.filter(tk => { if (tk.date === ds) return true; if (tk.duplicateDays) return tk.duplicateDays.some(g => (typeof g === 'string' ? g : g.date) === ds); return false; }); const totalTasks = [...myDayTasks, ...friendDayTasks]; let dayColors = []; if (totalTasks.length > 0) { const imps = totalTasks.map(tk => tk.importance); if(imps.includes('high')) dayColors.push('var(--danger)'); if(imps.includes('medium')) dayColors.push('var(--warning)'); if(imps.includes('low')) dayColors.push('var(--success)'); } if (holiday) dayColors.push('var(--holiday-color)'); if (dayBirthdays.length > 0) dayColors.push('var(--birthday-color)'); dayColors = [...new Set(dayColors)]; let bottomLineHtml = ''; if (dayColors.length > 0) { let bgStyle = ""; if (dayColors.length === 1) bgStyle = dayColors[0]; else { let stops = [], step = 100 / dayColors.length; dayColors.forEach((color, idx) => { stops.push(`${color} ${idx * step}%`, `${color} ${(idx+1) * step}%`); }); bgStyle = `linear-gradient(to right, ${stops.join(', ')})`; } bottomLineHtml = `<div style="position:absolute; bottom:0; left:0; width:100%; height:6px; background:${bgStyle}; border-radius: 0 0 10px 10px;"></div>`; } const div = document.createElement('div'); div.className = `day-card ${ds === todayStr ? 'is-today' : ''}`; let countHtml = ""; if(totalTasks.length > 0) countHtml = `<span style="position:absolute; top:4px; right:4px; font-size:0.65rem; font-weight:bold; color:var(--primary-dark); background:rgba(0, 206, 209, 0.15); border-radius:10px; padding:2px 5px;">+${totalTasks.length}</span>`; div.onclick = () => openCalendarDayModal(i, monthNames[selectedMonth], selectedYear, totalTasks, ds, holiday, dayBirthdays); div.innerHTML = `${countHtml}<span style="font-size:0.6rem; opacity:0.5; display:block; margin-top: ${totalTasks.length>0 ? '10px' : '4px'};">${dayInitials[new Date(selectedYear, selectedMonth, i).getDay()]}</span><b>${i}</b>${bottomLineHtml}`; c.appendChild(div); } } }
-function openCalendarDayModal(day, monthName, year, totalDayTasks, currentFullDate, holiday, dayBirthdays) { document.getElementById('cal-modal-date-title').innerText = `${day} ${monthName} ${year}`; const container = document.getElementById('cal-modal-tasks-container'); container.innerHTML = ''; if (holiday) container.innerHTML += `<div style="padding: 12px; border-radius: 12px; border-left: 6px solid var(--holiday-color); background: rgba(52, 152, 219, 0.05); margin-bottom: 5px;"><strong style="color:var(--holiday-color);">🏖️ ${holiday.name}</strong></div>`; if (dayBirthdays && dayBirthdays.length > 0) { dayBirthdays.forEach(b => { container.innerHTML += `<div style="padding: 12px; border-radius: 12px; border-left: 6px solid var(--birthday-color); background: rgba(232, 67, 147, 0.05); margin-bottom: 5px; display:flex; justify-content:space-between; align-items:center;"><strong style="color:var(--birthday-color);">🎂 Anniv. de ${b.name}</strong><button onclick="event.stopPropagation(); deleteBirthday('${b.id}')" style="background:none; border:none; color:var(--danger); font-size:1.2rem; cursor:pointer;">×</button></div>`; }); } if(totalDayTasks.length === 0 && !holiday && (!dayBirthdays || dayBirthdays.length === 0)) { container.innerHTML = '<p style="text-align:center; opacity:0.5; font-style:italic;">Rien de prévu</p>'; } else { totalDayTasks.forEach(t => { let specificTime = t.time, isCopy = false; if (t.date !== currentFullDate) { isCopy = true; let ghost = t.duplicateDays.find(g => (typeof g === 'string' ? g : g.date) === currentFullDate); if (ghost && ghost.time) specificTime = ghost.time; } const isCopyTag = isCopy ? ' <small style="opacity:0.6; font-size:0.75rem;">(Prévu 🗓️)</small>' : ''; const ownerTag = t.ownerName ? ` <small style="opacity:0.5; font-style:italic; margin-left:5px;">(par ${t.ownerName})</small>` : ''; container.innerHTML += `<div style="padding: 12px; border-radius: 12px; border-left: 6px solid var(--${t.importance === 'high'?'danger':t.importance==='medium'?'warning':'success'}); background: rgba(128,128,128,0.05); text-align:left;"><strong style="${t.completed ? 'text-decoration:line-through; opacity:0.5;' : ''}; word-break: break-word; overflow-wrap: anywhere;">${t.name}</strong>${ownerTag}${isCopyTag}${specificTime ? `<span style="float:right; font-size:0.85rem; opacity:0.7;">⏰ ${specificTime}</span>`:''}</div>`; }); } document.getElementById('calendar-day-modal').style.display = 'flex'; }
-
-// --- RENDER TODO ---
-function setTodoMode(m) { todoMode = m; renderTodo(); }
-function renderTodo() { const c = document.getElementById('todo-content'); if (!c) return; document.querySelectorAll('#todo-page .bubble').forEach(b => b.classList.remove('active')); if (todoMode === 'daily') document.getElementById('btn-daily').classList.add('active'); else if (todoMode === 'weekly') document.getElementById('btn-weekly').classList.add('active'); else if (todoMode === 'routine') document.getElementById('btn-routine').classList.add('active'); if(todoMode === 'daily') { document.getElementById('todo-today-date').innerText = new Date().toLocaleDateString('fr-FR', {weekday: 'long', day: 'numeric', month: 'long'}); c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container'); for (let h = 8; h <= 20; h++) { const currentHourStr = `${h.toString().padStart(2, '0')}:00`; let items = dailyTodo.filter(it => it.date === todayStr && parseInt(it.time.split(':')[0]) === h), weeklyItems = weeklyTodo.filter(it => parseInt(it.dayOfWeek) === currentDayOfWeek && parseInt(it.time.split(':')[0]) === h), routineItems = routineTodo.filter(it => parseInt(it.dayOfWeek) === currentDayOfWeek && parseInt(it.time.split(':')[0]) === h); let combinedItems = [...items, ...weeklyItems, ...routineItems]; combinedItems.sort((a,b) => a.time.localeCompare(b.time)); const hourCard = document.createElement('div'); hourCard.className = 'weekly-day-card'; hourCard.innerHTML = `<div class="weekly-day-header"><span class="weekly-day-title">${currentHourStr}</span><button onclick="openTodoModal('${h.toString().padStart(2,'0')}:00', false, 0, false)" class="weekly-add-btn">+</button></div><div class="weekly-subtasks">${combinedItems.map(it => { const isWeekly = it.hasOwnProperty('dayOfWeek') && !it.hasOwnProperty('isRoutine'), isRoutine = it.hasOwnProperty('isRoutine'); let checkFunc = `toggleTodo('${it.id}', ${it.completed})`, delFunc = `deleteDailyTodo('${it.id}')`, labelSuffix = ''; if (isWeekly) { checkFunc = `toggleWeeklyTodo('${it.id}', ${it.completed})`; delFunc = `deleteWeeklyTodo('${it.id}')`; labelSuffix = ' <small style="opacity:0.5;">(Hebdo)</small>'; } else if (isRoutine) { checkFunc = `toggleRoutineTodo('${it.id}', ${it.completed})`; delFunc = `deleteRoutineTodo('${it.id}')`; labelSuffix = ' <small style="opacity:0.5; color:var(--primary-dark);">(Type ⚙️)</small>'; } return `<div class="weekly-item"><span onclick="event.stopPropagation(); ${checkFunc}" style="cursor:pointer;" class="weekly-item-text ${it.completed ? 'todo-completed' : ''}"><b>${it.time}</b> : ${it.name}${labelSuffix}</span><div class="weekly-item-actions"><button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', ${(isWeekly || isRoutine)}, ${(isWeekly || isRoutine) ? it.dayOfWeek : 0}, ${isRoutine})" style="color:var(--primary);">✎</button><button onclick="${delFunc}" style="color:var(--danger);">×</button></div></div>`; }).join('') || '<span class="empty-subtasks-msg">Aucun événement</span>'}</div>`; wc.appendChild(hourCard); } } else if (todoMode === 'weekly') { document.getElementById('todo-today-date').innerText = "Planification Hebdomadaire"; c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container'); const presidentialOrder = [1, 2, 3, 4, 5, 6, 0]; presidentialOrder.forEach(dayNum => { let combinedTasks = [...weeklyTodo.filter(it => parseInt(it.dayOfWeek) === dayNum), ...routineTodo.filter(it => parseInt(it.dayOfWeek) === dayNum)]; combinedTasks.sort((a,b) => a.time.localeCompare(b.time)); const dayCard = document.createElement('div'); dayCard.className = 'weekly-day-card'; dayCard.innerHTML = `<div class="weekly-day-header"><span class="weekly-day-title">${dayNamesFr[dayNum]}</span><button onclick="openTodoModal('12:00', true, ${dayNum}, false)" class="weekly-add-btn">+</button></div><div class="weekly-subtasks">${combinedTasks.map(it => { const isRoutine = it.hasOwnProperty('isRoutine') || routineTodo.some(r => r.id === it.id); const checkFunc = isRoutine ? `toggleRoutineTodo('${it.id}', ${it.completed})` : `toggleWeeklyTodo('${it.id}', ${it.completed})`, delFunc = isRoutine ? `deleteRoutineTodo('${it.id}')` : `deleteWeeklyTodo('${it.id}')`; return `<div class="weekly-item"><span onclick="${checkFunc}" style="cursor:pointer;" class="weekly-item-text ${it.completed ? 'todo-completed' : ''}"><b>${it.time}</b> : ${it.name} ${isRoutine ? '<small style="opacity:0.5; color:var(--primary-dark);">(Type ⚙️)</small>':''}</span><div class="weekly-item-actions"><button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, ${isRoutine})" style="color:var(--primary);">✎</button><button onclick="${delFunc}" style="color:var(--danger);">×</button></div></div>`; }).join('') || '<span class="empty-subtasks-msg">Aucune activité planifiée</span>'}</div>`; wc.appendChild(dayCard); }); } else if (todoMode === 'routine') { document.getElementById('todo-today-date').innerText = "Configuration de la Semaine Type ⚙️"; c.innerHTML = '<div class="weekly-container"></div>'; const wc = c.querySelector('.weekly-container'); const presidentialOrder = [1, 2, 3, 4, 5, 6, 0]; presidentialOrder.forEach(dayNum => { const dayTasks = routineTodo.filter(it => parseInt(it.dayOfWeek) === dayNum); dayTasks.sort((a,b) => a.time.localeCompare(b.time)); const dayCard = document.createElement('div'); dayCard.className = 'weekly-day-card'; dayCard.innerHTML = `<div class="weekly-day-header"><span class="weekly-day-title">${dayNamesFr[dayNum]}</span><button onclick="openTodoModal('12:00', true, ${dayNum}, true)" class="weekly-add-btn">+</button></div><div class="weekly-subtasks">${dayTasks.map(it => `<div class="weekly-item"><span class="weekly-item-text"><b>${it.time}</b> : ${it.name}</span><div class="weekly-item-actions"><button onclick="editTodoItem('${it.id}', '${it.name}', '${it.time}', true, ${dayNum}, true)" style="color:var(--primary);">✎</button><button onclick="deleteRoutineTodo('${it.id}')" style="color:var(--danger);">×</button></div></div>`).join('') || '<span class="empty-subtasks-msg">Aucune tâche type définie</span>'}</div>`; wc.appendChild(dayCard); }); } }
-function openTodoModal(time, isWeeklyOrRoutine, dayNum = 1, isRoutine = false) { editingTodoId = null; setCustomTime('todo-time', time); document.getElementById('todo-task-name').value = ''; document.getElementById('todo-modal-title').innerText = isRoutine ? "Ajouter à la Semaine Type" : "Ajouter à la To-Do List"; if(isWeeklyOrRoutine) { document.getElementById('todo-day-selector-block').style.display = 'flex'; document.getElementById('todo-day-select').value = dayNum; } else { document.getElementById('todo-day-selector-block').style.display = 'none'; } document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeeklyOrRoutine && !isRoutine); document.getElementById('save-todo').setAttribute('data-routine-mode', isRoutine); document.getElementById('todo-modal').style.display = 'flex'; }
-function editTodoItem(id, name, time, isWeeklyOrRoutine, dayNum = 1, isRoutine = false) { editingTodoId = id; setCustomTime('todo-time', time); document.getElementById('todo-task-name').value = name; document.getElementById('todo-modal-title').innerText = isRoutine ? "Modifier la Semaine Type" : "Modifier la To-Do List"; if(isWeeklyOrRoutine) { document.getElementById('todo-day-selector-block').style.display = 'flex'; document.getElementById('todo-day-select').value = dayNum; } else { document.getElementById('todo-day-selector-block').style.display = 'none'; } document.getElementById('save-todo').setAttribute('data-weekly-mode', isWeeklyOrRoutine && !isRoutine); document.getElementById('save-todo').setAttribute('data-routine-mode', isRoutine); document.getElementById('todo-modal').style.display = 'flex'; }
-
-// --- EVENEMENTS CLICK (SAVE & MODALS) ---
-let btnSaveTask = document.getElementById('save-task'); if (btnSaveTask) { btnSaveTask.onclick = () => { const n = document.getElementById('task-name').value.trim(), dStr = document.getElementById('task-desc').value.trim(), singleDate = document.getElementById('task-date').value, time = getCustomTime('task-time'), imp = document.getElementById('task-importance').value, reminders = getSelectedRemindersFromBadges(); if(n && currentUser) { if(document.getElementById('modal-title').innerText === "Dupliquer la tâche" && editingId) { const task = tasks.find(t => t.id === editingId); if (task && singleDate) { let allOccurrences = [{date: task.date, time: task.time || ""}], currentGhosts = Array.isArray(task.duplicateDays) ? task.duplicateDays : []; currentGhosts.forEach(g => { allOccurrences.push(typeof g === 'string' ? {date: g, time: task.time} : g); }); allOccurrences.push({date: singleDate, time: time}); allOccurrences.sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : (a.time || "").localeCompare(b.time || "")); let nextMain = allOccurrences.shift(); db.collection("tasks").doc(editingId).update({ date: nextMain.date, time: nextMain.time || "", desc: task.desc || "", duplicateDays: allOccurrences }); editingId = null; showToast("Date planifiée avec succès ! 🗓️"); } } else if(editingId && singleDate) { db.collection("tasks").doc(editingId).update({ name: n, desc: dStr, date: singleDate, time: time, reminders: reminders, importance: imp }); editingId = null; showToast("Tâche modifiée ! ✎"); } else if (singleDate) { db.collection("tasks").add({ name: n, desc: dStr, date: singleDate, time: time, reminders: reminders, importance: imp, completed: false, userId: currentUser.uid, createdAt: Date.now(), duplicateDays: [] }); showToast("Tâche enregistrée ! ✨"); } unlockModalFields(); document.getElementById('task-modal').style.display = 'none'; } }; }
+let btnSaveTask = document.getElementById('save-task'); if (btnSaveTask) { btnSaveTask.onclick = () => { const n = document.getElementById('task-name').value.trim(), dStr = document.getElementById('task-desc').value.trim(), singleDate = document.getElementById('task-date').value, time = getCustomTime('task-time'), imp = document.getElementById('task-importance').value, reminders = getSelectedRemindersFromBadges(); if(n && currentUser) { if(document.getElementById('modal-title').innerText === "Dupliquer la tâche" && editingId) { const task = tasks.find(t => t.id === editingId); if (task && singleDate) { let allOccurrences = [{date: task.date, time: task.time || ""}], currentGhosts = Array.isArray(task.duplicateDays) ? task.duplicateDays : []; currentGhosts.forEach(g => { allOccurrences.push(typeof g === 'string' ? {date: g, time: task.time} : g); }); allOccurrences.push({date: singleDate, time: time}); allOccurrences.sort((a, b) => (a.date||"").localeCompare(b.date||"") !== 0 ? (a.date||"").localeCompare(b.date||"") : (a.time || "").localeCompare(b.time || "")); let nextMain = allOccurrences.shift(); db.collection("tasks").doc(editingId).update({ date: nextMain.date, time: nextMain.time || "", desc: task.desc || "", duplicateDays: allOccurrences }); editingId = null; showToast("Date planifiée avec succès ! 🗓️"); } } else if(editingId && singleDate) { db.collection("tasks").doc(editingId).update({ name: n, desc: dStr, date: singleDate, time: time, reminders: reminders, importance: imp }); editingId = null; showToast("Tâche modifiée ! ✎"); } else if (singleDate) { db.collection("tasks").add({ name: n, desc: dStr, date: singleDate, time: time, reminders: reminders, importance: imp, completed: false, userId: currentUser.uid, createdAt: Date.now(), duplicateDays: [] }); showToast("Tâche enregistrée ! ✨"); } unlockModalFields(); document.getElementById('task-modal').style.display = 'none'; } }; }
 let btnSaveTodo = document.getElementById('save-todo'); if (btnSaveTodo) { btnSaveTodo.onclick = () => { const n = document.getElementById('todo-task-name').value.trim(), t = getCustomTime('todo-time'), isWeekly = document.getElementById('save-todo').getAttribute('data-weekly-mode') === 'true', isRoutine = document.getElementById('save-todo').getAttribute('data-routine-mode') === 'true'; if(n && t && currentUser) { let targetCollection = "dailyTodo"; if (isWeekly) targetCollection = "weeklyTodo"; else if (isRoutine) targetCollection = "routineTodo"; if(editingTodoId) { let updateData = { name: n, time: t }; if(isWeekly || isRoutine) updateData.dayOfWeek = document.getElementById('todo-day-select').value; db.collection(targetCollection).doc(editingTodoId).update(updateData).then(() => { showToast(isRoutine ? "Semaine type modifiée ! ⚙️" : "Activité modifiée ! ✎"); }); editingTodoId = null; } else { if(isRoutine) { db.collection("routineTodo").add({ name: n, time: t, dayOfWeek: document.getElementById('todo-day-select').value, completed: false, isRoutine: true, userId: currentUser.uid }).then(() => { showToast("Ajouté à la semaine type ! ⚙️"); }); } else if(isWeekly) { db.collection("weeklyTodo").add({ name: n, time: t, dayOfWeek: document.getElementById('todo-day-select').value, completed: false, userId: currentUser.uid }).then(() => { showToast("Activité hebdomadaire ajoutée ! 🗓️"); }); } else { db.collection("dailyTodo").add({ name: n, time: t, date: todayStr, completed: false, userId: currentUser.uid }).then(() => { showToast("Activité ajoutée ! ✨"); }); } } document.getElementById('todo-modal').style.display = 'none'; document.getElementById('todo-task-name').value = ''; } }; }
 let btnSaveBirthday = document.getElementById('save-birthday'); if (btnSaveBirthday) { btnSaveBirthday.onclick = () => { const n = document.getElementById('birthday-name').value.trim(), d = document.getElementById('birthday-date').value; if (n && d && currentUser) { db.collection("birthdays").add({ name: n, date: d, userId: currentUser.uid, createdAt: Date.now() }).then(() => { showToast("Anniversaire enregistré ! 🎂"); document.getElementById('birthday-modal').style.display = 'none'; }); } }; }
 let btnAddTask = document.getElementById('add-task-btn'); if (btnAddTask) { btnAddTask.onclick = () => { editingId = null; unlockModalFields(); if(document.getElementById('task-name')) document.getElementById('task-name').value = ""; if(document.getElementById('task-desc')) document.getElementById('task-desc').value = ""; setCustomTime('task-time', ""); setSelectedRemindersToBadges([]); if(document.getElementById('task-date')) document.getElementById('task-date').value = todayStr; document.getElementById('modal-title').innerText = "Nouvelle Tâche"; document.getElementById('task-modal').style.display = 'flex'; }; }
@@ -1099,13 +1133,11 @@ function addGlobalFriend() {
 
     const code = inputField.value.trim().toUpperCase(); 
     
-    // 1. Sécurité : Vérifier si le champ est vide
     if(!code) {
         showToast("Veuillez saisir un code ! ⚠️");
         return;
     }
 
-    // 2. Sécurité : Empêcher de s'ajouter soi-même (évite le bug silencieux)
     if(code === myAgendaCode) {
         showToast("Vous ne pouvez pas vous ajouter vous-même ! 😅");
         return; 
@@ -1121,17 +1153,14 @@ function addGlobalFriend() {
         let friendData = friendDoc.data(); 
         let friendName = friendData.nickname || "Inconnu"; 
         
-        // 3. Sécurité : Vérifier s'il est déjà dans la liste
         if(friends.some(f => f.uid === friendUid)) { 
             showToast("Cet ami est déjà dans votre liste ! 🤝"); 
             return; 
         } 
         
-        // 4. On l'ajoute de NOTRE côté
         friends.push({uid: friendUid, nickname: friendName}); 
         db.collection("users").doc(currentUser.uid).update({following: friends}).then(() => {
             
-            // 5. AJOUT RÉCIPROQUE : On s'ajoute de SON côté (avec sécurité anti-crash)
             let theirFriends = friendData.following || [];
             if(!theirFriends.some(f => f.uid === currentUser.uid)) {
                 theirFriends.push({uid: currentUser.uid, nickname: userNickname || "Inconnu"});
