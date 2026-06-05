@@ -1,42 +1,47 @@
-// --- CONFIGURATION FIREBASE PROD ---
-const firebaseConfig = {
-  apiKey: "AIzaSyAVkf6PEZnPWLrS1smnau0J6k3ZE1wGX-4",
-  authDomain: "listme-2620d.firebaseapp.com",
-  projectId: "listme-2620d",
-  storageBucket: "listme-2620d.firebasestorage.app",
-  messagingSenderId: "145966801688",
-  appId: "1:145966801688:web:34638000fbafaff5bd346d",
-  measurementId: "G-ERX6N3R6XK"
-};
+const firebaseConfig = { apiKey: "AIzaSyAVkf6PEZnPWLrS1smnau0J6k3ZE1wGX-4", authDomain: "listme-2620d.firebaseapp.com", projectId: "listme-2620d", storageBucket: "listme-2620d.firebasestorage.app", messagingSenderId: "145966801688", appId: "1:145966801688:web:34638000fbafaff5bd346d", measurementId: "G-ERX6N3R6XK" };
+firebase.initializeApp(firebaseConfig); const db = firebase.firestore(), auth = firebase.auth();
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore(), auth = firebase.auth();
-
-// --- VARIABLES D'ÉTAT LOCALES ---
 let tasks = [], sharedTasks = [], dailyTodo = [], weeklyTodo = [], routineTodo = [], birthdays = [];
-let shoppingItems = []; 
-let mySharedLists = []; 
-let customShoppingCards = []; 
-let friends = []; 
-let friendUnsubscribes = {};
+let shoppingItems = [], mySharedLists = [], customShoppingCards = [], friends = [], friendUnsubscribes = {};
 let unsubscribeUser, sharedListsUnsubscribe, shoppingItemsUnsubscribe;
 let currentUser = null, userNickname = "", hasShownWelcomeThisSession = false, taskSubView = "active"; 
-let currentShoppingListId = "personal"; 
-let myAgendaCode = ""; 
-
-window.currentListMemberNames = {}; // Utilisé pour stocker les pseudos des participants de la liste active
-
-// --- VARIABLES DE CONTRÔLE ET RECHERCHE ---
-let currentShoppingPath = []; 
-let currentShareMode = 'agenda';
-let isArchiving = false;
-let shoppingSearchQuery = ""; 
-
-let currentTheme = localStorage.getItem('listme_theme') || 'pink', viewState = 'day', todoMode = 'daily', editingId = null, editingTodoId = null; 
+let currentShoppingListId = "personal", myAgendaCode = "", currentShoppingPath = [], currentShareMode = 'agenda';
+let isArchiving = false, shoppingSearchQuery = "", editingId = null, editingTodoId = null; 
+let currentTheme = localStorage.getItem('listme_theme') || 'pink', viewState = 'day', todoMode = 'daily'; 
 let selectedYear = new Date().getFullYear(), selectedMonth = new Date().getMonth();
-let todayStr = new Date().toISOString().split('T')[0];
-let lastCheckedDayStr = todayStr;
+let todayStr = new Date().toISOString().split('T')[0], lastCheckedDayStr = todayStr;
 const currentDayOfWeek = new Date().getDay();
 const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 const dayInitials = ["D", "L", "M", "M", "J", "V", "S"], dayNamesFr = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+
+window.currentListMemberNames = {};
 document.body.className = `theme-${currentTheme}`;
+
+const foodCategories = {
+    "🥩 Viandes": { "Volailles": { "Poulet": ["Entier (Poulet)", "Filet (Poulet)", "Cuisse (Poulet)", "Pilon (Poulet)", "Aiguillette (Poulet)"], "Dinde": ["Escalope (Dinde)", "Filet (Dinde)", "Rôti (Dinde)", "Cuisse (Dinde)"], "Canard": ["Magret (Canard)", "Cuisse (Canard)", "Entier (Canard)", "Aiguillette (Canard)"] }, "Bœuf": ["Steak haché (Bœuf)", "Entrecôte (Bœuf)", "Faux-filet (Bœuf)", "Bavette (Bœuf)", "Onglet (Bœuf)", "Rôti (Bœuf)", "Paleron (Bœuf)", "Macreuse (Bœuf)"], "Porc": ["Côtes (Porc)", "Lardons (Porc)", "Poitrine fumée (Porc)", "Filet mignon (Porc)", "Rôti (Porc)", "Échine (Porc)"], "Veau": ["Escalope (Veau)", "Rôti (Veau)", "Paupiettes (Veau)", "Côtes (Veau)", "Tendron (Veau)", "Épaule (Veau)"], "Agneau": ["Côtelettes (Agneau)", "Gigot (Agneau)", "Épaule (Agneau)", "Souris (Agneau)", "Collier (Agneau)"] },
+    "🐟 Poissons": { "Poissons Frais": ["Saumon", "Cabillaud", "Merlu", "Dorade", "Thon"], "Fruits de Mer": { "Coquillages": ["Moules", "Huîtres", "Coquilles Saint-Jacques", "Palourdes"], "Crustacés": ["Crevettes", "Langoustines", "Crabe", "Homard"] } },
+    "🥦 Légumes": { "Légumes": ["Carottes", "Tomates", "Pommes de terre", "Oignons", "Salade", "Courgettes", "Poireaux", "Concombres", "Poivrons", "Épinards", "Brocolis", "Chou-fleur", "Haricots verts", "Petits pois", "Radis", "Champignons", "Aubergines", "Asperges", "Céleri", "Ail", "Échalotes", "Navets", "Chou de Bruxelles"], "Courges": ["Potiron", "Butternut", "Potimarron", "Citrouille", "Courge spaghetti", "Pâtisson"], "Herbes diverses": ["Persil", "Ciboulette", "Basilic", "Menthe", "Coriandre", "Thym", "Romarin", "Aneth"] },
+    "🍎 Fruits": { "Fruits": ["Pommes", "Bananes", "Oranges", "Citrons", "Kiwis", "Poires", "Pêches", "Nectarines", "Abricots", "Melons", "Pastèques", "Prunes", "Raisins", "Clémentines", "Pamplemousses", "Figues", "Mandarines"], "Fruits rouges": ["Fraises", "Framboises", "Myrtilles", "Mûres", "Cerises", "Groseilles", "Cassis"], "Fruits exotiques": ["Ananas", "Mangue", "Fruit de la passion", "Litchi", "Noix de coco", "Avocats", "Grenades", "Papayes", "Kaki"] },
+    "🧀 Laitages": { "Fromages": ["Emmental râpé", "Camembert", "Chèvre", "Raclette", "Mozzarella", "Comté", "Roquefort", "Brie", "Coulommiers", "Reblochon", "Cantal", "Gouda", "Parmesan", "Feta", "Boursin", "Kiri", "Tartare", "Tomme de Savoie", "Saint-Nectaire", "Gruyère"], "Crèmerie": ["Lait demi-écrémé", "Beurre doux", "Beurre salé", "Crème fraîche", "Oeufs"], "Desserts": ["Yaourts nature", "Yaourts aux fruits", "Crèmes dessert"] },
+    "🍝 Épicerie Salée": { "Féculents": ["Riz", "Lentilles", "Quinoa", "Semoule"], "Pâtes": ["Coquillettes", "Spaghetti", "Penne", "Macaroni", "Tagliatelles", "Farfalle", "Fusilli", "Nouilles", "Linguine", "Cannelloni", "Vermicelles", "Crozets", "Rigatoni", "Orecchiette", "Pappardelle"], "Conserves": ["Sauce tomate", "Haricots verts", "Thon en boîte", "Maïs"], "Condiments": ["Huile d'olive", "Vinaigre", "Sel", "Poivre", "Moutarde", "Mayonnaise", "Ketchup", "Sauce Barbecue", "Sauce Burger", "Sauce Béarnaise", "Sauce Soja"] },
+    "🥨 Apéritif": { "Chips & Snacks": ["Chips", "Pringles", "Cacahuètes", "Pistaches", "Noix de cajou", "Olives", "Biscuits apéritifs", "Chips paysannes", "Doritos", "Curly"], "Tartinables": ["Tapenade", "Guacamole", "Houmous"] },
+    "🍪 Épicerie Sucrée": { "Petit-déjeuner": ["Céréales", "Confiture", "Pâte à tartiner", "Café", "Thé"], "Goûter": ["Gâteaux", "Chocolat", "Biscuits", "Bonbons"] },
+    "❄️ Surgelés": { "Légumes": ["Frites", "Poêlée de légumes", "Épinards", "Haricots verts"], "Plats": ["Plat préparé", "Bâtonnets de poisson", "Lasagnes"], "Pizzas": ["Pizza 4 fromages", "Pizza Margherita", "Pizza Royale"], "Glaces": ["Bacs de glace", "Cônes", "Bâtonnets", "Sorbets"] },
+    "🥤 Boissons": { "Eaux": ["Eau plate", "Eau gazeuse"], "Jus": ["Jus d'orange", "Jus de pomme", "Multifruits", "Jus de raisin", "Jus d'ananas", "Jus de pamplemousse", "Jus de tomate", "Jus de clémentine", "Jus de mandarine", "Jus de mangue", "Nectar d'abricot", "Nectar de poire", "Jus de grenade", "Jus de citron"], "Sirops": ["Sirop de grenadine", "Sirop de menthe", "Sirop de fraise", "Sirop de pêche", "Sirop de citron", "Sirop d'orgeat", "Sirop de cassis", "Sirop de framboise", "Sirop de cerise", "Sirop de kiwi", "Sirop de pamplemousse", "Sirop de menthe glaciale", "Sirop de violette"], "Sodas": ["Coca-Cola", "Limonade", "Ice Tea", "Orangina", "Fanta", "Oasis", "7Up", "Sprite", "Schweppes", "Red Bull"] },
+    "🍷 Cave": { "Vins": ["Vin rouge", "Vin blanc", "Vin rosé"], "Bières": ["Desperados", "Corona", "Skøll", "Bière blonde", "Bière blanche", "Bière brune", "Pack de bières"], "Spiritueux": ["Ricard", "Pastis", "Rhum", "Vodka", "Whisky", "Gin", "Tequila", "Get 27", "Baileys", "Cognac", "Martini"] },
+    "🥖 Boulangerie": { "Pains": ["Baguette", "Baguette tradition", "Pain de mie", "Pain de campagne", "Pain complet", "Pain aux céréales", "Pains Burger (Buns)", "Pains Pita", "Wraps"], "Viennoiseries": ["Croissants", "Pains au chocolat", "Brioches", "Chaussons aux pommes", "Pains aux raisins", "Chouquettes", "Pains au lait", "Croissants aux amandes"], "Pâtisserie": ["Tarte aux pommes", "Éclair au chocolat", "Mille-feuille", "Paris-Brest", "Flan parisien", "Religieuse", "Tarte au citron", "Fraisier"], "Aide à la pâtisserie": ["Farine", "Sucre", "Levure", "Extrait de vanille", "Pépites de chocolat"] },
+    "🥓 Charcuterie": ["Jambon blanc", "Saucisson", "Chorizo", "Pâté", "Lardons", "Saucisses"],
+    "👶 Bébé": { "Repas": ["Lait en poudre", "Petits pots salés", "Compotes"], "Change & Soin": ["Couches", "Lingettes", "Coton", "Liniment"] },
+    "🐾 Animaux": { "Chiens": ["Croquettes chien", "Pâtée chien", "Friandises chien"], "Chats": ["Croquettes chat", "Pâtée chat", "Litière"], "Rongeurs": ["Foin", "Granulés cobaye", "Litière chanvre"], "Oiseaux": ["Graines oiseaux", "Millet", "Fond de cage"], "Poissons": ["Flocons", "Granulés", "Filtre"] },
+    "🧴 Soin & Beauté": { "Douche & Cheveux": ["Gel douche", "Shampoing", "Après-shampoing", "Savon"], "Hygiène & Visage": ["Dentifrice", "Brosse à dents", "Déodorant", "Crème visage", "Coton-tiges"] },
+    "🧻 Entretien & Hygiène": { "Papier": ["Papier toilette", "Sopalin", "Mouchoirs"], "Ménage": ["Liquide vaisselle", "Lessive", "Adoucissant", "Éponge", "Nettoyant sol", "Javel"] }
+};
+
+function getCustomTime(prefix) { let h = document.getElementById(prefix + '-h'), m = document.getElementById(prefix + '-m'); if(!h || !m) return ""; let hVal = h.value.trim(), mVal = m.value.trim(); if(hVal) return `${hVal.padStart(2, '0')}:${mVal ? mVal.padStart(2, '0') : "00"}`; return ""; }
+function setCustomTime(prefix, timeStr) { let h = document.getElementById(prefix + '-h'), m = document.getElementById(prefix + '-m'); if(!h || !m) return; if(timeStr) { let p = timeStr.split(':'); h.value = p[0]; m.value = p[1]; } else { h.value = ""; m.value = ""; } }
+function disableCustomTime(prefix, disable) { let h = document.getElementById(prefix + '-h'), m = document.getElementById(prefix + '-m'); if(h) h.disabled = disable; if(m) m.disabled = disable; }
+function getFrenchHolidays(year) { const holidays = []; const addDate = (m, d, name) => holidays.push({ date: `${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`, name: name }); addDate(1, 1, "Jour de l'An"); addDate(5, 1, "Fête du Travail"); addDate(5, 8, "Victoire 1945"); addDate(7, 14, "Fête Nationale"); addDate(8, 15, "Assomption"); addDate(11, 1, "Toussaint"); addDate(11, 11, "Armistice 1918"); addDate(12, 25, "Noël"); const a = year % 19, b = Math.floor(year / 100), c = year % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), n0 = (h + l + 7 * m + 114), n = Math.floor(n0 / 31) - 1, p = n0 % 31 + 1; let easter = new Date(year, n, p); let lundiPaques = new Date(easter); lundiPaques.setDate(easter.getDate() + 1); addDate(lundiPaques.getMonth() + 1, lundiPaques.getDate(), "Lundi de Pâques"); let ascension = new Date(easter); ascension.setDate(easter.getDate() + 39); addDate(ascension.getMonth() + 1, ascension.getDate(), "Ascension"); let lundiPentecote = new Date(easter); lundiPentecote.setDate(easter.getDate() + 50); addDate(lundiPentecote.getMonth() + 1, lundiPentecote.getDate(), "Lundi de Pentecôte"); return holidays; }
+function showToast(message) { const toast = document.getElementById('toast-notification'); if (!toast) return; toast.innerText = message; toast.className = "toast-show"; setTimeout(() => { toast.className = "toast-hidden"; }, 3000); }
+function unlockModalFields() { const nameF = document.getElementById('task-name'), descF = document.getElementById('task-desc'), impF = document.getElementById('task-importance'), labelF = document.getElementById('date-input-label'); if(nameF) nameF.disabled = false; if(descF) descF.disabled = false; if(impF) impF.disabled = false; if(labelF) labelF.innerText = "Date"; disableCustomTime('task-time', false); disableCustomTime('todo-time', false); document.querySelectorAll('.reminder-badge').forEach(b => { b.style.pointerEvents = 'auto'; b.classList.remove('disabled-frozen'); }); const duplicateTags = document.getElementById('duplicate-dates-tags'); if(duplicateTags) duplicateTags.innerHTML = ""; }
+function getSelectedRemindersFromBadges() { let activeReminders = []; document.querySelectorAll('.reminder-badge.active').forEach(b => activeReminders.push(b.getAttribute('data-value'))); return activeReminders; }
+function setSelectedRemindersToBadges(remindersArray) { document.querySelectorAll('.reminder-badge').forEach(b => { if(remindersArray && remindersArray.includes(b.getAttribute('data-value'))) b.classList.add('active'); else b.classList.remove('active'); }); }
