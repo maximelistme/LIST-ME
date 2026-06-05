@@ -24,7 +24,7 @@ let currentUser = null, userNickname = "", hasShownWelcomeThisSession = false, t
 let currentShoppingListId = "personal"; 
 let myAgendaCode = ""; 
 
-window.currentListMemberNames = {}; // Utilisé pour stocker les pseudos des participants de la liste active
+window.currentListMemberNames = {};
 
 // --- VARIABLES DE CONTRÔLE ET RECHERCHE ---
 let currentShoppingPath = []; 
@@ -425,8 +425,7 @@ function openShoppingItemModal(identifier, isCustom) {
     units.forEach(u => {
         let opt = document.createElement('option'); opt.value = u.v; opt.innerText = u.l; unitSelect.appendChild(opt);
     });
-    
-    // Affichage conditionnel du menu d'assignation
+
     const assignContainer = document.getElementById('assignee-container');
     const assignSelect = document.getElementById('shopping-assignee');
     if(assignContainer && assignSelect) {
@@ -450,11 +449,11 @@ function openShoppingItemModal(identifier, isCustom) {
             }
         }
     }
+
     document.getElementById('shopping-item-modal').style.display = 'flex';
     currentShoppingPath = []; renderShoppingCategories();
 }
 
-// Helper pour trouver automatiquement le rayon d'un produit dans le dictionnaire
 function findRayonForProduct(productName) {
     if (!productName) return "✨ Produits Custom / Autres";
     const pLower = productName.toLowerCase();
@@ -466,11 +465,10 @@ function findRayonForProduct(productName) {
     return "✨ Produits Custom / Autres";
 }
 
-// Helper pour formater le nom du créateur pour l'algorithme de tri
 function itemOwnerNameForSort(item) {
     if (currentShoppingListId === 'personal') return 'Moi';
     if (item.assignedToName) return item.assignedToName;
-    if (item.userId === currentUser.uid) return 'A_Moi'; // Force "Moi" en haut du tri alphabétique
+    if (item.userId === currentUser.uid) return 'A_Moi'; 
     return item.ownerName || 'Z_Inconnu';
 }
 
@@ -519,12 +517,10 @@ function scrollToShoppingList() {
     if (listHeader) { listHeader.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 }
 
-// --- LOGIQUE MULTI-ONGLETS MARQUE-PAGE & SYNCHRONISATION ---
 function renderShoppingTabs() {
     const container = document.getElementById('shopping-tabs-dynamic');
     if (!container) return;
     
-    // Gestion conditionnelle de l'option de tri "Personne"
     const ownerOpt = document.getElementById('sort-opt-owner');
     const sortSelect = document.getElementById('shopping-sort-filter');
     if (ownerOpt && sortSelect) {
@@ -547,7 +543,6 @@ function renderShoppingTabs() {
 
     container.innerHTML = '';
 
-    // 1. Onglet Personnel
     const personalBtn = document.createElement('button');
     personalBtn.className = `sub-menu-tab ${currentShoppingListId === 'personal' ? 'active' : ''}`;
     personalBtn.style.cssText = currentShoppingListId === 'personal' 
@@ -557,7 +552,6 @@ function renderShoppingTabs() {
     personalBtn.onclick = () => switchShoppingListTab("personal");
     container.appendChild(personalBtn);
 
-    // 2. Onglets Partagés Dynamiques
     mySharedLists.forEach(list => {
         const listBtn = document.createElement('button');
         listBtn.className = `sub-menu-tab ${currentShoppingListId === list.id ? 'active' : ''}`;
@@ -609,12 +603,12 @@ async function updateParticipantsDisplay() {
                                 names.push(doc.data().nickname);
                                 window.currentListMemberNames[uid] = doc.data().nickname;
                             } else {
-                                names.push("Un membre");
-                                window.currentListMemberNames[uid] = "Un membre";
+                                names.push("Invité");
+                                window.currentListMemberNames[uid] = "Invité";
                             }
                         } catch(e) {
-                            names.push("Un membre");
-                            window.currentListMemberNames[uid] = "Un membre";
+                            names.push("Invité");
+                            window.currentListMemberNames[uid] = "Invité";
                         }
                     }
                 }
@@ -658,7 +652,6 @@ function renderShoppingList() {
         const scrollUpBtn = document.getElementById('shopping-scroll-up-btn');
         if (!c) return; c.innerHTML = '';
 
-        // --- LOGIQUE COMPLÈTE DE TRI FILTRÉ DYNAMIQUE ---
         const sortVal = document.getElementById('shopping-sort-filter') ? document.getElementById('shopping-sort-filter').value : 'date';
         
         if (sortVal === 'alpha') {
@@ -678,7 +671,6 @@ function renderShoppingList() {
                 return (a.name || "").localeCompare(b.name || "", 'fr', {sensitivity: 'base'});
             });
         } else {
-            // 'date' (par défaut)
             shoppingItems.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
         }
 
@@ -706,7 +698,6 @@ function renderShoppingList() {
 
         let lastRayonRendered = null;
 
-        // Rendu des produits actifs
         actives.forEach(item => {
             if (sortVal === 'rayon') {
                 const itemRayon = findRayonForProduct(item.name);
@@ -742,7 +733,6 @@ function renderShoppingList() {
             </div>`;
         }
 
-        // Rendu des produits cochés
         completeds.forEach(item => {
             const d = document.createElement('div'); d.className = `task-card completed-bubble`; 
             const nameToDisplay = item.name || "Produit";
@@ -778,7 +768,6 @@ function scrollToTopShopping() {
     if (marketHeader) { marketHeader.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 }
 
-// --- CREATION & REJOINDRE DES GROUPES DE COURSES MULTIPLES ---
 function openCustomShoppingListShareModal() {
     document.getElementById('new-shared-list-name').value = '';
     document.getElementById('join-shared-list-code').value = '';
@@ -788,8 +777,8 @@ function openCustomShoppingListShareModal() {
             mySharedLists = [];
             snap.forEach(doc => { let d = doc.data(); d.id = doc.id; mySharedLists.push(d); });
             renderMySharedListsInModal();
-            renderFriendsCheckboxesForNewList();
             renderShoppingTabs();
+            renderFriendsCheckboxesForNewList();
         }).catch(err => {
             showToast("Erreur de chargement: " + err.message);
         });
@@ -870,7 +859,7 @@ function createNewSharedShoppingList() {
         renderShoppingTabs();
         renderShoppingCategories();
         syncCurrentShoppingItems();
-        if(typeof updateParticipantsDisplay === 'function') updateParticipantsDisplay();
+        if (typeof updateParticipantsDisplay === 'function') updateParticipantsDisplay();
         renderMySharedListsInModal();
         
     }).catch(error => {
@@ -1052,7 +1041,7 @@ function copyShareCode() { const code = document.getElementById('my-share-code')
 
 function renderFriendsList() { 
     const container = document.getElementById('friends-list-container'); if(!container) return; 
-    if (friends.length === 0) { container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; margin-top: 10px; text-align: center; width: 100%;'>Aucun agenda lié pour le moment.</p>`; return; }
+    if (friends.length === 0) { container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center; width: 100%;'>Aucun agenda lié pour le moment.</p>`; return; }
     container.innerHTML = friends.map(f => `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; margin-top:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;"><span style="font-weight:bold; color:var(--primary-dark);">👤 ${f.nickname}</span><button onclick="removeFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:bold;">Retirer</button></div>`).join(''); 
 }
 
@@ -1090,9 +1079,9 @@ function renderTasks() {
     const c = document.getElementById('task-list'); if (!c) return; c.innerHTML = ''; const now = new Date(); 
     let activeList = [], archiveList = []; tasks.forEach(t => { if(t.completed) { if(t.completedAtStr && t.completedAtStr !== todayStr) { archiveList.push(t); } else { activeList.push(t); } } else { activeList.push(t); } }); 
     let filteredList = (taskSubView === "active") ? activeList : archiveList; 
-    if (taskSubView === "archive") { const archiveSort = document.getElementById('archive-sort-filter').value; filteredList.sort((a,b) => { const dateA = a.completedAtStr || a.date || "", dateB = b.completedAtStr || b.date || ""; if (archiveSort === 'desc') { if (dateA !== dateB) return (dateB||"").localeCompare(dateA||""); return b.createdAt - a.createdAt; } else { if (dateA !== dateB) return (dateA||"").localeCompare(dateB||""); return a.createdAt - b.createdAt; } }); } 
+    if (taskSubView === "archive") { const archiveSort = document.getElementById('archive-sort-filter').value; filteredList.sort((a,b) => { const dateA = a.completedAtStr || a.date || "", dateB = b.completedAtStr || b.date || ""; if (archiveSort === 'desc') { if (dateA !== dateB) return (dateB || "").localeCompare(dateA || ""); return b.createdAt - a.createdAt; } else { if (dateA !== dateB) return (dateA || "").localeCompare(dateB || ""); return a.createdAt - b.createdAt; } }); } 
     const isChronoSort = (taskSubView === "archive") || (document.getElementById('task-sort-filter') && document.getElementById('task-sort-filter').value === 'chrono');
-    if (taskSubView === "active") { const sortMode = document.getElementById('task-sort-filter') ? document.getElementById('task-sort-filter').value : 'chrono'; let imminentTasks = [], standardTasks = [], completedTodayTasks = []; filteredList.forEach(t => { t.currentDisplayDate = t.date; t.currentDisplayTime = t.time; if (!t.completed && t.duplicateDays && t.duplicateDays.length > 0) { let allOcc = [{date: t.date, time: t.time || ""}]; t.duplicateDays.forEach(g => { if (typeof g === 'string') allOcc.push({date: g, time: t.time || ""}); else allOcc.push(g); }); allOcc.sort((a,b) => (a.date||"").localeCompare(b.date||"") !== 0 ? (a.date||"").localeCompare(b.date||"") : (a.time||"").localeCompare(b.time||"")); let futureOcc = allOcc.filter(o => o.date >= todayStr), currentOcc = futureOcc.length > 0 ? futureOcc[0] : allOcc[allOcc.length - 1]; t.currentDisplayDate = currentOcc.date; t.currentDisplayTime = currentOcc.time; } if(t.completed) { completedTodayTasks.push(t); return; } if(t.currentDisplayDate === todayStr && t.currentDisplayTime) { const [tHour, tMin] = t.currentDisplayTime.split(':').map(Number); const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0); const remainingMinutes = (taskTimeObj - now) / 60000; if(remainingMinutes > 0 && remainingMinutes <= 60) { t.isImminent = true; t.minutesLeft = Math.round(remainingMinutes); imminentTasks.push(t); return; } } t.isImminent = false; standardTasks.push(t); }); const chronoSort = (a, b) => { let dateA = a.currentDisplayDate || a.date || "", dateB = b.currentDisplayDate || b.date || ""; if (dateA !== dateB) return (dateA||"").localeCompare(dateB||""); let timeA = a.currentDisplayTime || "", timeB = b.currentDisplayTime || ""; if (!timeA) return -1; if (!timeB) return 1; return (timeA||"").localeCompare(timeB||""); }; const creationSort = (a, b) => b.createdAt - a.createdAt; if (sortMode === 'chrono') { standardTasks.sort(chronoSort); completedTodayTasks.sort(chronoSort); } else { standardTasks.sort(creationSort); completedTodayTasks.sort(creationSort); } imminentTasks.sort((a,b) => a.minutesLeft - b.minutesLeft); filteredList = [...imminentTasks, ...standardTasks, ...completedTodayTasks]; } 
+    if (taskSubView === "active") { const sortMode = document.getElementById('task-sort-filter') ? document.getElementById('task-sort-filter').value : 'chrono'; let imminentTasks = [], standardTasks = [], completedTodayTasks = []; filteredList.forEach(t => { t.currentDisplayDate = t.date; t.currentDisplayTime = t.time; if (!t.completed && t.duplicateDays && t.duplicateDays.length > 0) { let allOcc = [{date: t.date, time: t.time || ""}]; t.duplicateDays.forEach(g => { if (typeof g === 'string') allOcc.push({date: g, time: t.time || ""}); else allOcc.push(g); }); allOcc.sort((a,b) => (a.date || "").localeCompare(b.date || "") !== 0 ? (a.date || "").localeCompare(b.date || "") : (a.time || "").localeCompare(b.time || "")); let futureOcc = allOcc.filter(o => o.date >= todayStr), currentOcc = futureOcc.length > 0 ? futureOcc[0] : allOcc[allOcc.length - 1]; t.currentDisplayDate = currentOcc.date; t.currentDisplayTime = currentOcc.time; } if(t.completed) { completedTodayTasks.push(t); return; } if(t.currentDisplayDate === todayStr && t.currentDisplayTime) { const [tHour, tMin] = t.currentDisplayTime.split(':').map(Number); const taskTimeObj = new Date(); taskTimeObj.setHours(tHour, tMin, 0, 0); const remainingMinutes = (taskTimeObj - now) / 60000; if(remainingMinutes > 0 && remainingMinutes <= 60) { t.isImminent = true; t.minutesLeft = Math.round(remainingMinutes); imminentTasks.push(t); return; } } t.isImminent = false; standardTasks.push(t); }); const chronoSort = (a, b) => { let dateA = a.currentDisplayDate || a.date || "", dateB = b.currentDisplayDate || b.date || ""; if (dateA !== dateB) return dateA.localeCompare(dateB); let timeA = a.currentDisplayTime || "", timeB = b.currentDisplayTime || ""; if (!timeA) return -1; if (!timeB) return 1; return (timeA||"").localeCompare(timeB||""); }; const creationSort = (a, b) => b.createdAt - a.createdAt; if (sortMode === 'chrono') { standardTasks.sort(chronoSort); completedTodayTasks.sort(chronoSort); } else { standardTasks.sort(creationSort); completedTodayTasks.sort(creationSort); } imminentTasks.sort((a,b) => a.minutesLeft - b.minutesLeft); filteredList = [...imminentTasks, ...standardTasks, ...completedTodayTasks]; } 
     if(filteredList.length === 0) { c.innerHTML = `<p style="text-align:center; opacity:0.4; font-style:italic; margin-top:30px;">${taskSubView==='active'?'Aucune tâche active !':'Aucune archive ne correspond'}</p>`; return; } 
     let separatorDrawn = false; let lastDateRendered = null;
     filteredList.forEach(t => { 
@@ -1203,11 +1192,11 @@ function renderGlobalFriends() {
 
 function removeGlobalFriend(fUid) { 
     friends = friends.filter(f => f.uid !== fUid); 
-    db.collection("users").doc(currentUser.uid).set({following: friends}, {merge: true}).then(() => { 
+    db.collection("users").doc(currentUser.uid).update({following: friends}).then(() => { 
         renderGlobalFriends(); 
         if(friendUnsubscribes[fUid]) { friendUnsubscribes[fUid](); delete friendUnsubscribes[fUid]; } 
         sharedTasks = sharedTasks.filter(t => t.userId !== fUid); 
-        renderCalendar(); 
+        if(document.getElementById('calendar-page').style.display === 'block') renderCalendar(); 
         showToast("Ami retiré ! 🗑️"); 
     }); 
 }
