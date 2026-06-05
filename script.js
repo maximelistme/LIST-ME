@@ -473,8 +473,19 @@ function saveShoppingItem() {
     const finalName = tempShoppingProduct;
     const displayInfo = unit === "" ? `x${qty}` : `${qty} ${unit}`;
     
+    let assignedToUid = null;
+    let assignedToName = null;
+    const assignContainer = document.getElementById('assignee-container');
+    if (assignContainer && assignContainer.style.display === 'block') {
+        const assignSelect = document.getElementById('shopping-assignee');
+        if (assignSelect && assignSelect.value) {
+            assignedToUid = assignSelect.value;
+            assignedToName = assignSelect.options[assignSelect.selectedIndex].text;
+        }
+    }
+
     if (finalName && currentUser) {
-        db.collection("shopping").add({
+        const payload = {
             name: finalName,
             info: displayInfo,
             completed: false,
@@ -482,7 +493,14 @@ function saveShoppingItem() {
             ownerName: userNickname || "Inconnu",
             listId: currentShoppingListId,
             createdAt: Date.now()
-        }).then(() => {
+        };
+
+        if (assignedToUid) {
+            payload.assignedToUid = assignedToUid;
+            payload.assignedToName = assignedToName;
+        }
+
+        db.collection("shopping").add(payload).then(() => {
             showToast("Ajouté au panier ! 🛒");
             document.getElementById('shopping-item-modal').style.display = 'none';
         });
