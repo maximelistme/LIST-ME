@@ -1,3 +1,28 @@
+// --- GESTION DES BOUTONS DE RAPPEL (MODAL TÂCHES) ---
+document.querySelectorAll('.reminder-badge').forEach(badge => { 
+    badge.onclick = () => { 
+        if(!badge.classList.contains('disabled-frozen')) { 
+            badge.classList.toggle('active'); 
+        } 
+    }; 
+});
+
+function getSelectedRemindersFromBadges() { 
+    let activeReminders = []; 
+    document.querySelectorAll('.reminder-badge.active').forEach(b => activeReminders.push(b.getAttribute('data-value'))); 
+    return activeReminders; 
+}
+
+function setSelectedRemindersToBadges(remindersArray) { 
+    document.querySelectorAll('.reminder-badge').forEach(b => { 
+        if(remindersArray && remindersArray.includes(b.getAttribute('data-value'))) {
+            b.classList.add('active'); 
+        } else {
+            b.classList.remove('active'); 
+        }
+    }); 
+}
+
 // --- ÉVÉNEMENTS CLICS (CONNEXION & BOUTONS PRINCIPAUX) ---
 let btnLogin = document.getElementById('btn-login'); if (btnLogin) { btnLogin.onclick = () => { const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-pass').value; if(email && pass) auth.signInWithEmailAndPassword(email, pass).then(() => { showToast("Ravi de vous revoir ! 👋"); }).catch(err => showToast("Erreur : " + err.message)); }; }
 let btnRegister = document.getElementById('btn-register'); if (btnRegister) { btnRegister.onclick = () => { const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-pass').value; if(email && pass) auth.createUserWithEmailAndPassword(email, pass).then(() => showToast("Compte créé avec succès ! 🎉")).catch(err => showToast("Erreur : " + err.message)); }; }
