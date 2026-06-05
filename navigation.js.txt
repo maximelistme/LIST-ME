@@ -1,0 +1,28 @@
+function showPage(p) {
+    document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
+    const target = document.getElementById(`${p}-page`); if (target) target.style.display = 'block';
+    document.querySelectorAll('.nav-bubble').forEach(btn => btn.classList.remove('active'));
+    const currentNavBtn = document.getElementById(`nav-btn-${p}`); if (currentNavBtn) currentNavBtn.classList.add('active');
+    
+    if(p === 'calendar') if(typeof renderCalendar === "function") renderCalendar(); 
+    if(p === 'todo') if(typeof renderTodo === "function") renderTodo(); 
+    if(p === 'tasks') if(typeof renderTasks === "function") renderTasks();
+    if(p === 'shopping') { 
+        if(typeof renderShoppingCategories === "function") renderShoppingCategories(); 
+        if(typeof renderShoppingTabs === "function") renderShoppingTabs(); 
+        if(typeof syncCurrentShoppingItems === "function") syncCurrentShoppingItems(); 
+    }
+}
+
+function changeTheme(t) { 
+    document.body.className = `theme-${t}`; 
+    localStorage.setItem('listme_theme', t); 
+}
+
+function showToast(message) { 
+    const toast = document.getElementById('toast-notification'); 
+    if (!toast) return; 
+    toast.innerText = message; 
+    toast.className = "toast-show"; 
+    setTimeout(() => { toast.className = "toast-hidden"; }, 3000); 
+}

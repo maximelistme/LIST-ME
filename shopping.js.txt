@@ -1,0 +1,51 @@
+function shoppingNavigateTo(cat) { shoppingSearchQuery = ""; currentShoppingPath.push(cat); renderShoppingCategories(); }
+function shoppingNavigateBack() { shoppingSearchQuery = ""; currentShoppingPath.pop(); renderShoppingCategories(); }
+
+function renderShoppingCategories() {
+    const container = document.getElementById('shopping-categories'); const breadcrumb = document.getElementById('shopping-breadcrumb'); if(!container || !breadcrumb) return;
+
+    // --- SÉCURITÉ : VÉRIFICATION ACCÈS RESTREINT ÉVÉNEMENT POUR LES INVITÉS ---
+    if (currentShoppingListId !== 'personal' && typeof mySharedLists !== "undefined") {
+        const listObj = mySharedLists.find(l => l.id === currentShoppingListId);
+        if (listObj && listObj.type === 'event' && listObj.createdBy !== currentUser.uid) {
+            breadcrumb.innerText = "Accès restreint";
+            container.innerHTML = `
+                <div style="grid-column: 1 / -1; background: rgba(128,128,128,0.05); border: 2px dashed var(--warning); padding: 25px 15px; border-radius: 12px; text-align: center;">
+                    <span style="font-size: 2rem; display:block; margin-bottom: 10px;">🛡️</span>
+                    <strong style="color: var(--primary-dark); font-size: 1.1rem; display:block; margin-bottom: 5px;">Mode Événement</strong>
+                    <span style="font-style: italic; opacity: 0.8; font-size: 0.9rem;">Vous êtes invité à cet événement. Seul l'organisateur gère la liste et ajoute les produits.</span>
+                </div>`;
+            return; 
+        }
+    }
+
+    let isFocused = (document.activeElement && document.activeElement.id === 'shopping-search'); container.innerHTML = '';
+    if (currentShoppingPath.length === 0) { breadcrumb.innerText = ''; } else { breadcrumb.innerText = currentShoppingPath[currentShoppingPath.length - 1]; }
+    const isAtRoot = (currentShoppingPath.length === 0), currentPathStr = currentShoppingPath.join('/');
+
+    let navRowHtml = `<div style="grid-column: 1 / -1; display: flex; gap: 10px; width: 100%; align-items: center; margin-bottom: 5px;"><div onclick="${isAtRoot ? '' : 'shoppingNavigateBack()'}" style="flex: 1; background:rgba(128,128,128,0.1); color:var(--text-color); padding:12px; border-radius:12px; text-align:center; font-weight:bold; ${isAtRoot ? 'opacity: 0.3; cursor: default; pointer-events: none;' : 'cursor: pointer;'}">⬅️ Retour</div><input type="text" id="shopping-search" placeholder="🔍 Rechercher..." value="${shoppingSearchQuery}" oninput="handleShoppingSearch(this.value)" style="flex: 2; padding: 12px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; font-weight: bold; outline: none;"></div>`;
+    container.innerHTML += navRowHtml;
+    container.innerHTML += `<div onclick="openCustomCardModal()" style="grid-column: 1 / -1; background:var(--primary); color:white; padding:10px; border-radius:20px; text-align:center; font-weight:bold; cursor:pointer; width: 70%; margin: 0 auto 10px auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);">+ Nouveau Produit</div>`;
+
+    if (shoppingSearchQuery.trim() !== "") {
+        let matches = []; let q = shoppingSearchQuery.toLowerCase().trim();
+        function extractMatches(obj) { if (Array.isArray(obj)) { obj.forEach(p => { if (p.toLowerCase().includes(q) && !matches.some(m => m.name === p)) matches.push({ name: p, isCustom: false }); }); } else if (typeof obj === 'object' && obj !== null) { for (let key in obj) { extractMatches(obj[key]); } } }
+        extractMatches(foodCategories); customShoppingCards.forEach(card => { if (card.name.toLowerCase().includes(q) && !matches.some(m => m.id === card.id)) matches.push({ name: card.name, id: card.id, isCustom: true }); });
+        matches.forEach(product => {
+            let safe = product.isCustom ? product.id.replace(/'/g, "\\'") : product.name.replace(/'/g, "\\'");
+            container.innerHTML += `<div onclick="openShoppingItemModal('${safe}', ${product.isCustom})" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2); transition: transform 0.2s;">+ ${product.isCustom ? product.name : formatProductDisplay(product.name)}</div>`;
+        });
+    } else {
+        let defaultFolders = [], defaultProducts = []; let currentObj = foodCategories;
+        for (let step of currentShoppingPath) { if (currentObj && currentObj[step]) currentObj = currentObj[step]; }
+        if (currentObj) { if (Array.isArray(currentObj)) defaultProducts = currentObj; else defaultFolders = Object.keys(currentObj); }
+        defaultFolders.forEach(cat => { container.innerHTML += `<div onclick="shoppingNavigateTo('${cat.replace(/'/g, "\\'")}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1);">${cat}</div>`; });
+        defaultProducts.forEach(p => { container.innerHTML += `<div onclick="openShoppingItemModal('${p.replace(/'/g, "\\'")}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:1px solid rgba(128,128,128,0.2);">+ ${formatProductDisplay(p)}</div>`; });
+        customShoppingCards.filter(c => c.path === currentPathStr).forEach(p => { container.innerHTML += `<div onclick="openShoppingItemModal('${p.id.replace(/'/g, "\\'")}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); font-weight:bold; cursor:pointer; border:2px dashed var(--primary);">+ ${p.name}</div>`; });
+    }
+    if (isFocused) { const input = document.getElementById('shopping-search'); if (input) { input.focus(); let val = input.value; input.value = ''; input.value = val; } }
+}
+
+function handleShoppingSearch(val) { shoppingSearchQuery = val; renderShoppingCategories(); }
+function scrollToShoppingList() { const listHeader = document.getElementById('shopping-list-header'); if (listHeader) listHeader.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function scrollToTopShopping() { const marketHeader = document.getElementById('shopping-page'); if (marketHeader) marketHeader.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
