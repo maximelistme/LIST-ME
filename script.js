@@ -422,6 +422,29 @@ function openShoppingItemModal(identifier, isCustom) {
     units.forEach(u => {
         let opt = document.createElement('option'); opt.value = u.v; opt.innerText = u.l; unitSelect.appendChild(opt);
     });
+    const assignContainer = document.getElementById('assignee-container');
+    const assignSelect = document.getElementById('shopping-assignee');
+    if(assignContainer && assignSelect) {
+        assignContainer.style.display = 'none';
+        assignSelect.innerHTML = '';
+
+        if (currentShoppingListId !== 'personal') {
+            const listObj = mySharedLists.find(l => l.id === currentShoppingListId);
+            if (listObj && listObj.type === 'event' && listObj.createdBy === currentUser.uid) {
+                assignContainer.style.display = 'block';
+                assignSelect.innerHTML = '<option value="">-- Non attribué --</option>';
+                assignSelect.innerHTML += `<option value="${currentUser.uid}">Moi</option>`;
+                
+                listObj.members.forEach(memberUid => {
+                    if(memberUid !== currentUser.uid) {
+                        let f = friends.find(fr => fr.uid === memberUid);
+                        let fName = f ? f.nickname : "Invité";
+                        assignSelect.innerHTML += `<option value="${memberUid}">${fName}</option>`;
+                    }
+                });
+            }
+        }
+    }
     document.getElementById('shopping-item-modal').style.display = 'flex';
     currentShoppingPath = []; renderShoppingCategories();
 }
