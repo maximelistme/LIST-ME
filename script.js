@@ -1094,31 +1094,64 @@ function copyUserCode() {
 }
 
 function addGlobalFriend() {
-    const code = document.getElementById('add-friend-input').value.trim().toUpperCase(); 
-    if(!code || code === myAgendaCode) return; 
+    const inputField = document.getElementById('add-friend-input');
+    if (!inputField) return;
+
+    const code = inputField.value.trim().toUpperCase(); 
+    
+    // 1. Sécurité : Vérifier si le champ est vide
+    if(!code) {
+        showToast("Veuillez saisir un code ! ⚠️");
+        return;
+    }
+
+    // 2. Sécurité : Empêcher de s'ajouter soi-même (évite le bug silencieux)
+    if(code === myAgendaCode) {
+        showToast("Vous ne pouvez pas vous ajouter vous-même ! 😅");
+        return; 
+    }
+    
+    showToast("Recherche en cours... ⏳");
     
     db.collection("users").where("shareCode", "==", code).get().then(snapshot => { 
         if(snapshot.empty) { showToast("Code introuvable ! ❌"); return; } 
-        let friendDoc = snapshot.docs[0], friendUid = friendDoc.id, friendData = friendDoc.data(); 
+        
+        let friendDoc = snapshot.docs[0];
+        let friendUid = friendDoc.id;
+        let friendData = friendDoc.data(); 
         let friendName = friendData.nickname || "Inconnu"; 
         
-        if(friends.some(f => f.uid === friendUid)) { showToast("Déjà dans vos amis ! 🤝"); return; } 
+        // 3. Sécurité : Vérifier s'il est déjà dans la liste
+        if(friends.some(f => f.uid === friendUid)) { 
+            showToast("Cet ami est déjà dans votre liste ! 🤝"); 
+            return; 
+        } 
         
-        // 1. On l'ajoute dans NOTRE liste
+        // 4. On l'ajoute de NOTRE côté
         friends.push({uid: friendUid, nickname: friendName}); 
         db.collection("users").doc(currentUser.uid).update({following: friends}).then(() => {
             
-            // 2. AJOUT RÉCIPROQUE : on s'ajoute dans SA liste
+            // 5. AJOUT RÉCIPROQUE : On s'ajoute de SON côté (avec sécurité anti-crash)
             let theirFriends = friendData.following || [];
             if(!theirFriends.some(f => f.uid === currentUser.uid)) {
                 theirFriends.push({uid: currentUser.uid, nickname: userNickname || "Inconnu"});
-                db.collection("users").doc(friendUid).update({following: theirFriends});
+                
+                db.collection("users").doc(friendUid).update({following: theirFriends}).catch(err => {
+                    console.warn("Info: Réciprocité bloquée par les règles Firebase, mais l'ajout local a fonctionné.", err);
+                });
             }
 
             showToast(`${friendName} ajouté à vos amis ! ✨`);
-            document.getElementById('add-friend-input').value = ""; 
+            inputField.value = ""; 
             renderGlobalFriends();
+            
+        }).catch(err => {
+            showToast("Erreur lors de l'enregistrement ❌");
+            console.error(err);
         });
+    }).catch(err => {
+        showToast("Erreur réseau ❌");
+        console.error(err);
     }); 
 }
 
