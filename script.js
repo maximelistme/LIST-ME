@@ -1017,6 +1017,69 @@ let btnRegister = document.getElementById('btn-register'); if (btnRegister) { bt
 let btnGoogle = document.getElementById('btn-google'); if (btnGoogle) { btnGoogle.onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => { showToast("Connexion Google réussie ! 🚀"); }).catch((err) => { showToast("Erreur Google : " + err.message); }); }; }
 let btnLogout = document.getElementById('btn-logout'); if (btnLogout) { btnLogout.onclick = () => { auth.signOut().then(() => { showToast("Déconnexion réussie."); }); }; }
 
+// --- SYSTÈME D'AMIS GLOBAL (PROFIL) ---
+function copyUserCode() {
+    const code = document.getElementById('my-user-code').innerText;
+    navigator.clipboard.writeText(code).then(() => showToast("Code copié ! Donnez-le à vos amis. 📋"));
+}
+
+function addGlobalFriend() {
+    const code = document.getElementById('add-friend-input').value.trim().toUpperCase(); 
+    if(!code || code === myAgendaCode) return; 
+    
+    db.collection("users").where("shareCode", "==", code).get().then(snapshot => { 
+        if(snapshot.empty) { showToast("Code introuvable ! ❌"); return; } 
+        let friendDoc = snapshot.docs[0], friendUid = friendDoc.id, friendData = friendDoc.data(); 
+        let friendName = friendData.nickname || "Inconnu"; 
+        
+        if(friends.some(f => f.uid === friendUid)) { showToast("Déjà dans vos amis ! 🤝"); return; } 
+        
+        // 1. On l'ajoute dans NOTRE liste
+        friends.push({uid: friendUid, nickname: friendName}); 
+        db.collection("users").doc(currentUser.uid).update({following: friends}).then(() => {
+            
+            // 2. AJOUT RÉCIPROQUE : on s'ajoute dans SA liste
+            let theirFriends = friendData.following || [];
+            if(!theirFriends.some(f => f.uid === currentUser.uid)) {
+                theirFriends.push({uid: currentUser.uid, nickname: userNickname || "Inconnu"});
+                db.collection("users").doc(friendUid).update({following: theirFriends});
+            }
+
+            showToast(`${friendName} ajouté à vos amis ! ✨`);
+            document.getElementById('add-friend-input').value = ""; 
+            renderGlobalFriends();
+        });
+    }); 
+}
+
+function renderGlobalFriends() {
+    const container = document.getElementById('global-friends-list');
+    if(!container) return;
+    
+    if (friends.length === 0) { 
+        container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center;'>Vous n'avez pas encore ajouté d'amis.</p>`; 
+        return; 
+    }
+    
+    container.innerHTML = friends.map(f => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;">
+            <span style="font-weight:bold; color:var(--primary-dark);">👤 ${f.nickname}</span>
+            <button onclick="removeGlobalFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:bold;">Retirer</button>
+        </div>
+    `).join('');
+}
+
+function removeGlobalFriend(fUid) { 
+    friends = friends.filter(f => f.uid !== fUid); 
+    db.collection("users").doc(currentUser.uid).set({following: friends}, {merge: true}).then(() => { 
+        renderGlobalFriends(); 
+        if(friendUnsubscribes[fUid]) { friendUnsubscribes[fUid](); delete friendUnsubscribes[fUid]; } 
+        sharedTasks = sharedTasks.filter(t => t.userId !== fUid); 
+        renderCalendar(); 
+        showToast("Ami retiré ! 🗑️"); 
+    }); 
+}
+
 window.onclick = (e) => { 
     if(e.target.classList && e.target.classList.contains('modal')) { 
         unlockModalFields(); 
