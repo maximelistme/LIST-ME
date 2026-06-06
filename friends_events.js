@@ -1,4 +1,12 @@
 auth.onAuthStateChanged((user) => {
+    // ... (dans auth.onAuthStateChanged) ...
+if(document.getElementById('my-user-code')) {
+    document.getElementById('my-user-code').innerText = myAgendaCode;
+}
+if(document.getElementById('profile-page').style.display === 'block') {
+    renderGlobalFriends();
+}
+// ...
     if (user) {
         currentUser = user; document.getElementById('main-nav').style.display = 'flex'; if(document.getElementById('profile-user-email')) document.getElementById('profile-user-email').innerText = user.email || ""; if(typeof requestNotificationPermission === 'function') requestNotificationPermission();
         
