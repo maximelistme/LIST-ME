@@ -73,37 +73,98 @@ function removeFriend(fUid) {
     db.collection("users").doc(currentUser.uid).set({following: friends}, {merge: true}).then(() => { renderFriendsList(); if(friendUnsubscribes[fUid]) { friendUnsubscribes[fUid](); delete friendUnsubscribes[fUid]; } sharedTasks = sharedTasks.filter(t => t.userId !== fUid); if(typeof renderCalendar === 'function') renderCalendar(); showToast("Agenda retiré ! 🗑️"); }); 
 }
 
+// --- SYSTÈME D'AMIS GLOBAL ---
+
+function copyUserCode() {
+    const code = document.getElementById('my-user-code').innerText;
+    navigator.clipboard.writeText(code).then(() => showToast("Code copié ! Donnez-le à vos amis. 📋"));
+}
+
 function addGlobalFriend() {
-    const inputField = document.getElementById('add-friend-input'); if (!inputField) return;
+    const inputField = document.getElementById('add-friend-input');
+    if (!inputField) return;
+
     const code = inputField.value.trim().toUpperCase(); 
     if(!code) { showToast("Veuillez saisir un code ! ⚠️"); return; }
-    if(code === myAgendaCode) { showToast("Vous ne pouvez pas vous ajouter ! 😅"); return; }
+    if(code === myAgendaCode) { showToast("Vous ne pouvez pas vous ajouter vous-même ! 😅"); return; }
     
     showToast("Recherche en cours... ⏳");
+    
+    // On cherche l'utilisateur qui possède ce code
     db.collection("users").where("shareCode", "==", code).get().then(snapshot => { 
         if(snapshot.empty) { showToast("Code introuvable ! ❌"); return; } 
-        let friendDoc = snapshot.docs[0], friendUid = friendDoc.id, friendData = friendDoc.data(), friendName = friendData.nickname || "Inconnu"; 
-        if(friends.some(f => f.uid === friendUid)) { showToast("Ami déjà ajouté ! 🤝"); return; } 
         
+        let friendDoc = snapshot.docs[0];
+        let friendUid = friendDoc.id;
+        let friendData = friendDoc.data(); 
+        let friendName = friendData.nickname || "Inconnu"; 
+        
+        if(friends.some(f => f.uid === friendUid)) { 
+            showToast("Cet ami est déjà dans votre liste ! 🤝"); 
+            return; 
+        } 
+        
+        // 1. On l'ajoute de NOTRE côté
         friends.push({uid: friendUid, nickname: friendName}); 
         db.collection("users").doc(currentUser.uid).update({following: friends}).then(() => {
+            
+            // 2. RÉCIPROCITÉ : On s'ajoute de SON côté automatiquement
             let theirFriends = friendData.following || [];
             if(!theirFriends.some(f => f.uid === currentUser.uid)) {
                 theirFriends.push({uid: currentUser.uid, nickname: userNickname || "Inconnu"});
-                db.collection("users").doc(friendUid).update({following: theirFriends}).catch(e => console.log("Ajout réciproque bloqué."));
+                
+                db.collection("users").doc(friendUid).update({following: theirFriends}).catch(err => {
+                    console.warn("Info: La sécurité Firebase empêche l'écriture distante, mais l'ajout local a fonctionné.", err);
+                });
             }
-            showToast(`${friendName} ajouté ! ✨`); inputField.value = ""; renderGlobalFriends();
+
+            showToast(`${friendName} ajouté à vos amis ! ✨`);
+            inputField.value = ""; 
+            renderGlobalFriends();
+            
+        }).catch(err => {
+            showToast("Erreur lors de l'enregistrement ❌");
         });
-    }).catch(e => showToast("Erreur réseau ❌"));
+    }).catch(err => {
+        showToast("Erreur réseau ❌");
+    }); 
 }
 
 function renderGlobalFriends() {
-    const container = document.getElementById('global-friends-list'); if(!container) return;
-    if (friends.length === 0) { container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center;'>Vous n'avez pas encore d'amis.</p>`; return; }
-    container.innerHTML = friends.map(f => `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;"><span style="font-weight:bold;">👤 ${f.nickname}</span><button onclick="removeGlobalFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:bold;">Retirer</button></div>`).join('');
+    const container = document.getElementById('global-friends-list');
+    if(!container) return;
+    
+    if (friends.length === 0) { 
+        container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center;'>Vous n'avez pas encore ajouté d'amis.</p>`; 
+        return; 
+    }
+    
+    container.innerHTML = friends.map(f => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;">
+            <span style="font-weight:bold; color:var(--primary-dark);">👤 ${f.nickname}</span>
+            <button onclick="removeGlobalFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:bold;">Retirer</button>
+        </div>
+    `).join('');
 }
 
-function removeGlobalFriend(fUid) {
-    friends = friends.filter(f => f.uid !== fUid);
-    db.collection("users").doc(currentUser.uid).update({following: friends}).then(() => { renderGlobalFriends(); if(friendUnsubscribes[fUid]) { friendUnsubscribes[fUid](); delete friendUnsubscribes[fUid]; } sharedTasks = sharedTasks.filter(t => t.userId !== fUid); if(typeof renderCalendar === 'function') renderCalendar(); showToast("Ami retiré ! 🗑️"); });
+function removeGlobalFriend(fUid) { 
+    // On se retire de notre côté
+    friends = friends.filter(f => f.uid !== fUid); 
+    db.collection("users").doc(currentUser.uid).update({following: friends}).then(() => { 
+        
+        // Réciprocité : on essaie de se retirer de SA liste aussi
+        db.collection("users").doc(fUid).get().then(doc => {
+            if(doc.exists) {
+                let theirFriends = doc.data().following || [];
+                theirFriends = theirFriends.filter(f => f.uid !== currentUser.uid);
+                db.collection("users").doc(fUid).update({following: theirFriends}).catch(e => console.warn("Retrait distant ignoré."));
+            }
+        });
+
+        renderGlobalFriends(); 
+        if(friendUnsubscribes[fUid]) { friendUnsubscribes[fUid](); delete friendUnsubscribes[fUid]; } 
+        sharedTasks = sharedTasks.filter(t => t.userId !== fUid); 
+        if(typeof renderCalendar === 'function') renderCalendar(); 
+        showToast("Ami retiré ! 🗑️"); 
+    }); 
 }
