@@ -432,3 +432,32 @@ input:disabled, select:disabled, textarea:disabled { opacity: 0.55; cursor: not-
     display: block;
     max-width: 100%;
 }
+
+/* --- RÉPARATION DU DESIGN DES LISTES --- */
+.task-card {
+    background: var(--card-bg) !important;
+    padding: 15px !important;
+    margin-bottom: 10px !important;
+    border-radius: 15px !important;
+    border-left: 6px solid var(--primary) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+.task-card button {
+    background: var(--danger) !important;
+    color: white !important;
+    border: none !important;
+    padding: 5px 10px !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    font-weight: bold !important;
+    font-size: 0.9rem !important;
+}
+
+.completed-bubble {
+    opacity: 0.7;
+    border-left-color: #ccc !important;
+}
