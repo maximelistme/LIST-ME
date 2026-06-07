@@ -207,3 +207,79 @@ if ('serviceWorker' in navigator) {
             .catch(() => console.log('SW FAIL'));
     });
 }
+
+// ---- NAVIGATION ENTRE PAGES ----
+function showPage(p) {
+    document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
+    const target = document.getElementById(`${p}-page`);
+    if (target) target.style.display = 'block';
+    document.querySelectorAll('.nav-bubble').forEach(btn => btn.classList.remove('active'));
+    const currentNavBtn = document.getElementById(`nav-btn-${p}`);
+    if (currentNavBtn) currentNavBtn.classList.add('active');
+
+    if (p === 'calendar' && typeof renderCalendar === 'function') renderCalendar();
+    if (p === 'todo' && typeof renderTodo === 'function') renderTodo();
+    if (p === 'tasks' && typeof renderTasks === 'function') renderTasks();
+    if (p === 'shopping') {
+        if (typeof renderShoppingCategories === 'function') renderShoppingCategories();
+        if (typeof renderShoppingTabs === 'function') renderShoppingTabs();
+        if (typeof syncCurrentShoppingItems === 'function') syncCurrentShoppingItems();
+    }
+    if (p === 'profile' && typeof renderGlobalFriends === 'function') renderGlobalFriends();
+}
+
+// ---- SWITCH VUE TÂCHES (Actives / Archives) ----
+function switchTaskSubView(view) {
+    taskSubView = view;
+    document.querySelectorAll('.sub-menu-tab').forEach(b => b.classList.remove('active'));
+    const actionBar = document.getElementById('tasks-action-bar');
+    const archiveSearch = document.getElementById('archive-search-bar');
+    if (view === 'active') {
+        document.getElementById('sub-btn-active-tasks').classList.add('active');
+        if (actionBar) actionBar.style.display = 'flex';
+        if (archiveSearch) archiveSearch.style.display = 'none';
+    } else {
+        document.getElementById('sub-btn-archived-tasks').classList.add('active');
+        if (actionBar) actionBar.style.display = 'none';
+        if (archiveSearch) archiveSearch.style.display = 'flex';
+    }
+    if (typeof renderTasks === 'function') renderTasks();
+}
+
+// ---- THÈME ----
+function changeTheme(t) {
+    document.body.className = `theme-${t}`;
+    localStorage.setItem('listme_theme', t);
+}
+
+// ---- MODALE DE BIENVENUE ----
+function triggerWelcomeModal() {
+    const now = new Date();
+    const hour = now.getHours();
+    let greeting = "Bonne nuit";
+    if (hour >= 5 && hour < 12) greeting = "Bonjour";
+    else if (hour >= 12 && hour < 18) greeting = "Bonne après-midi";
+    else if (hour >= 18 && hour < 22) greeting = "Bonne soirée";
+
+    const name = userNickname ? ` ${userNickname}` : "";
+    const welcomeText = document.getElementById('welcome-message-text');
+    if (welcomeText) welcomeText.innerText = `${greeting}${name} ! 👋`;
+
+    const summaryZone = document.getElementById('today-summary-zone');
+    if (summaryZone) {
+        const todayTasks = tasks.filter(t => !t.completed && t.date === todayStr);
+        const todayBirthdays = birthdays.filter(b => (b.date || "").endsWith(todayStr.substring(5)));
+        let html = '';
+        if (todayTasks.length > 0) {
+            html += `<div class="welcome-summary-item">📋 <strong>${todayTasks.length} tâche(s)</strong> prévue(s) aujourd'hui</div>`;
+        } else {
+            html += `<div class="welcome-summary-item">✅ Aucune tâche prévue aujourd'hui</div>`;
+        }
+        todayBirthdays.forEach(b => {
+            html += `<div class="welcome-summary-item">🎂 C'est l'anniversaire de <strong>${b.name}</strong> aujourd'hui !</div>`;
+        });
+        summaryZone.innerHTML = html;
+    }
+
+    document.getElementById('welcome-modal').style.display = 'flex';
+}
