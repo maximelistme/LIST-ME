@@ -222,9 +222,15 @@ function deleteShoppingItem(id) { db.collection("shopping").doc(id).delete().the
 function clearCompletedShopping() { let completeds = shoppingItems.filter(item => item.completed); if (completeds.length === 0) return; Promise.all(completeds.map(item => db.collection("shopping").doc(item.id).delete())).then(() => { showToast("Le chariot a été vidé ! 🗑️"); }); }
 
 function openCustomShoppingListShareModal() {
-    document.getElementById('new-shared-list-name').value = ''; document.getElementById('join-shared-list-code').value = '';
-    if (currentUser) { db.collection("shoppingLists").where("members", "array-contains", currentUser.uid).get().then(snap => { mySharedLists = []; snap.forEach(doc => { let d = doc.data(); d.id = doc.id; mySharedLists.push(d); }); renderMySharedListsInModal(); renderShoppingTabs(); renderFriendsCheckboxesForNewList(); }); } 
-    else { renderMySharedListsInModal(); }
+    document.getElementById('new-shared-list-name').value = ''; 
+    document.getElementById('join-shared-list-code').value = '';
+    
+    // Inutile de refaire une requête à Firebase !
+    // La liste mySharedLists est DÉJÀ synchronisée en temps réel par friends_events.js
+    renderMySharedListsInModal(); 
+    renderShoppingTabs(); 
+    renderFriendsCheckboxesForNewList(); 
+    
     document.getElementById('shopping-list-multi-share-modal').style.display = 'flex';
 }
 
@@ -235,9 +241,32 @@ function renderFriendsCheckboxesForNewList() {
 }
 
 function renderMySharedListsInModal() {
-    const container = document.getElementById('my-shared-lists-container'); if (!container) return;
-    if (mySharedLists.length === 0) { container.innerHTML = `<p style="font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center;">Aucune liste partagée active.</p>`; return; }
-    container.innerHTML = mySharedLists.map(l => `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px; border-radius:8px; border: 1px solid rgba(128,128,128,0.1); width: 100%; gap: 10px;"><div style="flex: 1; min-width: 0;"><strong style="display:block; color:var(--primary-dark); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${l.name}</strong><small style="color:var(--primary); font-weight:bold; background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;">Code: ${l.code}</small></div><div style="display:flex; gap:8px; flex-shrink:0;"><button onclick="copyListCode('${l.code}')" style="background:none; border:none; cursor:pointer; font-size:1.1rem;" title="Copier le code">📋</button><button onclick="leaveSharedList('${l.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:bold; font-family:inherit;">Quitter</button></div></div>`).join('');
+    const container = document.getElementById('my-shared-lists-container'); 
+    if (!container) return;
+    
+    // Sécurité d'affichage si la liste est vide
+    if (!mySharedLists || mySharedLists.length === 0) { 
+        container.innerHTML = `<p style="font-size: 0.9rem; opacity: 0.6; font-style: italic; text-align: center; padding: 10px;">Aucune liste partagée active.</p>`; 
+        return; 
+    }
+    
+    // Rendu sécurisé des listes existantes
+    container.innerHTML = mySharedLists.map(l => {
+        let safeName = l.name || "Liste sans nom";
+        let safeCode = l.code || "---";
+        
+        return `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px; border-radius:8px; border: 1px solid rgba(128,128,128,0.1); width: 100%; gap: 10px; box-sizing: border-box;">
+            <div style="flex: 1; min-width: 0;">
+                <strong style="display:block; color:var(--primary-dark); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${safeName}</strong>
+                <small style="color:var(--primary); font-weight:bold; background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;">Code: ${safeCode}</small>
+            </div>
+            <div style="display:flex; gap:8px; flex-shrink:0;">
+                <button onclick="copyListCode('${safeCode}')" style="background:none; border:none; cursor:pointer; font-size:1.1rem;" title="Copier le code">📋</button>
+                <button onclick="leaveSharedList('${l.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:bold; font-family:inherit;">Quitter</button>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 function copyListCode(code) { navigator.clipboard.writeText(code).then(() => showToast("Code copié ! 📋")); }
