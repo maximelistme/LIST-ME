@@ -1,65 +1,310 @@
-// --- GESTION DES BOUTONS DE RAPPEL (MODAL TÂCHES) ---
-document.querySelectorAll('.reminder-badge').forEach(badge => { 
-    badge.onclick = () => { 
-        if(!badge.classList.contains('disabled-frozen')) { 
-            badge.classList.toggle('active'); 
-        } 
-    }; 
+// ============================================================
+// jsevents.js — Auth, Sync Firebase, Système d'amis
+// VERSION CORRIGÉE : doublons supprimés
+// ============================================================
+
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        currentUser = user;
+        document.getElementById('main-nav').style.display = 'flex';
+        if (document.getElementById('profile-user-email')) document.getElementById('profile-user-email').innerText = user.email || "";
+        if (typeof requestNotificationPermission === 'function') requestNotificationPermission();
+
+        unsubscribeUser = db.collection("users").doc(user.uid).onSnapshot((doc) => {
+            try {
+                let data = doc.exists ? doc.data() : {};
+                userNickname = data.nickname || "";
+                if (document.getElementById('profile-nickname')) document.getElementById('profile-nickname').value = userNickname;
+                customShoppingCards = data.customCards || [];
+
+                let updateData = {};
+                myAgendaCode = data.shareCode;
+                if (!myAgendaCode) {
+                    myAgendaCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    updateData.shareCode = myAgendaCode;
+                    updateData.sharedWith = [];
+                }
+                if (Object.keys(updateData).length > 0) {
+                    db.collection("users").doc(user.uid).set(updateData, { merge: true });
+                }
+
+                if (document.getElementById('my-share-code') && document.getElementById('share-modal').style.display === 'flex')
+                    document.getElementById('my-share-code').innerText = myAgendaCode;
+                if (document.getElementById('my-user-code'))
+                    document.getElementById('my-user-code').innerText = myAgendaCode;
+
+                friends = data.following || [];
+                if (document.getElementById('friends-count-badge'))
+                    document.getElementById('friends-count-badge').innerText = friends.length;
+                if (document.getElementById('profile-page').style.display === 'block' && typeof renderGlobalFriends === 'function')
+                    renderGlobalFriends();
+                if (document.getElementById('shopping-page').style.display === 'block' && typeof renderShoppingCategories === 'function')
+                    renderShoppingCategories();
+            } catch (e) { console.error(e); }
+        });
+
+        startRealtimeSync(user.uid);
+        showPage('tasks');
+    } else {
+        currentUser = null;
+        userNickname = "";
+        hasShownWelcomeThisSession = false;
+        document.getElementById('main-nav').style.display = 'none';
+        stopRealtimeSync();
+        document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
+        document.getElementById('auth-page').style.display = 'block';
+    }
 });
 
-function getSelectedRemindersFromBadges() { 
-    let activeReminders = []; 
-    document.querySelectorAll('.reminder-badge.active').forEach(b => activeReminders.push(b.getAttribute('data-value'))); 
-    return activeReminders; 
-}
+// ---- SYNC TEMPS RÉEL ----
 
-function setSelectedRemindersToBadges(remindersArray) { 
-    document.querySelectorAll('.reminder-badge').forEach(b => { 
-        if(remindersArray && remindersArray.includes(b.getAttribute('data-value'))) {
-            b.classList.add('active'); 
-        } else {
-            b.classList.remove('active'); 
+let initialSyncDone = false;
+
+function startRealtimeSync(userId) {
+    initialSyncDone = false;
+
+    unsubscribeTasks = db.collection("tasks").where("userId", "==", userId).onSnapshot((snapshot) => {
+        tasks = [];
+        snapshot.forEach((doc) => {
+            let data = doc.data(); data.id = doc.id;
+            if (!data.createdAt) data.createdAt = 0;
+            else if (data.createdAt.seconds) data.createdAt = data.createdAt.seconds * 1000;
+            tasks.push(data);
+        });
+        if (!initialSyncDone && tasks.length > 0) {
+            initialSyncDone = true;
+            setTimeout(() => { if (typeof processMidnightAutoArchive === 'function') processMidnightAutoArchive(); }, 1500);
         }
-    }); 
+        if (typeof renderTasks === 'function') renderTasks();
+        if (!hasShownWelcomeThisSession) {
+            if (typeof triggerWelcomeModal === 'function') triggerWelcomeModal();
+            hasShownWelcomeThisSession = true;
+        }
+        if (viewState === 'day' && typeof renderCalendar === 'function') renderCalendar();
+    });
+
+    unsubscribeDaily = db.collection("dailyTodo").where("userId", "==", userId).onSnapshot((snapshot) => {
+        dailyTodo = [];
+        snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; dailyTodo.push(data); });
+        if (typeof renderTodo === 'function') renderTodo();
+    });
+
+    unsubscribeWeekly = db.collection("weeklyTodo").where("userId", "==", userId).onSnapshot((snapshot) => {
+        weeklyTodo = [];
+        snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; weeklyTodo.push(data); });
+        if (typeof renderTodo === 'function') renderTodo();
+    });
+
+    unsubscribeRoutine = db.collection("routineTodo").where("userId", "==", userId).onSnapshot((snapshot) => {
+        routineTodo = [];
+        snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; routineTodo.push(data); });
+        if (typeof renderTodo === 'function') renderTodo();
+    });
+
+    unsubscribeBirthdays = db.collection("birthdays").where("userId", "==", userId).onSnapshot((snapshot) => {
+        birthdays = [];
+        snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; birthdays.push(data); });
+        if (viewState === 'day' && typeof renderCalendar === 'function') renderCalendar();
+    });
+
+    sharedListsUnsubscribe = db.collection("shoppingLists").where("members", "array-contains", userId).onSnapshot((snapshot) => {
+        mySharedLists = [];
+        snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; mySharedLists.push(data); });
+        if (currentShoppingListId !== "personal" && !mySharedLists.some(l => l.id === currentShoppingListId)) {
+            currentShoppingListId = "personal";
+        }
+        if (typeof renderShoppingTabs === 'function') renderShoppingTabs();
+        if (typeof syncCurrentShoppingItems === 'function') syncCurrentShoppingItems();
+        if (typeof updateParticipantsDisplay === 'function') updateParticipantsDisplay();
+        if (document.getElementById('shopping-list-multi-share-modal') &&
+            document.getElementById('shopping-list-multi-share-modal').style.display === 'flex' &&
+            typeof renderMySharedListsInModal === 'function') renderMySharedListsInModal();
+    });
+
+    friends.forEach(f => startFriendSync(f.uid, f.nickname, 'agenda'));
 }
 
-// --- ÉVÉNEMENTS CLICS (CONNEXION & BOUTONS PRINCIPAUX) ---
-let btnLogin = document.getElementById('btn-login'); if (btnLogin) { btnLogin.onclick = () => { const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-pass').value; if(email && pass) auth.signInWithEmailAndPassword(email, pass).then(() => { showToast("Ravi de vous revoir ! 👋"); }).catch(err => showToast("Erreur : " + err.message)); }; }
-let btnRegister = document.getElementById('btn-register'); if (btnRegister) { btnRegister.onclick = () => { const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-pass').value; if(email && pass) auth.createUserWithEmailAndPassword(email, pass).then(() => showToast("Compte créé avec succès ! 🎉")).catch(err => showToast("Erreur : " + err.message)); }; }
-let btnGoogle = document.getElementById('btn-google'); if (btnGoogle) { btnGoogle.onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => { showToast("Connexion Google réussie ! 🚀"); }).catch((err) => { showToast("Erreur Google : " + err.message); }); }; }
-let btnLogout = document.getElementById('btn-logout'); if (btnLogout) { btnLogout.onclick = () => { auth.signOut().then(() => { showToast("Déconnexion réussie."); }); }; }
-
-let btnSaveTask = document.getElementById('save-task'); if (btnSaveTask) { btnSaveTask.onclick = () => { const n = document.getElementById('task-name').value.trim(), dStr = document.getElementById('task-desc').value.trim(), singleDate = document.getElementById('task-date').value, time = getCustomTime('task-time'), imp = document.getElementById('task-importance').value, reminders = getSelectedRemindersFromBadges(); if(n && currentUser) { if(document.getElementById('modal-title').innerText === "Dupliquer la tâche" && editingId) { const task = tasks.find(t => t.id === editingId); if (task && singleDate) { let allOccurrences = [{date: task.date, time: task.time || ""}], currentGhosts = Array.isArray(task.duplicateDays) ? task.duplicateDays : []; currentGhosts.forEach(g => { allOccurrences.push(typeof g === 'string' ? {date: g, time: task.time} : g); }); allOccurrences.push({date: singleDate, time: time}); allOccurrences.sort((a, b) => (a.date||"").localeCompare(b.date||"") !== 0 ? (a.date||"").localeCompare(b.date||"") : (a.time || "").localeCompare(b.time || "")); let nextMain = allOccurrences.shift(); db.collection("tasks").doc(editingId).update({ date: nextMain.date, time: nextMain.time || "", desc: task.desc || "", duplicateDays: allOccurrences }); editingId = null; showToast("Date planifiée avec succès ! 🗓️"); } } else if(editingId && singleDate) { db.collection("tasks").doc(editingId).update({ name: n, desc: dStr, date: singleDate, time: time, reminders: reminders, importance: imp }); editingId = null; showToast("Tâche modifiée ! ✎"); } else if (singleDate) { db.collection("tasks").add({ name: n, desc: dStr, date: singleDate, time: time, reminders: reminders, importance: imp, completed: false, userId: currentUser.uid, createdAt: Date.now(), duplicateDays: [] }); showToast("Tâche enregistrée ! ✨"); } unlockModalFields(); document.getElementById('task-modal').style.display = 'none'; } }; }
-let btnSaveTodo = document.getElementById('save-todo'); if (btnSaveTodo) { btnSaveTodo.onclick = () => { const n = document.getElementById('todo-task-name').value.trim(), t = getCustomTime('todo-time'), isWeekly = document.getElementById('save-todo').getAttribute('data-weekly-mode') === 'true', isRoutine = document.getElementById('save-todo').getAttribute('data-routine-mode') === 'true'; if(n && t && currentUser) { let targetCollection = "dailyTodo"; if (isWeekly) targetCollection = "weeklyTodo"; else if (isRoutine) targetCollection = "routineTodo"; if(editingTodoId) { let updateData = { name: n, time: t }; if(isWeekly || isRoutine) updateData.dayOfWeek = document.getElementById('todo-day-select').value; db.collection(targetCollection).doc(editingTodoId).update(updateData).then(() => { showToast(isRoutine ? "Semaine type modifiée ! ⚙️" : "Activité modifiée ! ✎"); }); editingTodoId = null; } else { if(isRoutine) { db.collection("routineTodo").add({ name: n, time: t, dayOfWeek: document.getElementById('todo-day-select').value, completed: false, isRoutine: true, userId: currentUser.uid }).then(() => { showToast("Ajouté à la semaine type ! ⚙️"); }); } else if(isWeekly) { db.collection("weeklyTodo").add({ name: n, time: t, dayOfWeek: document.getElementById('todo-day-select').value, completed: false, userId: currentUser.uid }).then(() => { showToast("Activité hebdomadaire ajoutée ! 🗓️"); }); } else { db.collection("dailyTodo").add({ name: n, time: t, date: todayStr, completed: false, userId: currentUser.uid }).then(() => { showToast("Activité ajoutée ! ✨"); }); } } document.getElementById('todo-modal').style.display = 'none'; document.getElementById('todo-task-name').value = ''; } }; }
-let btnSaveBirthday = document.getElementById('save-birthday'); if (btnSaveBirthday) { btnSaveBirthday.onclick = () => { const n = document.getElementById('birthday-name').value.trim(), d = document.getElementById('birthday-date').value; if (n && d && currentUser) { db.collection("birthdays").add({ name: n, date: d, userId: currentUser.uid, createdAt: Date.now() }).then(() => { showToast("Anniversaire enregistré ! 🎂"); document.getElementById('birthday-modal').style.display = 'none'; }); } }; }
-
-let btnAddTask = document.getElementById('add-task-btn'); if (btnAddTask) { btnAddTask.onclick = () => { editingId = null; unlockModalFields(); if(document.getElementById('task-name')) document.getElementById('task-name').value = ""; if(document.getElementById('task-desc')) document.getElementById('task-desc').value = ""; setCustomTime('task-time', ""); setSelectedRemindersToBadges([]); if(document.getElementById('task-date')) document.getElementById('task-date').value = todayStr; document.getElementById('modal-title').innerText = "Nouvelle Tâche"; document.getElementById('task-modal').style.display = 'flex'; }; }
-let btnCloseTaskModal = document.getElementById('close-modal'); if (btnCloseTaskModal) { btnCloseTaskModal.onclick = () => { unlockModalFields(); document.getElementById('task-modal').style.display = 'none'; }; }
-let btnCloseTodoModal = document.getElementById('close-todo-modal'); if (btnCloseTodoModal) { btnCloseTodoModal.onclick = () => { document.getElementById('todo-modal').style.display = 'none'; } }
-
-let btnAddFriend = document.getElementById('btn-add-friend');
-if(btnAddFriend) { 
-    btnAddFriend.onclick = () => { 
-        const code = document.getElementById('friend-code-input').value.trim().toUpperCase(); if(!code || code === myAgendaCode) return; 
-        db.collection("users").where("shareCode", "==", code).get().then(snapshot => { 
-            if(snapshot.empty) { showToast("Code introuvable ! ❌"); return; } 
-            let friendDoc = snapshot.docs[0], friendUid = friendDoc.id, friendData = friendDoc.data(); let friendName = friendData.nickname || "Inconnu"; 
-            if(friends.some(f => f.uid === friendUid)) { showToast("Déjà lié ! 🤝"); return; } 
-            friends.push({uid: friendUid, nickname: friendName}); db.collection("users").doc(currentUser.uid).update({following: friends}); 
-            let sharedWith = friendData.sharedWith || []; if(!sharedWith.includes(currentUser.uid)) { sharedWith.push(currentUser.uid); db.collection("users").doc(friendUid).update({sharedWith: sharedWith}); } 
-            startFriendSync(friendUid, friendName, 'agenda'); showToast(`Agenda de ${friendName} lié ! ✨`);
-            renderFriendsList(); document.getElementById('friend-code-input').value = ""; 
-        }); 
-    }; 
+function startFriendSync(fUid, fName, mode) {
+    if (mode === 'agenda') {
+        if (friendUnsubscribes[fUid]) return;
+        friendUnsubscribes[fUid] = db.collection("tasks").where("userId", "==", fUid).onSnapshot((snapshot) => {
+            sharedTasks = sharedTasks.filter(t => t.userId !== fUid);
+            snapshot.forEach((doc) => {
+                let data = doc.data(); data.id = doc.id; data.ownerName = fName;
+                if (!data.createdAt) data.createdAt = 0;
+                else if (data.createdAt.seconds) data.createdAt = data.createdAt.seconds * 1000;
+                sharedTasks.push(data);
+            });
+            if (viewState === 'day' && typeof renderCalendar === 'function') renderCalendar();
+        });
+    }
 }
 
-// --- FERMETURE DES FENÊTRES EN CLIQUANT À L'EXTÉRIEUR ---
-window.onclick = (e) => { 
-    if(e.target.classList && e.target.classList.contains('modal')) { 
-        unlockModalFields(); 
-        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-    } 
-};
+function stopRealtimeSync() {
+    if (typeof unsubscribeTasks !== 'undefined' && unsubscribeTasks) unsubscribeTasks();
+    if (typeof unsubscribeDaily !== 'undefined' && unsubscribeDaily) unsubscribeDaily();
+    if (typeof unsubscribeWeekly !== 'undefined' && unsubscribeWeekly) unsubscribeWeekly();
+    if (typeof unsubscribeRoutine !== 'undefined' && unsubscribeRoutine) unsubscribeRoutine();
+    if (typeof unsubscribeBirthdays !== 'undefined' && unsubscribeBirthdays) unsubscribeBirthdays();
+    if (typeof unsubscribeUser !== 'undefined' && unsubscribeUser) unsubscribeUser();
+    if (typeof sharedListsUnsubscribe !== 'undefined' && sharedListsUnsubscribe) sharedListsUnsubscribe();
+    if (typeof shoppingItemsUnsubscribe !== 'undefined' && shoppingItemsUnsubscribe) shoppingItemsUnsubscribe();
+    Object.values(friendUnsubscribes).forEach(u => u());
+    friendUnsubscribes = {};
+    tasks = []; sharedTasks = []; dailyTodo = []; weeklyTodo = [];
+    routineTodo = []; birthdays = []; friends = []; shoppingItems = []; mySharedLists = [];
+}
 
-// --- SERVICE WORKER ---
-if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(reg => { console.log('SW OK'); }).catch(err => { console.log('SW FAIL'); }); }); }
+// ---- PROFIL & PARTAGE ----
+
+function autoSaveNickname() {
+    const nick = document.getElementById('profile-nickname').value.trim();
+    if (currentUser) {
+        db.collection("users").doc(currentUser.uid).set({ nickname: nick }, { merge: true }).then(() => {
+            userNickname = nick;
+            showToast("Surnom mis à jour ! ✨");
+        });
+    }
+}
+
+function openShareModal(mode) {
+    currentShareMode = mode;
+    document.getElementById('share-modal-title').innerText = "Partage Agenda 🤝";
+    if (document.getElementById('my-share-code')) document.getElementById('my-share-code').innerText = myAgendaCode;
+    renderFriendsList();
+    document.getElementById('share-modal').style.display = 'flex';
+}
+
+function copyShareCode() {
+    const code = document.getElementById('my-share-code').innerText;
+    navigator.clipboard.writeText(code).then(() => showToast("Code copié ! 📋"));
+}
+
+// CORRECTION : une seule déclaration de copyUserCode
+function copyUserCode() {
+    const code = document.getElementById('my-user-code').innerText;
+    navigator.clipboard.writeText(code).then(() => showToast("Code copié ! Donnez-le à vos amis. 📋"));
+}
+
+// ---- LISTE D'AMIS (modal Agenda) ----
+
+function renderFriendsList() {
+    const container = document.getElementById('friends-list-container');
+    if (!container) return;
+    if (friends.length === 0) {
+        container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center; width: 100%;'>Aucun agenda lié.</p>`;
+        return;
+    }
+    container.innerHTML = friends.map(f => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; margin-top:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;">
+            <span style="font-weight:bold; color:var(--primary-dark);">👤 ${f.nickname}</span>
+            <button onclick="removeFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:bold;">Retirer</button>
+        </div>`).join('');
+}
+
+function removeFriend(fUid) {
+    friends = friends.filter(f => f.uid !== fUid);
+    db.collection("users").doc(currentUser.uid).set({ following: friends }, { merge: true }).then(() => {
+        renderFriendsList();
+        if (friendUnsubscribes[fUid]) { friendUnsubscribes[fUid](); delete friendUnsubscribes[fUid]; }
+        sharedTasks = sharedTasks.filter(t => t.userId !== fUid);
+        if (typeof renderCalendar === 'function') renderCalendar();
+        showToast("Agenda retiré ! 🗑️");
+    });
+}
+
+// ---- SYSTÈME D'AMIS GLOBAL ----
+
+function addGlobalFriend() {
+    const inputField = document.getElementById('add-friend-input');
+    if (!inputField) return;
+    const code = inputField.value.trim().toUpperCase();
+    if (!code) { showToast("Veuillez saisir un code ! ⚠️"); return; }
+    if (code === myAgendaCode) { showToast("Vous ne pouvez pas vous ajouter vous-même ! 😅"); return; }
+
+    showToast("Recherche en cours... ⏳");
+
+    db.collection("users").where("shareCode", "==", code).get().then(snapshot => {
+        if (snapshot.empty) { showToast("Code introuvable ! ❌"); return; }
+        let friendDoc = snapshot.docs[0];
+        let friendUid = friendDoc.id;
+        let friendData = friendDoc.data();
+        let friendName = friendData.nickname || "Inconnu";
+
+        if (friends.some(f => f.uid === friendUid)) {
+            showToast("Cet ami est déjà dans votre liste ! 🤝");
+            return;
+        }
+
+        friends.push({ uid: friendUid, nickname: friendName });
+        db.collection("users").doc(currentUser.uid).update({ following: friends }).then(() => {
+            // Réciprocité (peut échouer selon règles Firestore, non bloquant)
+            let theirFriends = friendData.following || [];
+            if (!theirFriends.some(f => f.uid === currentUser.uid)) {
+                theirFriends.push({ uid: currentUser.uid, nickname: userNickname || "Inconnu" });
+                db.collection("users").doc(friendUid).update({ following: theirFriends }).catch(err => {
+                    console.warn("Réciprocité non appliquée (règles Firestore) :", err);
+                });
+            }
+            showToast(`${friendName} ajouté à vos amis ! ✨`);
+            inputField.value = "";
+            renderGlobalFriends();
+            startFriendSync(friendUid, friendName, 'agenda');
+        }).catch(() => showToast("Erreur lors de l'enregistrement ❌"));
+    }).catch(() => showToast("Erreur réseau ❌"));
+}
+
+function openFriendsModal() {
+    const searchInput = document.getElementById('friend-search-input');
+    if (searchInput) searchInput.value = "";
+    renderGlobalFriends();
+    document.getElementById('friends-list-modal').style.display = 'flex';
+}
+
+function filterFriendsList() {
+    renderGlobalFriends();
+}
+
+function renderGlobalFriends() {
+    const container = document.getElementById('global-friends-list');
+    const badge = document.getElementById('friends-count-badge');
+    if (badge) badge.innerText = friends.length;
+    if (!container) return;
+
+    if (friends.length === 0) {
+        container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center; margin-top: 10px;'>Vous n'avez pas encore ajouté d'amis.</p>`;
+        return;
+    }
+
+    const searchQuery = (document.getElementById('friend-search-input')?.value || "").toLowerCase().trim();
+    const filteredFriends = friends.filter(f => f.nickname.toLowerCase().includes(searchQuery));
+
+    if (filteredFriends.length === 0) {
+        container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center; margin-top: 10px;'>Aucun ami trouvé pour "${searchQuery}".</p>`;
+        return;
+    }
+
+    container.innerHTML = filteredFriends.map(f => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;">
+            <span style="font-weight:bold;">👤 ${f.nickname}</span>
+            <button onclick="removeGlobalFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:bold;">Retirer</button>
+        </div>`).join('');
+}
+
+function removeGlobalFriend(fUid) {
+    friends = friends.filter(f => f.uid !== fUid);
+    db.collection("users").doc(currentUser.uid).update({ following: friends }).then(() => {
+        db.collection("users").doc(fUid).get().then(doc => {
+            if (doc.exists) {
+                let theirFriends = doc.data().following || [];
+                theirFriends = theirFriends.filter(f => f.uid !== currentUser.uid);
+                db.collection("users").doc(fUid).update({ following: theirFriends }).catch(e => console.warn("Retrait distant ignoré."));
+            }
+        });
+        renderGlobalFriends();
+        if (friendUnsubscribes[fUid]) { friendUnsubscribes[fUid](); delete friendUnsubscribes[fUid]; }
+        sharedTasks = sharedTasks.filter(t => t.userId !== fUid);
+        if (typeof renderCalendar === 'function') renderCalendar();
+        showToast("Ami retiré ! 🗑️");
+    });
+}
