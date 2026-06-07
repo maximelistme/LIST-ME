@@ -304,3 +304,18 @@ function leaveSharedList(listId) {
         renderShoppingTabs(); renderShoppingCategories(); syncCurrentShoppingItems(); updateParticipantsDisplay(); if (document.getElementById('shopping-list-multi-share-modal').style.display === 'flex') { renderMySharedListsInModal(); }
     });
 }
+
+function autoArchiveShoppingItems() {
+    const today = new Date().toISOString().split('T')[0];
+    db.collection("shopping").where("completed", "==", true).get().then(snapshot => {
+        snapshot.forEach(doc => {
+            let item = doc.data();
+            // Si validé avant aujourd'hui, on supprime
+            if (item.createdAt && new Date(item.createdAt).toISOString().split('T')[0] < today) {
+                doc.ref.delete();
+            }
+        });
+    });
+}
+// Ajoute l'appel dans ton runNotificationEngine ou via un setInterval séparé
+setInterval(autoArchiveShoppingItems, 3600000); // Vérifie toutes les heures
