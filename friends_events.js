@@ -138,18 +138,43 @@ function addGlobalFriend() {
     }); 
 }
 
+function openFriendsModal() {
+    document.getElementById('friend-search-input').value = ""; // On réinitialise la recherche
+    renderGlobalFriends();
+    document.getElementById('friends-list-modal').style.display = 'flex';
+}
+
+function filterFriendsList() {
+    renderGlobalFriends();
+}
+
 function renderGlobalFriends() {
     const container = document.getElementById('global-friends-list');
-    if(!container) return;
+    const badge = document.getElementById('friends-count-badge');
+    
+    // Met à jour le compteur sur le bouton du profil
+    if (badge) badge.innerText = friends.length;
+    
+    if (!container) return;
     
     if (friends.length === 0) { 
-        container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center;'>Vous n'avez pas encore ajouté d'amis.</p>`; 
+        container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center; margin-top: 10px;'>Vous n'avez pas encore ajouté d'amis.</p>`; 
         return; 
     }
     
-    container.innerHTML = friends.map(f => `
+    // Logique de recherche
+    const searchQuery = (document.getElementById('friend-search-input')?.value || "").toLowerCase().trim();
+    const filteredFriends = friends.filter(f => f.nickname.toLowerCase().includes(searchQuery));
+    
+    if (filteredFriends.length === 0) {
+        container.innerHTML = `<p style='font-size: 0.85rem; opacity: 0.5; font-style: italic; text-align: center; margin-top: 10px;'>Aucun ami trouvé pour "${searchQuery}".</p>`; 
+        return;
+    }
+    
+    // Affichage des résultats filtrés
+    container.innerHTML = filteredFriends.map(f => `
         <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; border: 1px solid rgba(128,128,128,0.2); width: 100%;">
-            <span style="font-weight:bold; color:var(--primary-dark);">👤 ${f.nickname}</span>
+            <span style="font-weight:bold;">👤 ${f.nickname}</span>
             <button onclick="removeGlobalFriend('${f.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:bold;">Retirer</button>
         </div>
     `).join('');
