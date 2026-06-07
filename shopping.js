@@ -70,33 +70,70 @@ function openShoppingItemModal(identifier, isCustom) {
     tempShoppingProduct = productName; document.getElementById('shopping-modal-title').innerHTML = formatProductDisplay(productName); document.getElementById('shopping-qty').value = "1";
     const unitSelect = document.getElementById('shopping-unit'); unitSelect.innerHTML = ''; units.forEach(u => { let opt = document.createElement('option'); opt.value = u.v; opt.innerText = u.l; unitSelect.appendChild(opt); });
     
-    const assignContainer = document.getElementById('assignee-container'), assignSelect = document.getElementById('shopping-assignee');
+    // GESTION DU MENU D'ATTRIBUTION
+    const assignContainer = document.getElementById('assignee-container');
+    const assignSelect = document.getElementById('shopping-assignee');
     if(assignContainer && assignSelect) {
-        assignContainer.style.display = 'none'; assignSelect.innerHTML = '';
+        assignContainer.style.display = 'none';
+        assignSelect.innerHTML = '';
+
         if (currentShoppingListId !== 'personal') {
             const listObj = mySharedLists.find(l => l.id === currentShoppingListId);
+            // Si c'est un event et qu'ON EST le créateur, on affiche la liste des participants
             if (listObj && listObj.type === 'event' && listObj.createdBy === currentUser.uid) {
-                assignContainer.style.display = 'block'; assignSelect.innerHTML = '<option value="">-- Non attribué --</option><option value="'+currentUser.uid+'">Moi</option>';
-                listObj.members.forEach(memberUid => { if(memberUid !== currentUser.uid) { let f = friends.find(fr => fr.uid === memberUid); assignSelect.innerHTML += `<option value="${memberUid}">${f ? f.nickname : "Invité"}</option>`; } });
+                assignContainer.style.display = 'block';
+                assignSelect.innerHTML = '<option value="">-- Non attribué --</option>';
+                
+                listObj.members.forEach(memberUid => {
+                    let fName = window.currentListMemberNames[memberUid] || "Invité";
+                    assignSelect.innerHTML += `<option value="${memberUid}">${fName}</option>`;
+                });
             }
         }
     }
-    document.getElementById('shopping-item-modal').style.display = 'flex'; currentShoppingPath = []; renderShoppingCategories();
+    document.getElementById('shopping-item-modal').style.display = 'flex'; 
+    currentShoppingPath = []; renderShoppingCategories();
 }
 
 function findRayonForProduct(productName) { const pLower = (productName||"").toLowerCase(); for (let rayon in foodCategories) { if (JSON.stringify(foodCategories[rayon]).toLowerCase().includes(pLower)) return rayon; } return "✨ Produits Custom / Autres"; }
 function itemOwnerNameForSort(item) { if (currentShoppingListId === 'personal') return 'Moi'; if (item.assignedToName) return item.assignedToName; if (item.userId === currentUser.uid) return 'A_Moi'; return item.ownerName || 'Z_Inconnu'; }
 
 function saveShoppingItem() {
-    const qty = document.getElementById('shopping-qty').value, unit = document.getElementById('shopping-unit').value, finalName = tempShoppingProduct, displayInfo = unit === "" ? `x${qty}` : `${qty} ${unit}`;
+    const qty = document.getElementById('shopping-qty').value;
+    const unit = document.getElementById('shopping-unit').value;
+    const finalName = tempShoppingProduct;
+    const displayInfo = unit === "" ? `x${qty}` : `${qty} ${unit}`;
+    
     let assignedToUid = null, assignedToName = null;
     const assignContainer = document.getElementById('assignee-container');
-    if (assignContainer && assignContainer.style.display === 'block') { const assignSelect = document.getElementById('shopping-assignee'); if (assignSelect && assignSelect.value) { assignedToUid = assignSelect.value; assignedToName = assignSelect.options[assignSelect.selectedIndex].text; } }
+    if (assignContainer && assignContainer.style.display === 'block') { 
+        const assignSelect = document.getElementById('shopping-assignee'); 
+        if (assignSelect && assignSelect.value) { 
+            assignedToUid = assignSelect.value; 
+            assignedToName = assignSelect.options[assignSelect.selectedIndex].text; 
+        } 
+    }
 
     if (finalName && currentUser) {
-        const payload = { name: finalName, info: displayInfo, completed: false, userId: currentUser.uid, ownerName: userNickname || "Inconnu", listId: currentShoppingListId, createdAt: Date.now() };
-        if (assignedToUid) { payload.assignedToUid = assignedToUid; payload.assignedToName = assignedToName; }
-        db.collection("shopping").add(payload).then(() => { showToast("Ajouté au panier ! 🛒"); document.getElementById('shopping-item-modal').style.display = 'none'; });
+        const payload = { 
+            name: finalName, 
+            info: displayInfo, 
+            completed: false, 
+            userId: currentUser.uid, 
+            ownerName: userNickname || "Inconnu", 
+            listId: currentShoppingListId, 
+            createdAt: Date.now() 
+        };
+        // Injecte les données d'attribution si elles existent
+        if (assignedToUid) { 
+            payload.assignedToUid = assignedToUid; 
+            payload.assignedToName = assignedToName; 
+        }
+        
+        db.collection("shopping").add(payload).then(() => { 
+            showToast("Ajouté au panier ! 🛒"); 
+            document.getElementById('shopping-item-modal').style.display = 'none'; 
+        });
     }
 }
 
@@ -161,6 +198,14 @@ function renderShoppingList() {
         if (item.assignedToName) { const isMe = item.assignedToUid === currentUser.uid; return ` <small style="opacity:0.8; font-weight:bold; color:white; background: ${isMe ? 'var(--danger)' : 'var(--warning)'}; padding: 2px 6px; border-radius: 6px; font-size: 0.7rem; margin-left: 5px;">🎯 Ramené par ${isMe ? 'Moi' : item.assignedToName}</small>`; }
         if (item.userId === currentUser.uid) return ` <small style="opacity:0.6; font-style:italic; color:var(--primary);">(Moi)</small>`;
         if (item.ownerName) return ` <small style="opacity:0.6; font-style:italic;">(${item.ownerName})</small>`; return '';
+        // Mode Événement : Si le produit est attribué à quelqu'un
+        if (item.assignedToName) { 
+            const isMe = item.assignedToUid === currentUser.uid; 
+            return ` <small style="opacity:0.9; font-weight:bold; color:white; background: ${isMe ? 'var(--danger)' : 'var(--warning)'}; padding: 2px 7px; border-radius: 6px; font-size: 0.7rem; margin-left: 5px;">🎯 Ramené par ${isMe ? 'Moi' : item.assignedToName}</small>`; 
+        }
+        
+        // Mode Standard
+        return item.userId === currentUser.uid ? ` <small style="opacity:0.6; font-style:italic; color:var(--primary);">(Moi)</small>` : ` <small style="opacity:0.6; font-style:italic;">(${item.ownerName})</small>`;
     };
 
     let lastRayonRendered = null;
