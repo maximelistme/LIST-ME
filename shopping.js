@@ -1,7 +1,9 @@
+// --- FONCTIONS DE NAVIGATION ---
 function shoppingNavigateTo(cat) { shoppingSearchQuery = ""; currentShoppingPath.push(cat); renderShoppingCategories(); }
 function formatProductDisplay(name) { return (name||"").replace(/\(([^)]+)\)/g, '<span style="color:transparent; font-size:0; opacity:0; pointer-events:none;">($1)</span>'); }
 function shoppingNavigateBack() { shoppingSearchQuery = ""; currentShoppingPath.pop(); renderShoppingCategories(); }
 
+// --- AFFICHAGE RAYONS ---
 function renderShoppingCategories() {
     const container = document.getElementById('shopping-categories'), breadcrumb = document.getElementById('shopping-breadcrumb'); if(!container || !breadcrumb) return;
 
@@ -40,6 +42,7 @@ function handleShoppingSearch(val) { shoppingSearchQuery = val; renderShoppingCa
 function scrollToShoppingList() { const listHeader = document.getElementById('shopping-list-header'); if (listHeader) listHeader.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 function scrollToTopShopping() { const marketHeader = document.getElementById('shopping-page'); if (marketHeader) marketHeader.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 
+// --- LISTES PARTAGÉES ---
 function renderShoppingTabs() {
     const container = document.getElementById('shopping-tabs-dynamic'), ownerOpt = document.getElementById('sort-opt-owner'), sortSelect = document.getElementById('shopping-sort-filter'); if (!container) return;
     if (ownerOpt && sortSelect) { if (currentShoppingListId === 'personal') { ownerOpt.style.display = 'none'; ownerOpt.disabled = true; if (sortSelect.value === 'owner') sortSelect.value = 'date'; } else { ownerOpt.style.display = 'block'; ownerOpt.disabled = false; } }
@@ -62,8 +65,6 @@ function renderShoppingList() {
         else shoppingItems.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
         const actives = shoppingItems.filter(item => !item.completed), completeds = shoppingItems.filter(item => item.completed);
-        
-        // --- BOUTON SUPPRIMER POUR TOUS (CRÉATEUR UNIQUEMENT) ---
         const isCreator = (mySharedLists.find(l => l.id === currentShoppingListId)?.createdBy === currentUser.uid);
 
         const getOwnerTag = (item) => {
@@ -89,13 +90,11 @@ function renderShoppingList() {
     } catch(e) { console.error(e); }
 }
 
+// --- OUTILS & GESTION ---
 function autoArchiveShoppingItems() {
     const today = new Date().toISOString().split('T')[0];
     db.collection("shopping").where("completed", "==", true).get().then(snapshot => {
-        snapshot.forEach(doc => {
-            let item = doc.data();
-            if (item.createdAt && new Date(item.createdAt).toISOString().split('T')[0] < today) doc.ref.delete();
-        });
+        snapshot.forEach(doc => { let item = doc.data(); if (item.createdAt && new Date(item.createdAt).toISOString().split('T')[0] < today) doc.ref.delete(); });
     });
 }
 setInterval(autoArchiveShoppingItems, 3600000);
@@ -103,3 +102,15 @@ setInterval(autoArchiveShoppingItems, 3600000);
 function toggleShoppingCheck(id, isCompleted) { db.collection("shopping").doc(id).update({ completed: !isCompleted }); }
 function deleteShoppingItem(id) { db.collection("shopping").doc(id).delete().then(() => showToast("Produit retiré !")); }
 function clearCompletedShopping() { let completeds = shoppingItems.filter(item => item.completed); if (completeds.length === 0) return; Promise.all(completeds.map(item => db.collection("shopping").doc(item.id).delete())).then(() => { showToast("Le chariot a été vidé ! 🗑️"); }); }
+
+function openCustomShoppingListShareModal() {
+    document.getElementById('new-shared-list-name').value = ''; document.getElementById('join-shared-list-code').value = '';
+    renderMySharedListsInModal(); renderShoppingTabs(); renderFriendsCheckboxesForNewList();
+    document.getElementById('shopping-list-multi-share-modal').style.display = 'flex';
+}
+
+function renderMySharedListsInModal() {
+    const container = document.getElementById('my-shared-lists-container'); if (!container) return;
+    if (!mySharedLists || mySharedLists.length === 0) { container.innerHTML = `<p style="font-size: 0.9rem; opacity: 0.6; font-style: italic; text-align: center; padding: 10px;">Aucune liste partagée active.</p>`; return; }
+    container.innerHTML = mySharedLists.map(l => `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px; border-radius:8px; border: 1px solid rgba(128,128,128,0.1); width: 100%; gap: 10px; box-sizing: border-box;"><div style="flex: 1; min-width: 0;"><strong style="display:block; color:var(--primary-dark); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${l.name || "Sans nom"}</strong><small style="color:var(--primary); font-weight:bold; background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;">Code: ${l.code || "---"}</small></div><div style="display:flex; gap:8px; flex-shrink:0;"><button onclick="copyListCode('${l.code}')" style="background:none; border:none; cursor:pointer; font-size:1.1rem;" title="Copier le code">📋</button><button onclick="leaveSharedList('${l.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:bold; font-family:inherit;">Quitter</button></div></div>`).join('');
+}
