@@ -399,3 +399,36 @@ input:disabled, select:disabled, textarea:disabled { opacity: 0.55; cursor: not-
     font-size: 0.8rem;
     font-weight: bold;
 }
+
+/* --- CORRECTIONS POUR MODALES ET LISTES PARTAGÉES --- */
+
+/* 1. Force la largeur maximale des modales */
+.modal-content.content-center {
+    width: 90% !important;
+    max-width: 450px !important;
+    box-sizing: border-box;
+}
+
+/* 2. S'assure que la liste des amis partagées ne déborde pas */
+#my-shared-lists-container {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 3. Empêche le bouton "Quitter" de pousser le texte hors de l'écran */
+#my-shared-lists-container > div {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    overflow: hidden; /* Cache ce qui dépasse */
+    box-sizing: border-box;
+}
+
+/* 4. Garantit que le texte du nom de la liste est tronqué proprement s'il est trop long */
+#my-shared-lists-container strong {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
+}
