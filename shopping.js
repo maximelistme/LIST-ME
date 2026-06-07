@@ -5,15 +5,22 @@ function shoppingNavigateBack() { shoppingSearchQuery = ""; currentShoppingPath.
 function renderShoppingCategories() {
     const container = document.getElementById('shopping-categories'), breadcrumb = document.getElementById('shopping-breadcrumb'); if(!container || !breadcrumb) return;
 
+    // SÉCURITÉ : VÉRIFICATION ACCÈS RESTREINT ÉVÉNEMENT
     if (currentShoppingListId !== 'personal' && typeof mySharedLists !== "undefined") {
         const listObj = mySharedLists.find(l => l.id === currentShoppingListId);
+        // Si c'est un event et qu'on N'EST PAS le créateur, on bloque l'affichage
         if (listObj && listObj.type === 'event' && listObj.createdBy !== currentUser.uid) {
             breadcrumb.innerText = "Accès restreint";
-            container.innerHTML = `<div style="grid-column: 1 / -1; background: rgba(128,128,128,0.05); border: 2px dashed var(--warning); padding: 25px 15px; border-radius: 12px; text-align: center;"><span style="font-size: 2rem; display:block; margin-bottom: 10px;">🛡️</span><strong style="color: var(--primary-dark); font-size: 1.1rem; display:block; margin-bottom: 5px;">Mode Événement</strong><span style="font-style: italic; opacity: 0.8; font-size: 0.9rem;">Vous êtes invité. Seul l'organisateur gère la liste.</span></div>`;
+            container.innerHTML = `
+                <div style="grid-column: 1 / -1; background: rgba(128,128,128,0.05); border: 2px dashed var(--warning); padding: 25px 15px; border-radius: 12px; text-align: center;">
+                    <span style="font-size: 2rem; display:block; margin-bottom: 10px;">🛡️</span>
+                    <strong style="color: var(--primary-dark); font-size: 1.1rem; display:block; margin-bottom: 5px;">Mode Événement</strong>
+                    <span style="font-style: italic; opacity: 0.8; font-size: 0.9rem;">Vous êtes invité à cet événement. Seul l'organisateur ajoute les produits. Vous pouvez cocher ce que vous prenez dans le chariot en bas !</span>
+                </div>`;
             return; 
         }
     }
-
+    
     let isFocused = (document.activeElement && document.activeElement.id === 'shopping-search'); container.innerHTML = ''; const currentPathStr = currentShoppingPath.join('/');
     breadcrumb.innerText = currentShoppingPath.length === 0 ? '' : currentShoppingPath[currentShoppingPath.length - 1]; const isAtRoot = (currentShoppingPath.length === 0);
 
