@@ -73,9 +73,30 @@ function openCustomShoppingListShareModal() {
     document.getElementById('shopping-list-multi-share-modal').style.display = 'flex';
 }
 
+// --- RENDER LISTES PARTAGÉES DANS MODAL ---
 function renderMySharedListsInModal() {
-    const container = document.getElementById('my-shared-lists-container'); if (!container) return;
-    container.innerHTML = mySharedLists.map(l => `<div style="display:flex; justify-content:space-between; align-items:center;"><strong>${l.name}</strong><button onclick="leaveSharedList('${l.id}')">Quitter</button></div>`).join('');
+    const container = document.getElementById('my-shared-lists-container'); 
+    if (!container) return;
+    
+    // Si la liste est vide, on affiche un message clair
+    if (!mySharedLists || mySharedLists.length === 0) {
+        container.innerHTML = `<p style="font-size: 0.9rem; opacity: 0.6; font-style: italic; text-align: center; padding: 10px;">Aucune liste partagée active.</p>`;
+        return;
+    }
+    
+    // Rendu robuste avec style intégré pour éviter le "cassé"
+    container.innerHTML = mySharedLists.map(l => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px; border-radius:8px; border: 1px solid rgba(128,128,128,0.1); width: 100%; gap: 10px; box-sizing: border-box; margin-bottom: 5px;">
+            <div style="flex: 1; min-width: 0;">
+                <strong style="display:block; color:var(--primary-dark); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${l.name || "Sans nom"}</strong>
+                <small style="color:var(--primary); font-weight:bold; background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;">Code: ${l.code || "---"}</small>
+            </div>
+            <div style="display:flex; gap:8px; flex-shrink:0;">
+                <button onclick="copyListCode('${l.code}')" style="background:none; border:none; cursor:pointer; font-size:1.1rem;">📋</button>
+                <button onclick="leaveSharedList('${l.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:bold;">Quitter</button>
+            </div>
+        </div>
+    `).join('');
 }
 
 function renderFriendsCheckboxesForNewList() {
