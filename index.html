@@ -15,6 +15,10 @@
             opacity: 1 !important;
             display: block !important;
         }
+        /* Empêche les notifications de bloquer les clics */
+        #toast-notification {
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="theme-pink">
@@ -78,16 +82,16 @@
         </section>
 
         <section id="calendar-page" style="display:none;">
-            <div class="calendar-nav">
+            <div class="calendar-nav" style="position: relative; z-index: 5;">
                 <button id="btn-year" class="bubble" onclick="setViewState('year')">Année</button>
                 <button id="btn-month" class="bubble" onclick="setViewState('month')">Mois</button>
                 <button id="btn-day" class="bubble active" onclick="setViewState('day')">Jours</button>
             </div>
-            <div style="display:flex; justify-content:center; align-items:center; margin-bottom:15px; position:relative; width: 100%; height: 35px;">
+            <div style="display:flex; justify-content:center; align-items:center; margin-bottom:15px; position:relative; width: 100%; height: 35px; z-index: 5;">
                 <button id="btn-add-birthday" onclick="openBirthdayModal()" class="btn-add-birthday btn-validated-click" style="position: absolute; left: 15px;">+ 🎂</button>
                 <div id="calendar-title" class="calendar-title" style="margin:0; font-size: 1.5em; text-align:center;"></div>
             </div>
-            <div id="calendar-content"></div>
+            <div id="calendar-content" style="position: relative; z-index: 1;"></div>
             <div id="calendar-legend" class="calendar-legend">
                 <span class="legend-item"><span class="legend-dot" style="background:var(--danger)"></span>Haute</span>
                 <span class="legend-item"><span class="legend-dot" style="background:var(--warning)"></span>Moyenne</span>
@@ -107,7 +111,7 @@
                     🛒 Voir ma liste ⬇️
                 </button>
                 <button onclick="openCustomShoppingListShareModal()" class="btn-primary" style="padding: 10px 18px; font-size: 0.9rem; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: var(--primary); color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    🤝 Partager ma liste de course
+                    🤝 Partager ma liste
                 </button>
             </div>
 
@@ -121,17 +125,13 @@
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%; border-bottom: 2px solid var(--primary); padding: 0 10px 0 10px; margin-bottom: 15px; box-sizing: border-box; flex-wrap: wrap; gap: 10px;">
-                
-                <div id="shopping-tabs-dynamic" style="display: none; gap: 6px; overflow-x: auto; white-space: nowrap; flex: 1;">
-                    </div>
-                
+                <div id="shopping-tabs-dynamic" style="display: none; gap: 6px; overflow-x: auto; white-space: nowrap; flex: 1;"></div>
                 <select id="shopping-sort-filter" onchange="renderShoppingList()" style="padding: 6px 10px; font-size: 0.8rem; border-radius: 12px; font-weight: bold; cursor: pointer; background: var(--card-bg); color: var(--text-color); border: 1px solid rgba(128,128,128,0.3); outline: none; margin-left: auto; margin-bottom: 5px;">
                     <option value="date">✨ Tri par Ajout</option>
                     <option value="alpha">🔤 Alphabétique</option>
                     <option value="rayon">🏬 Par Rayon</option>
                     <option value="owner" id="sort-opt-owner">👤 Par Personne</option>
                 </select>
-                
             </div>
             
             <div id="shopping-list-content"></div>
@@ -150,22 +150,26 @@
                 <input type="text" id="profile-nickname" placeholder="Ex: Max, Julie..." onchange="autoSaveNickname()" style="text-align: center;">
                 
                 <hr style="opacity: 0.1; margin: 20px 0;">
-                <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 10px;">👥 Mes Amis</h3>
+                <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 10px;">👥 Amis</h3>
                 
-                <div class="share-code-box" style="background: transparent; border: 2px dashed rgba(128,128,128,0.3); color: var(--primary); text-align: center; padding: 10px; border-radius: 10px;">
-                    <span style="font-size: 0.85rem; opacity: 0.7; display: block;">Mon Code Utilisateur :</span>
-                    <span id="my-user-code" style="font-size: 1.5rem; font-weight: bold; letter-spacing: 1px;">------</span>
-                    <button onclick="copyUserCode()" style="background:none; border:none; cursor:pointer; font-size:1.2rem; margin-left: 10px;" title="Copier le code">📋</button>
+                <div style="display: flex; gap: 10px; align-items: center; background: rgba(128,128,128,0.05); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.1); margin-bottom: 10px;">
+                    <span style="font-size: 0.85rem; opacity: 0.7; flex-shrink: 0;">Mon Code :</span>
+                    <span id="my-user-code" style="font-size: 1.1rem; font-weight: bold; letter-spacing: 1px; flex: 1; text-align: center; color: var(--primary);">------</span>
+                    <button onclick="copyUserCode()" style="background:none; border:none; cursor:pointer; font-size:1.2rem; flex-shrink: 0;" title="Copier le code">📋</button>
                 </div>
                 
-                <div style="display:flex; gap:10px; margin-top:15px;">
-                    <input type="text" id="add-friend-input" placeholder="Ajouter un ami (Code)..." style="flex:1; text-transform:uppercase; margin-bottom: 0; padding: 10px; font-size: 0.85rem;">
-                    <button class="btn-primary btn-validated-click" onclick="addGlobalFriend()" style="padding: 0 15px;">Ajouter</button>
+                <div style="display:flex; gap:10px; margin-bottom: 15px;">
+                    <input type="text" id="add-friend-input" placeholder="Ajouter via code..." style="flex:1; text-transform:uppercase; margin-bottom: 0; padding: 10px; font-size: 0.85rem;">
+                    <button class="btn-primary btn-validated-click" onclick="addGlobalFriend()" style="padding: 0 15px; font-size: 0.85rem;">Ajouter</button>
                 </div>
                 
-                <div id="global-friends-list" style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px;"></div>
+                <button onclick="openFriendsModal()" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 0.95rem; display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 15px;">
+                    Voir mes amis 
+                    <span id="friends-count-badge" style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">0</span>
+                </button>
+
                 <hr style="opacity: 0.1; margin: 20px 0;">
-                <button onclick="openShareModal('agenda')" class="btn-secondary btn-validated-click" style="font-size: 1rem; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;">Partage Agenda 🤝</button>
+                <button onclick="openShareModal('agenda')" class="btn-secondary btn-validated-click" style="font-size: 1rem; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;">Partage Agenda Historique 🤝</button>
 
                 <button id="btn-logout" class="btn-secondary" style="background:var(--danger); color:white; margin-top: 15px;">Se déconnecter</button>
             </div>
@@ -203,8 +207,14 @@
                 <div style="flex: 1.5;">
                     <label>Mesure</label>
                     <select id="shopping-unit" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; box-sizing: border-box;">
-                        </select>
+                    </select>
                 </div>
+            </div>
+
+            <div id="assignee-container" style="display: none; width: 100%; margin-top: 10px;">
+                <label style="color: var(--primary); font-weight: bold;">🎯 Attribuer cet achat à :</label>
+                <select id="shopping-assignee" style="padding: 14px; border-radius: 10px; border: 2px dashed var(--primary); background: rgba(128,128,128,0.05); color: var(--text-color); font-size: 1rem; width: 100%; box-sizing: border-box;">
+                </select>
             </div>
 
             <div class="modal-buttons" style="display:flex; gap:10px; margin-top:15px;">
@@ -220,7 +230,7 @@
             
             <label>Rayon de rangement</label>
             <select id="custom-card-category" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; margin-bottom: 10px;">
-                </select>
+            </select>
 
             <label>Nom du produit</label>
             <input type="text" id="custom-card-name" placeholder="Ex: Gaufres, Épices...">
@@ -248,20 +258,13 @@
 
     <div id="share-modal" class="modal modal-center" style="display: none; justify-content: center; align-items: center; z-index: 10005;">
         <div class="modal-content content-center">
-            <h3 id="share-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Partage</h3>
+            <h3 id="share-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Partage Agenda</h3>
             <div>
-                <label>Mon code à donner :</label>
-                <div class="share-code-box" style="background: transparent; border: 2px dashed rgba(128,128,128,0.3); color: var(--primary);">
-                    <span id="my-share-code" style="font-size: 1.5rem;">------</span>
-                    <button onclick="copyShareCode()" style="background:none; border:none; cursor:pointer; font-size:1.5rem;" title="Copier le code">📋</button>
-                </div>
-                
-                <label style="margin-top:15px; display:block;">Ajouter le code d'un proche :</label>
+                <label>Ajouter avec un code :</label>
                 <div style="display:flex; gap:10px; margin-top:5px;">
                     <input type="text" id="friend-code-input" placeholder="Code..." style="flex:1; text-transform:uppercase;">
                     <button id="btn-add-friend" class="btn-primary btn-validated-click">Lier</button>
                 </div>
-                
                 <div id="friends-list-container" class="friend-list"></div>
             </div>
             <button onclick="document.getElementById('share-modal').style.display='none'" class="btn-secondary" style="margin-top: 20px; width: 100%;">Fermer</button>
@@ -291,7 +294,7 @@
             </div>
 
             <div style="background: rgba(128,128,128,0.05); padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px solid rgba(128,128,128,0.1);">
-                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Rejoindre une liste :</label>
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Rejoindre une liste (Code) :</label>
                 <div style="display: flex; gap: 8px;">
                     <input type="text" id="join-shared-list-code" placeholder="CODE..." style="flex: 1; text-transform: uppercase; margin-bottom: 0; min-width: 0;">
                     <button onclick="joinSharedShoppingList()" class="btn-primary" style="padding: 0 15px; flex-shrink: 0;">Lier</button>
@@ -306,6 +309,19 @@
         </div>
     </div>
 
+    <div id="friends-list-modal" class="modal modal-center" style="display: none; z-index: 10008;">
+        <div class="modal-content content-center" style="max-height: 85vh; overflow-y: auto;">
+            <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">👥 Mes Amis</h3>
+            
+            <input type="text" id="friend-search-input" placeholder="🔍 Rechercher un ami..." oninput="filterFriendsList()" style="width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 0.95rem;">
+            
+            <div id="global-friends-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; padding-right: 5px;">
+                </div>
+            
+            <button onclick="document.getElementById('friends-list-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
+        </div>
+    </div>
+
     <div id="share-success-modal" class="modal modal-center" style="display: none; z-index: 10007;">
         <div class="modal-content content-center">
             <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">🎉 Liste Créée !</h3>
@@ -317,7 +333,7 @@
             </div>
             
             <p style="font-size: 0.9rem; text-align: center; opacity: 0.7; margin-bottom: 15px; line-height: 1.4;">
-                Donnez ce code à vos proches pour qu'ils rejoignent la liste.<br><br>Vous pourrez le retrouver à tout moment dans le bouton <b>"Partager ma liste de course"</b>.
+                Les amis sélectionnés ont été ajoutés.<br>Donnez ce code aux autres pour qu'ils rejoignent la liste.
             </p>
             
             <button onclick="document.getElementById('share-success-modal').style.display='none'" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem;">C'est compris !</button>
@@ -328,12 +344,12 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
-    <script src="config.js?v=v5"></script>
-    <script src="navigation.js?v=v5"></script>
-    <script src="tasks.js?v=v5"></script>
-    <script src="calendar.js?v=v5"></script>
-    <script src="shopping.js?v=v5"></script>
-    <script src="friends_events.js?v=v5"></script>
-    <script src="jsevents.js?v=v5"></script>
+    <script src="config.js?v=v6"></script>
+    <script src="navigation.js?v=v6"></script>
+    <script src="tasks.js?v=v6"></script>
+    <script src="calendar.js?v=v6"></script>
+    <script src="shopping.js?v=v6"></script>
+    <script src="friends_events.js?v=v6"></script>
+    <script src="jsevents.js?v=v6"></script>
 </body>
 </html>
