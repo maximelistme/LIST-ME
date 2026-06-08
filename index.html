@@ -63,10 +63,13 @@
             </div>
             <div id="tasks-action-bar" class="action-bar-left" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px;">
                 <button id="add-task-btn" class="btn-add-bubble btn-validated-click">+ Ajouter une tâche</button>
-                <select id="task-sort-filter" onchange="renderTasks()" style="padding: 10px; font-size: 0.85rem; border-radius: 20px; font-weight: bold; cursor: pointer; max-width: 160px;">
-                    <option value="chrono">⏳ Tri Chronologique</option>
-                    <option value="creation">✨ Tri par Ajout</option>
-                </select>
+                <div style="position:relative; display:inline-block;">
+                    <button style="padding:10px 16px; font-size:0.85rem; border-radius:20px; font-weight:bold; cursor:pointer; background:var(--card-bg); color:var(--text-color); border:1px solid rgba(128,128,128,0.3); pointer-events:none;">⏳ Tri ▾</button>
+                    <select id="task-sort-filter" onchange="renderTasks()" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
+                        <option value="chrono">Chronologique</option>
+                        <option value="creation">Par Ajout</option>
+                    </select>
+                </div>
             </div>
             <div id="task-list"></div>
         </section>
@@ -106,11 +109,18 @@
                 <h2>Market</h2>
             </div>
             
-            <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; padding: 0 10px;">
-                <button onclick="scrollToShoppingList()" class="btn-primary" style="padding: 10px 18px; font-size: 0.9rem; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: var(--primary); color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; padding: 0 10px;">
+                <div id="shopping-list-selector-top" style="display:none; position:relative;">
+                    <button onclick="toggleShoppingListDropdown('top')" style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:white; border:none; padding:10px 18px; border-radius:20px; font-size:0.9rem; font-family:'Mogra',cursive; font-weight:normal; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,0.2);">
+                        <span id="shopping-list-dropdown-label-top">Ma liste</span>
+                        <span id="shopping-list-dropdown-arrow-top" style="font-size:0.75rem; font-family:sans-serif;">▼</span>
+                    </button>
+                    <div id="shopping-list-dropdown-menu-top" style="display:none; position:absolute; top:calc(100% + 8px); left:0; background:var(--card-bg); border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,0.2); min-width:200px; z-index:999; overflow:hidden; border:1px solid rgba(128,128,128,0.15);"></div>
+                </div>
+                <button onclick="scrollToShoppingList()" class="btn-primary" style="padding: 10px 18px; font-size: 0.9rem; border-radius: 20px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     🛒 Voir ma liste ⬇️
                 </button>
-                <button onclick="openCustomShoppingListShareModal()" class="btn-primary" style="padding: 10px 18px; font-size: 0.9rem; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: var(--primary); color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <button onclick="openCustomShoppingListShareModal()" class="btn-primary" style="padding: 10px 18px; font-size: 0.9rem; border-radius: 20px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     🤝 Partager ma liste
                 </button>
             </div>
@@ -120,12 +130,18 @@
             <div id="shopping-categories" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 20px;"></div>
             
             <div id="shopping-list-header" class="header-action header-centered" style="margin-top: 30px; margin-bottom: 5px; flex-direction: column; width: 100%;">
-                <h2>Ma Liste de Courses</h2>
+                <h2 id="shopping-list-title">Ma Liste de Courses</h2>
                 <div id="shopping-list-participants" style="font-size: 0.85rem; opacity: 0.8; text-align: center; margin-top: 5px; display: none;"></div>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%; border-bottom: 2px solid var(--primary); padding: 0 10px 0 10px; margin-bottom: 15px; box-sizing: border-box; flex-wrap: wrap; gap: 10px;">
-                <div id="shopping-tabs-dynamic" style="display: none; gap: 6px; overflow-x: auto; white-space: nowrap; flex: 1;"></div>
+                <div id="shopping-list-selector" style="display:none; position:relative;">
+                    <button id="shopping-list-dropdown-btn" onclick="toggleShoppingListDropdown('bottom')" style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:white; border:none; padding:8px 14px; border-radius:20px; font-size:0.9rem; font-family:'Mogra',cursive; font-weight:normal; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,0.2);">
+                        <span id="shopping-list-dropdown-label">Ma liste</span>
+                        <span id="shopping-list-dropdown-arrow" style="font-size:0.75rem; font-family:sans-serif;">▼</span>
+                    </button>
+                    <div id="shopping-list-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 8px); left:0; background:var(--card-bg); border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,0.2); min-width:200px; z-index:999; overflow:hidden; border:1px solid rgba(128,128,128,0.15);"></div>
+                </div>
                 <select id="shopping-sort-filter" onchange="renderShoppingList()" style="padding: 6px 10px; font-size: 0.8rem; border-radius: 12px; font-weight: bold; cursor: pointer; background: var(--card-bg); color: var(--text-color); border: 1px solid rgba(128,128,128,0.3); outline: none; margin-left: auto; margin-bottom: 5px;">
                     <option value="date">✨ Tri par Ajout</option>
                     <option value="alpha">🔤 Alphabétique</option>
@@ -147,36 +163,36 @@
             <div class="header-action header-centered"><h2>Mon Profil</h2></div>
 
             <!-- 3 boutons principaux -->
-            <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 30px;">
+            <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:30px;">
 
-                <!-- Bouton Nom du profil -->
-                <button onclick="openProfileNicknameModal()" class="btn-validated-click" style="display:flex; align-items:center; gap:16px; background:var(--card-bg); border:none; border-radius:20px; padding:18px 22px; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.1); width:100%; text-align:left;">
-                    <span style="font-size:1.8rem;">👤</span>
+                <!-- Bouton Mon Profil -->
+                <button onclick="openProfileNicknameModal()" class="btn-validated-click" style="display:flex; align-items:center; gap:15px; background:linear-gradient(135deg, var(--primary), var(--primary-dark)); border:none; border-radius:20px; padding:16px 20px; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,0.25); width:100%; text-align:left; color:white;">
+                    <span style="font-size:1.6rem; background:rgba(255,255,255,0.2); border-radius:12px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">👤</span>
                     <div style="flex:1;">
-                        <div style="font-weight:bold; font-size:1rem; color:var(--text-color);">Mon Profil</div>
-                        <div id="profile-preview-name" style="font-size:0.82rem; opacity:0.55; margin-top:2px;">Modifier mon nom d'affichage</div>
+                        <div class="profile-action-btn-label" style="font-size:1rem;">Mon Profil</div>
+                        <div id="profile-preview-name" style="font-size:0.8rem; opacity:0.75; margin-top:2px; font-family:-apple-system,sans-serif;">Modifier mon nom d'affichage</div>
                     </div>
-                    <span style="opacity:0.35; font-size:1.2rem;">›</span>
+                    <span style="opacity:0.6; font-size:1.2rem;">›</span>
                 </button>
 
-                <!-- Bouton Amis -->
-                <button onclick="openFriendsModal()" class="btn-validated-click" style="display:flex; align-items:center; gap:16px; background:var(--card-bg); border:none; border-radius:20px; padding:18px 22px; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.1); width:100%; text-align:left;">
-                    <span style="font-size:1.8rem;">👥</span>
+                <!-- Bouton Mes Amis -->
+                <button onclick="openFriendsModal()" class="btn-validated-click" style="display:flex; align-items:center; gap:15px; background:linear-gradient(135deg, var(--primary), var(--primary-dark)); border:none; border-radius:20px; padding:16px 20px; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,0.25); width:100%; text-align:left; color:white;">
+                    <span style="font-size:1.6rem; background:rgba(255,255,255,0.2); border-radius:12px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">👥</span>
                     <div style="flex:1;">
-                        <div style="font-weight:bold; font-size:1rem; color:var(--text-color);">Mes Amis</div>
-                        <div style="font-size:0.82rem; opacity:0.55; margin-top:2px;">Gérer ma liste d'amis</div>
+                        <div class="profile-action-btn-label" style="font-size:1rem;">Mes Amis</div>
+                        <div style="font-size:0.8rem; opacity:0.75; margin-top:2px; font-family:-apple-system,sans-serif;">Gérer ma liste d'amis</div>
                     </div>
-                    <span id="friends-count-badge" style="background:var(--primary); color:white; padding:3px 10px; border-radius:20px; font-size:0.78rem; font-weight:bold;">0</span>
+                    <span id="friends-count-badge" style="background:white; color:var(--primary-dark); padding:3px 10px; border-radius:20px; font-size:0.78rem; font-weight:bold;">0</span>
                 </button>
 
-                <!-- Bouton Agenda partagé -->
-                <button onclick="openShareModal('agenda')" class="btn-validated-click" style="display:flex; align-items:center; gap:16px; background:var(--card-bg); border:none; border-radius:20px; padding:18px 22px; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.1); width:100%; text-align:left;">
-                    <span style="font-size:1.8rem;">🤝</span>
+                <!-- Bouton Agenda Partagé -->
+                <button onclick="openShareModal('agenda')" class="btn-validated-click" style="display:flex; align-items:center; gap:15px; background:linear-gradient(135deg, var(--primary), var(--primary-dark)); border:none; border-radius:20px; padding:16px 20px; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,0.25); width:100%; text-align:left; color:white;">
+                    <span style="font-size:1.6rem; background:rgba(255,255,255,0.2); border-radius:12px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">🤝</span>
                     <div style="flex:1;">
-                        <div style="font-weight:bold; font-size:1rem; color:var(--text-color);">Agenda Partagé</div>
-                        <div style="font-size:0.82rem; opacity:0.55; margin-top:2px;">Partager mon agenda avec des amis</div>
+                        <div class="profile-action-btn-label" style="font-size:1rem;">Agenda Partagé</div>
+                        <div style="font-size:0.8rem; opacity:0.75; margin-top:2px; font-family:-apple-system,sans-serif;">Partager mon agenda avec des amis</div>
                     </div>
-                    <span style="opacity:0.35; font-size:1.2rem;">›</span>
+                    <span style="opacity:0.6; font-size:1.2rem;">›</span>
                 </button>
 
             </div>
@@ -391,6 +407,29 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+    <!-- Modal participants -->
+    <div id="participants-modal" class="modal modal-center" style="display:none; z-index:10010;">
+        <div class="modal-content content-center">
+            <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:15px;">👥 Participants</h3>
+            <div id="participants-modal-list" style="display:flex; flex-direction:column; gap:10px; max-height:55vh; overflow-y:auto;"></div>
+            <button onclick="document.getElementById('participants-modal').style.display='none'" class="btn-secondary" style="margin-top:15px; width:100%;">Fermer</button>
+        </div>
+    </div>
+
+    <!-- Modal confirmation suppression liste -->
+    <div id="confirm-delete-list-modal" class="modal modal-center" style="display:none; z-index:10011;">
+        <div class="modal-content content-center">
+            <h3 style="text-align:center; color:var(--danger); margin-bottom:10px;">🗑️ Supprimer la liste</h3>
+            <p style="text-align:center; font-size:0.95rem; opacity:0.8; margin-bottom:5px;">Tu es sur le point de supprimer</p>
+            <p style="text-align:center; font-weight:bold; font-size:1.1rem; color:var(--primary); margin-bottom:15px;" id="confirm-delete-list-name"></p>
+            <p style="text-align:center; font-size:0.85rem; opacity:0.6; margin-bottom:20px;">Tous les articles seront perdus pour tous les participants.</p>
+            <div style="display:flex; gap:10px;">
+                <button id="confirm-delete-list-btn" class="btn-primary btn-validated-click" style="flex:1; background:var(--danger);">Supprimer</button>
+                <button onclick="document.getElementById('confirm-delete-list-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
+            </div>
+        </div>
+    </div>
 
     <script src="config.js?v=v6"></script>
     <script src="navigation.js?v=v6"></script>
