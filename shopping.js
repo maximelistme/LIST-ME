@@ -30,10 +30,10 @@ function renderShoppingCategories() {
     breadcrumb.innerText = currentShoppingPath.length === 0 ? '' : currentShoppingPath[currentShoppingPath.length - 1];
 
     container.innerHTML += `<div style="grid-column: 1 / -1; display: flex; gap: 10px; width: 100%; align-items: center; margin-bottom: 5px;">
-        <div onclick="${currentShoppingPath.length === 0 ? '' : 'shoppingNavigateBack()'}" style="flex: 1; background:rgba(128,128,128,0.1); padding:12px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer;">⬅️ Retour</div>
+        <div onclick="${currentShoppingPath.length === 0 ? '' : 'shoppingNavigateBack()'}" style="flex: 1; background:rgba(128,128,128,0.1); padding:12px; border-radius:12px; text-align:center; font-weight:normal; cursor:pointer; font-family:'Mogra',cursive; box-shadow:0 3px 8px rgba(0,0,0,0.15);">⬅️ Retour</div>
         <input type="text" id="shopping-search" placeholder="🔍 Rechercher..." oninput="handleShoppingSearch(this.value)" value="${shoppingSearchQuery}" style="flex: 2; padding: 12px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.3);">
     </div>`;
-    container.innerHTML += `<div onclick="openCustomCardModal()" style="grid-column: 1 / -1; background:var(--primary); color:white; padding:10px; border-radius:20px; text-align:center; cursor:pointer; width: 70%; margin: 0 auto 10px auto;">+ Nouveau Produit</div>`;
+    container.innerHTML += `<div onclick="openCustomCardModal()" style="grid-column: 1 / -1; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:white; padding:10px; border-radius:20px; text-align:center; cursor:pointer; width: 70%; margin: 0 auto 10px auto; font-weight:bold; font-size:0.95rem; box-shadow:0 3px 8px rgba(0,0,0,0.25);">+ Nouveau Produit</div>`;
 
     // Recherche globale
     if (shoppingSearchQuery.trim().length > 0) {
@@ -191,32 +191,83 @@ function saveCustomCard() {
     });
 }
 
-// ---- ONGLETS & SYNCHRO ----
-function renderShoppingTabs() {
-    const container = document.getElementById('shopping-tabs-dynamic');
-    if (!container) return;
-    container.style.display = (mySharedLists && mySharedLists.length > 0) ? 'flex' : 'none';
-    container.innerHTML = '';
-    const personalBtn = document.createElement('button');
-    personalBtn.className = `sub-menu-tab ${currentShoppingListId === 'personal' ? 'active' : ''}`;
-    personalBtn.innerText = "Ma liste";
-    personalBtn.onclick = () => switchShoppingListTab("personal");
-    container.appendChild(personalBtn);
-    mySharedLists.forEach(list => {
-        const listBtn = document.createElement('button');
-        listBtn.className = `sub-menu-tab ${currentShoppingListId === list.id ? 'active' : ''}`;
-        listBtn.innerText = list.name;
-        listBtn.onclick = () => switchShoppingListTab(list.id);
-        container.appendChild(listBtn);
+// ---- DROPDOWN SÉLECTEUR DE LISTE ----
+function _buildDropdownMenu(menu, onSelect) {
+    menu.innerHTML = '';
+    const allLists = [{ id: 'personal', name: 'Ma liste' }, ...mySharedLists];
+    allLists.forEach(list => {
+        const item = document.createElement('div');
+        const isActive = list.id === currentShoppingListId;
+        item.style.cssText = `padding:12px 16px; cursor:pointer; font-size:0.95rem; font-weight:${isActive ? 'bold' : 'normal'}; color:${isActive ? 'var(--primary-dark)' : 'var(--text-color)'}; border-bottom:1px solid rgba(128,128,128,0.1); display:flex; align-items:center; gap:8px;`;
+        item.innerHTML = `<span style="opacity:${isActive ? '1' : '0'}; color:var(--primary);">✓</span> ${list.name}`;
+        item.onclick = () => { closeShoppingListDropdown(); switchShoppingListTab(list.id); };
+        menu.appendChild(item);
     });
 }
 
+function renderShoppingTabs() {
+    const hasShared = mySharedLists && mySharedLists.length > 0;
+    const activeName = currentShoppingListId === 'personal'
+        ? 'Ma liste'
+        : (mySharedLists.find(l => l.id === currentShoppingListId)?.name || 'Ma liste');
+
+    // Dropdown du bas (près de la liste)
+    const selectorBot = document.getElementById('shopping-list-selector');
+    const labelBot = document.getElementById('shopping-list-dropdown-label');
+    const menuBot = document.getElementById('shopping-list-dropdown-menu');
+    if (selectorBot) selectorBot.style.display = hasShared ? 'block' : 'none';
+    if (labelBot) labelBot.innerText = activeName;
+    if (menuBot) _buildDropdownMenu(menuBot);
+
+    // Dropdown du haut (en haut de l'onglet)
+    const selectorTop = document.getElementById('shopping-list-selector-top');
+    const labelTop = document.getElementById('shopping-list-dropdown-label-top');
+    const menuTop = document.getElementById('shopping-list-dropdown-menu-top');
+    if (selectorTop) selectorTop.style.display = hasShared ? 'block' : 'none';
+    if (labelTop) labelTop.innerText = activeName;
+    if (menuTop) _buildDropdownMenu(menuTop);
+}
+
+function toggleShoppingListDropdown(which) {
+    const menuId = which === 'top' ? 'shopping-list-dropdown-menu-top' : 'shopping-list-dropdown-menu';
+    const arrowId = which === 'top' ? 'shopping-list-dropdown-arrow-top' : 'shopping-list-dropdown-arrow';
+    const selectorId = which === 'top' ? 'shopping-list-selector-top' : 'shopping-list-selector';
+    const menu = document.getElementById(menuId);
+    const arrow = document.getElementById(arrowId);
+    if (!menu) return;
+    const isOpen = menu.style.display === 'block';
+    // Fermer l'autre dropdown d'abord
+    closeShoppingListDropdown();
+    if (!isOpen) {
+        menu.style.display = 'block';
+        if (arrow) arrow.innerText = '▲';
+        setTimeout(() => document.addEventListener('click', _closeDropdownOutside, { once: true }), 10);
+    }
+}
+
+function closeShoppingListDropdown() {
+    ['shopping-list-dropdown-menu', 'shopping-list-dropdown-menu-top'].forEach(id => {
+        const m = document.getElementById(id); if (m) m.style.display = 'none';
+    });
+    ['shopping-list-dropdown-arrow', 'shopping-list-dropdown-arrow-top'].forEach(id => {
+        const a = document.getElementById(id); if (a) a.innerText = '▼';
+    });
+}
+
+function _closeDropdownOutside(e) {
+    const s1 = document.getElementById('shopping-list-selector');
+    const s2 = document.getElementById('shopping-list-selector-top');
+    if ((!s1 || !s1.contains(e.target)) && (!s2 || !s2.contains(e.target))) closeShoppingListDropdown();
+}
+
 function switchShoppingListTab(listId) {
+    const scrollY = window.scrollY;
     currentShoppingListId = listId;
     renderShoppingTabs();
     renderShoppingCategories();
     syncCurrentShoppingItems();
     updateParticipantsDisplay();
+    requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: 'instant' }));
 }
 
 function syncCurrentShoppingItems() {
@@ -238,13 +289,43 @@ function syncCurrentShoppingItems() {
 
 function updateParticipantsDisplay() {
     const el = document.getElementById('shopping-list-participants');
+    const title = document.getElementById('shopping-list-title');
+    if (title) {
+        if (currentShoppingListId === 'personal') {
+            title.innerText = 'Ma Liste de Courses';
+        } else {
+            const listObj = mySharedLists.find(l => l.id === currentShoppingListId);
+            title.innerText = listObj ? listObj.name : 'Ma Liste de Courses';
+        }
+    }
     if (!el) return;
     if (currentShoppingListId === 'personal') { el.style.display = 'none'; return; }
     const listObj = mySharedLists.find(l => l.id === currentShoppingListId);
     if (!listObj) { el.style.display = 'none'; return; }
     const count = listObj.members ? listObj.members.length : 1;
     el.style.display = 'block';
-    el.innerText = `👥 ${count} participant(s) · Code : ${listObj.code || '---'}`;
+    el.style.cursor = 'pointer';
+    el.onclick = () => openParticipantsModal(listObj);
+    el.innerHTML = `👥 <u>${count} participant(s)</u>`;
+}
+
+function openParticipantsModal(listObj) {
+    const names = Object.values(listObj.memberNames || {});
+    const memberUids = listObj.members || [];
+    let html = memberUids.map(uid => {
+        const name = (listObj.memberNames && listObj.memberNames[uid])
+            ? listObj.memberNames[uid]
+            : (uid === currentUser?.uid ? (userNickname || 'Moi') : 'Participant');
+        const isCreator = uid === listObj.createdBy;
+        return `<div style="display:flex; align-items:center; gap:12px; padding:12px 15px; background:rgba(128,128,128,0.07); border-radius:12px;">
+            <span style="font-size:1.4rem;">👤</span>
+            <span style="font-weight:bold; flex:1;">${name}</span>
+            ${isCreator ? `<span style="font-size:0.72rem; background:rgba(0,206,209,0.15); color:var(--primary); padding:3px 8px; border-radius:10px; font-weight:bold;">Créateur</span>` : ''}
+        </div>`;
+    }).join('');
+    if (!html) html = `<p style="text-align:center; opacity:0.5; font-style:italic;">Aucun participant trouvé.</p>`;
+    document.getElementById('participants-modal-list').innerHTML = html;
+    document.getElementById('participants-modal').style.display = 'flex';
 }
 
 // ---- RENDU LISTE DE COURSES ----
@@ -266,7 +347,9 @@ function renderShoppingList() {
     actives.sort(sortFn);
     completeds.sort(sortFn);
 
-    const isCreator = (mySharedLists.find(l => l.id === currentShoppingListId)?.createdBy === currentUser?.uid);
+    const currentList = mySharedLists.find(l => l.id === currentShoppingListId);
+    const isCreator = (currentList?.createdBy === currentUser?.uid);
+    const isEventList = (currentList?.type === 'event');
 
     if (actives.length === 0 && completeds.length === 0) {
         c.innerHTML = `<p style="text-align:center; opacity:0.4; font-style:italic; margin-top:30px;">Ta liste est vide ! Ajoute des produits ☝️</p>`;
@@ -275,9 +358,10 @@ function renderShoppingList() {
 
     actives.forEach(item => {
         const canDelete = (currentShoppingListId === 'personal' || isCreator || item.userId === currentUser?.uid);
+        const canCheck = !isEventList || isCreator || !item.assignedTo || item.assignedTo === currentUser?.uid;
         const assigneeTag = item.assignedTo ? `<small style="color:var(--primary); font-size:0.75rem;">→ ${getFriendName(item.assignedTo)}</small>` : '';
-        c.innerHTML += `<div class="task-card low" style="border-left-color: var(--primary);">
-            <div style="flex:1; cursor:pointer;" onclick="toggleShoppingCheck('${item.id}', false)">
+        c.innerHTML += `<div class="task-card low" style="border-left-color:var(--primary);${!canCheck?' opacity:0.55;':''}">
+            <div style="flex:1;${canCheck?' cursor:pointer;':' cursor:default;'}" ${canCheck?`onclick="toggleShoppingCheck('${item.id}', false)"`:''}>
                 <strong>${item.name}</strong>
                 <small style="display:block; margin-top:2px; opacity:0.7;">${item.info || ''} ${assigneeTag}</small>
             </div>
@@ -289,8 +373,9 @@ function renderShoppingList() {
         c.innerHTML += `<div class="task-section-separator"><span>Articles cochés</span></div>`;
         completeds.forEach(item => {
             const canDelete = (currentShoppingListId === 'personal' || isCreator || item.userId === currentUser?.uid);
+            const canCheck = !isEventList || isCreator || !item.assignedTo || item.assignedTo === currentUser?.uid;
             c.innerHTML += `<div class="task-card completed-bubble">
-                <div style="flex:1; cursor:pointer;" onclick="toggleShoppingCheck('${item.id}', true)">
+                <div style="flex:1;${canCheck?' cursor:pointer;':' cursor:default;'}" ${canCheck?`onclick="toggleShoppingCheck('${item.id}', true)"`:''}>
                     <s style="opacity:0.5;">${item.name}</s>
                     <small style="display:block; opacity:0.4;">${item.info || ''}</small>
                 </div>
@@ -298,7 +383,6 @@ function renderShoppingList() {
             </div>`;
         });
 
-        // Bouton vider cochés
         c.innerHTML += `<div style="text-align:center; margin-top:10px;">
             <button onclick="clearCompletedShopping()" class="btn-secondary" style="font-size:0.85rem; padding:8px 16px;">🗑️ Vider les articles cochés</button>
         </div>`;
@@ -362,10 +446,10 @@ function renderMySharedListsInModal() {
         <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px; border-radius:8px; border: 1px solid rgba(128,128,128,0.1); gap: 10px; box-sizing: border-box; margin-bottom: 5px;">
             <div style="flex: 1; min-width: 0;">
                 <strong style="display:block; color:var(--primary-dark); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${l.name || "Sans nom"}</strong>
-                <small style="color:var(--primary); font-weight:bold; background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;">Code: ${l.code || "---"}</small>
+                ${(isCreator || l.type !== 'event') ? `<small style="color:var(--primary); font-weight:bold; background:rgba(128,128,128,0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;">Code: ${l.code || "---"}</small>` : ''}
             </div>
             <div style="display:flex; gap:8px; flex-shrink:0;">
-                <button onclick="copyListCode('${l.code}')" style="background:none; border:none; cursor:pointer; font-size:1.1rem;">📋</button>
+                ${(isCreator || l.type !== 'event') ? `<button onclick="copyListCode('${l.code}')" style="background:none; border:none; cursor:pointer; font-size:1.1rem;">📋</button>` : ''}
                 ${isCreator
                     ? `<button onclick="deleteSharedList('${l.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:bold;">🗑️ Supprimer</button>`
                     : `<button onclick="leaveSharedList('${l.id}')" style="background:rgba(128,128,128,0.3); color:inherit; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:bold;">Quitter</button>`
@@ -467,7 +551,15 @@ function joinSharedShoppingList() {
 }
 
 function deleteSharedList(listId) {
-    if (!confirm("Supprimer cette liste pour tous les participants ? Tous les articles seront perdus.")) return;
+    const listObj = mySharedLists.find(l => l.id === listId);
+    document.getElementById('confirm-delete-list-name').innerText = listObj ? listObj.name : 'cette liste';
+    document.getElementById('confirm-delete-list-modal').style.display = 'flex';
+    document.getElementById('confirm-delete-list-btn').onclick = () => {
+        document.getElementById('confirm-delete-list-modal').style.display = 'none';
+        _doDeleteSharedList(listId);
+    };
+}
+function _doDeleteSharedList(listId) {
     db.collection("shopping").where("listId", "==", listId).get().then(snap => {
         const batch = db.batch();
         snap.forEach(doc => batch.delete(doc.ref));
