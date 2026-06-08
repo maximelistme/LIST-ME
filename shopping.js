@@ -47,8 +47,8 @@ function renderShoppingCategories() {
         customShoppingCards.forEach(c => { if (c.name.toLowerCase().includes(q)) results.push({ name: c.name, isCustom: true, id: c.id }); });
         if (results.length === 0) { container.innerHTML += `<div style="grid-column:1/-1; text-align:center; opacity:0.5; font-style:italic; padding:20px;">Aucun résultat pour "${shoppingSearchQuery}"</div>`; return; }
         results.forEach(r => {
-            if (r.isCustom) container.innerHTML += `<div onclick="openShoppingItemModal('${r.id.replace(/'/g, "\\'")}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; cursor:pointer; border:2px dashed var(--primary);">+ ${r.name}</div>`;
-            else container.innerHTML += `<div onclick="openShoppingItemModal('${r.name.replace(/'/g, "\\'")}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; cursor:pointer; border:1px solid rgba(128,128,128,0.2);">+ ${formatProductDisplay(r.name)}</div>`;
+            if (r.isCustom) container.innerHTML += `<div onclick="openShoppingItemModal('${r.id.replace(/'/g, "\\'")}', true)" style="background:var(--card-bg); padding:8px 10px; border-radius:12px; text-align:center; cursor:pointer; border:2px dashed var(--primary); font-size:0.85rem;">+ ${r.name}</div>`;
+            else container.innerHTML += `<div onclick="openShoppingItemModal('${r.name.replace(/'/g, "\\'")}', false)" style="background:var(--card-bg); padding:8px 10px; border-radius:12px; text-align:center; cursor:pointer; border:1px solid rgba(128,128,128,0.2); font-size:0.85rem;">+ ${formatProductDisplay(r.name)}</div>`;
         });
         return;
     }
@@ -60,13 +60,13 @@ function renderShoppingCategories() {
     else if (Array.isArray(currentObj)) defaultProducts = currentObj;
 
     defaultFolders.forEach(cat => {
-        container.innerHTML += `<div onclick="shoppingNavigateTo('${cat.replace(/'/g, "\\'")}')" style="background:var(--primary); color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer;">${cat}</div>`;
+        container.innerHTML += `<div onclick="shoppingNavigateTo('${cat.replace(/'/g, "\\'")}')" style="background:var(--primary); color:white; padding:8px 6px; border-radius:12px; text-align:center; font-weight:bold; cursor:pointer; font-size:0.8rem;">${cat}</div>`;
     });
     defaultProducts.forEach(p => {
-        container.innerHTML += `<div onclick="openShoppingItemModal('${p.replace(/'/g, "\\'")}', false)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; cursor:pointer; border:1px solid rgba(128,128,128,0.2);">+ ${formatProductDisplay(p)}</div>`;
+        container.innerHTML += `<div onclick="openShoppingItemModal('${p.replace(/'/g, "\\'")}', false)" style="background:var(--card-bg); padding:8px 10px; border-radius:12px; text-align:center; cursor:pointer; border:1px solid rgba(128,128,128,0.2); font-size:0.85rem;">+ ${formatProductDisplay(p)}</div>`;
     });
     customShoppingCards.filter(c => c.path === currentShoppingPath.join('/')).forEach(p => {
-        container.innerHTML += `<div onclick="openShoppingItemModal('${p.id.replace(/'/g, "\\'")}', true)" style="background:var(--card-bg); padding:15px; border-radius:12px; text-align:center; cursor:pointer; border:2px dashed var(--primary);">+ ${p.name}</div>`;
+        container.innerHTML += `<div onclick="openShoppingItemModal('${p.id.replace(/'/g, "\\'")}', true)" style="background:var(--card-bg); padding:8px 10px; border-radius:12px; text-align:center; cursor:pointer; border:2px dashed var(--primary); font-size:0.85rem;">+ ${p.name}</div>`;
     });
 }
 
@@ -222,11 +222,16 @@ function switchShoppingListTab(listId) {
 function syncCurrentShoppingItems() {
     if (shoppingItemsUnsubscribe) shoppingItemsUnsubscribe();
     let query = (currentShoppingListId === "personal")
-        ? db.collection("shopping").where("userId", "==", currentUser.uid).where("listId", "==", null)
+        ? db.collection("shopping").where("userId", "==", currentUser.uid)
         : db.collection("shopping").where("listId", "==", currentShoppingListId);
     shoppingItemsUnsubscribe = query.onSnapshot((snapshot) => {
         shoppingItems = [];
-        snapshot.forEach(doc => { let d = doc.data(); d.id = doc.id; shoppingItems.push(d); });
+        snapshot.forEach(doc => {
+            let d = doc.data(); d.id = doc.id;
+            // Pour la liste perso, on exclut les items qui appartiennent à une liste partagée
+            if (currentShoppingListId === "personal" && d.listId) return;
+            shoppingItems.push(d);
+        });
         renderShoppingList();
     });
 }
@@ -351,7 +356,9 @@ function renderMySharedListsInModal() {
         container.innerHTML = `<p style="font-size: 0.9rem; opacity: 0.6; font-style: italic; text-align: center; padding: 10px;">Aucune liste partagée active.</p>`;
         return;
     }
-    container.innerHTML = mySharedLists.map(l => `
+    container.innerHTML = mySharedLists.map(l => {
+        const isCreator = l.createdBy === currentUser.uid;
+        return `
         <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px; border-radius:8px; border: 1px solid rgba(128,128,128,0.1); gap: 10px; box-sizing: border-box; margin-bottom: 5px;">
             <div style="flex: 1; min-width: 0;">
                 <strong style="display:block; color:var(--primary-dark); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${l.name || "Sans nom"}</strong>
@@ -359,15 +366,66 @@ function renderMySharedListsInModal() {
             </div>
             <div style="display:flex; gap:8px; flex-shrink:0;">
                 <button onclick="copyListCode('${l.code}')" style="background:none; border:none; cursor:pointer; font-size:1.1rem;">📋</button>
-                <button onclick="leaveSharedList('${l.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:bold;">Quitter</button>
+                ${isCreator
+                    ? `<button onclick="deleteSharedList('${l.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:bold;">🗑️ Supprimer</button>`
+                    : `<button onclick="leaveSharedList('${l.id}')" style="background:rgba(128,128,128,0.3); color:inherit; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:bold;">Quitter</button>`
+                }
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 function renderFriendsCheckboxesForNewList() {
-    const container = document.getElementById('create-list-friends-container'), box = document.getElementById('create-list-friends-checkboxes');
-    if (box) box.innerHTML = friends.map(f => `<label style="display:flex; align-items:center; gap:5px; font-size:0.85rem;"><input type="checkbox" class="friend-invite-cb" value="${f.uid}"> ${f.nickname}</label>`).join('');
-    if (container) container.style.display = friends.length > 0 ? 'block' : 'none';
+    const container = document.getElementById('create-list-friends-container');
+    const box = document.getElementById('create-list-friends-checkboxes');
+    if (!container || !box) return;
+    if (friends.length === 0) { container.style.display = 'none'; return; }
+    container.style.display = 'block';
+    box.innerHTML = `
+        <div style="position:relative; width:100%;">
+            <input type="text" id="friend-invite-search" placeholder="🔍 Rechercher un ami..." oninput="filterFriendInviteDropdown()" onfocus="document.getElementById('friend-invite-dropdown').style.display='block'" style="width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1px solid rgba(128,128,128,0.3); background:var(--card-bg); color:var(--text-color); font-size:0.9rem;">
+            <div id="friend-invite-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card-bg); border:1px solid rgba(128,128,128,0.3); border-radius:10px; z-index:100; max-height:150px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin-top:4px;">
+                ${friends.map(f => `<div onclick="toggleFriendInvite('${f.uid}', '${f.nickname}')" id="fi-opt-${f.uid}" style="padding:10px 14px; cursor:pointer; font-size:0.9rem; display:flex; justify-content:space-between; align-items:center;" onmouseover="this.style.background='rgba(0,206,209,0.1)'" onmouseout="this.style.background=''">${f.nickname} <span id="fi-check-${f.uid}" style="display:none; color:var(--primary); font-weight:bold;">✓</span></div>`).join('')}
+            </div>
+        </div>
+        <div id="friend-invite-tags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+    `;
+    document.addEventListener('click', closeFriendInviteDropdown, { once: false });
+}
+
+function filterFriendInviteDropdown() {
+    const q = (document.getElementById('friend-invite-search')?.value || '').toLowerCase();
+    document.getElementById('friend-invite-dropdown').style.display = 'block';
+    friends.forEach(f => {
+        const opt = document.getElementById(`fi-opt-${f.uid}`);
+        if (opt) opt.style.display = f.nickname.toLowerCase().includes(q) ? 'flex' : 'none';
+    });
+}
+
+function toggleFriendInvite(uid, nickname) {
+    const check = document.getElementById(`fi-check-${uid}`);
+    const tagsContainer = document.getElementById('friend-invite-tags');
+    const existing = document.getElementById(`fi-tag-${uid}`);
+    if (existing) {
+        existing.remove();
+        if (check) check.style.display = 'none';
+    } else {
+        if (check) check.style.display = 'inline';
+        const tag = document.createElement('div');
+        tag.id = `fi-tag-${uid}`;
+        tag.setAttribute('data-uid', uid);
+        tag.style.cssText = 'display:flex; align-items:center; gap:5px; background:rgba(0,206,209,0.15); color:var(--primary-dark); padding:4px 10px; border-radius:20px; font-size:0.82rem; font-weight:bold;';
+        tag.innerHTML = `${nickname} <span onclick="toggleFriendInvite('${uid}', '${nickname}')" style="cursor:pointer; font-size:1rem; line-height:1; opacity:0.6;">×</span>`;
+        tagsContainer.appendChild(tag);
+    }
+}
+
+function closeFriendInviteDropdown(e) {
+    const dropdown = document.getElementById('friend-invite-dropdown');
+    const search = document.getElementById('friend-invite-search');
+    if (dropdown && search && !dropdown.contains(e.target) && e.target !== search) {
+        dropdown.style.display = 'none';
+    }
 }
 
 function createNewSharedShoppingList() {
@@ -375,7 +433,7 @@ function createNewSharedShoppingList() {
     if (!name) { showToast("Veuillez saisir un nom ! ⚠️"); return; }
     const uniqueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     const listType = document.getElementById('new-list-type').value;
-    let selectedFriends = Array.from(document.querySelectorAll('.friend-invite-cb:checked')).map(cb => cb.value);
+    let selectedFriends = Array.from(document.querySelectorAll('#friend-invite-tags [data-uid]')).map(el => el.getAttribute('data-uid'));
     db.collection("shoppingLists").add({
         name: name, code: uniqueCode, createdBy: currentUser.uid,
         members: [currentUser.uid, ...selectedFriends], type: listType, createdAt: Date.now()
@@ -406,6 +464,20 @@ function joinSharedShoppingList() {
             document.getElementById('join-shared-list-code').value = '';
         });
     }).catch(() => showToast("Erreur réseau ❌"));
+}
+
+function deleteSharedList(listId) {
+    if (!confirm("Supprimer cette liste pour tous les participants ? Tous les articles seront perdus.")) return;
+    db.collection("shopping").where("listId", "==", listId).get().then(snap => {
+        const batch = db.batch();
+        snap.forEach(doc => batch.delete(doc.ref));
+        batch.delete(db.collection("shoppingLists").doc(listId));
+        return batch.commit();
+    }).then(() => {
+        if (currentShoppingListId === listId) currentShoppingListId = 'personal';
+        showToast("Liste supprimée pour tous ! 🗑️");
+        renderMySharedListsInModal();
+    }).catch(() => showToast("Erreur lors de la suppression ❌"));
 }
 
 function leaveSharedList(listId) {
