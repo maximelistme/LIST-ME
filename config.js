@@ -2,10 +2,10 @@ const firebaseConfig = { apiKey: "AIzaSyAVkf6PEZnPWLrS1smnau0J6k3ZE1wGX-4", auth
 firebase.initializeApp(firebaseConfig); const db = firebase.firestore(), auth = firebase.auth();
 
 let tasks = [], sharedTasks = [], dailyTodo = [], weeklyTodo = [], routineTodo = [], birthdays = [];
-let shoppingItems = [], mySharedLists = [], customShoppingCards = [], friends = [], friendUnsubscribes = {};
+let shoppingItems = [], mySharedLists = [], customShoppingCards = [], friends = [], agendaLinks = [], friendUnsubscribes = {};
 let unsubscribeUser, sharedListsUnsubscribe, shoppingItemsUnsubscribe;
 let currentUser = null, userNickname = "", hasShownWelcomeThisSession = false, taskSubView = "active"; 
-let currentShoppingListId = "personal", myAgendaCode = "", currentShoppingPath = [], currentShareMode = 'agenda';
+let currentShoppingListId = "personal", myAgendaCode = "", myFriendCode = "", currentShoppingPath = [], currentShareMode = 'agenda';
 let isArchiving = false, shoppingSearchQuery = "", editingId = null, editingTodoId = null; 
 let currentTheme = localStorage.getItem('listme_theme') || 'pink', viewState = 'day', todoMode = 'daily'; 
 let selectedYear = new Date().getFullYear(), selectedMonth = new Date().getMonth();
