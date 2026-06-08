@@ -171,21 +171,16 @@ if (btnAddFriend) {
     btnAddFriend.onclick = () => {
         const code = document.getElementById('friend-code-input').value.trim().toUpperCase();
         if (!code || code === myAgendaCode) return;
-        db.collection("users").where("shareCode", "==", code).get().then(snapshot => {
+        db.collection("users").where("agendaCode", "==", code).get().then(snapshot => {
             if (snapshot.empty) { showToast("Code introuvable ! ❌"); return; }
             let friendDoc = snapshot.docs[0], friendUid = friendDoc.id, friendData = friendDoc.data();
             let friendName = friendData.nickname || "Inconnu";
-            if (friends.some(f => f.uid === friendUid)) { showToast("Déjà lié ! 🤝"); return; }
-            friends.push({ uid: friendUid, nickname: friendName });
-            db.collection("users").doc(currentUser.uid).update({ following: friends });
-            let sharedWith = friendData.sharedWith || [];
-            if (!sharedWith.includes(currentUser.uid)) {
-                sharedWith.push(currentUser.uid);
-                db.collection("users").doc(friendUid).update({ sharedWith: sharedWith });
-            }
+            if (agendaLinks.some(a => a.uid === friendUid)) { showToast("Agenda déjà lié ! 🤝"); return; }
+            agendaLinks.push({ uid: friendUid, nickname: friendName });
+            db.collection("users").doc(currentUser.uid).update({ agendaLinks: agendaLinks });
             startFriendSync(friendUid, friendName, 'agenda');
             showToast(`Agenda de ${friendName} lié ! ✨`);
-            renderFriendsList();
+            renderAgendaLinksList();
             document.getElementById('friend-code-input').value = "";
         });
     };
