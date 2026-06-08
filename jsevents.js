@@ -15,14 +15,22 @@ auth.onAuthStateChanged((user) => {
                 let data = doc.exists ? doc.data() : {};
                 userNickname = data.nickname || "";
                 if (document.getElementById('profile-nickname')) document.getElementById('profile-nickname').value = userNickname;
+                const preview = document.getElementById('profile-preview-name');
+                if (preview && userNickname) preview.innerText = userNickname;
                 customShoppingCards = data.customCards || [];
 
                 let updateData = {};
-                myAgendaCode = data.shareCode;
+                // Code agenda (partage historique)
+                myAgendaCode = data.agendaCode || data.shareCode;
                 if (!myAgendaCode) {
                     myAgendaCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    updateData.shareCode = myAgendaCode;
-                    updateData.sharedWith = [];
+                    updateData.agendaCode = myAgendaCode;
+                }
+                // Code amis (ajout d'amis)
+                myFriendCode = data.friendCode;
+                if (!myFriendCode) {
+                    myFriendCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    updateData.friendCode = myFriendCode;
                 }
                 if (Object.keys(updateData).length > 0) {
                     db.collection("users").doc(user.uid).set(updateData, { merge: true });
@@ -30,10 +38,11 @@ auth.onAuthStateChanged((user) => {
 
                 if (document.getElementById('my-share-code') && document.getElementById('share-modal').style.display === 'flex')
                     document.getElementById('my-share-code').innerText = myAgendaCode;
-                if (document.getElementById('my-user-code'))
-                    document.getElementById('my-user-code').innerText = myAgendaCode;
+                if (document.getElementById('my-friend-code-display'))
+                    document.getElementById('my-friend-code-display').innerText = myFriendCode;
 
                 friends = data.following || [];
+                agendaLinks = data.agendaLinks || [];
                 if (document.getElementById('friends-count-badge'))
                     document.getElementById('friends-count-badge').innerText = friends.length;
                 if (document.getElementById('profile-page').style.display === 'block' && typeof renderGlobalFriends === 'function')
@@ -122,6 +131,7 @@ function startRealtimeSync(userId) {
     });
 
     friends.forEach(f => startFriendSync(f.uid, f.nickname, 'agenda'));
+    agendaLinks.forEach(a => startFriendSync(a.uid, a.nickname, 'agenda'));
 }
 
 function startFriendSync(fUid, fName, mode) {
@@ -152,16 +162,24 @@ function stopRealtimeSync() {
     Object.values(friendUnsubscribes).forEach(u => u());
     friendUnsubscribes = {};
     tasks = []; sharedTasks = []; dailyTodo = []; weeklyTodo = [];
-    routineTodo = []; birthdays = []; friends = []; shoppingItems = []; mySharedLists = [];
+    routineTodo = []; birthdays = []; friends = []; agendaLinks = []; shoppingItems = []; mySharedLists = [];
 }
 
 // ---- PROFIL & PARTAGE ----
+
+function openProfileNicknameModal() {
+    if (document.getElementById('profile-nickname'))
+        document.getElementById('profile-nickname').value = userNickname;
+    document.getElementById('profile-nickname-modal').style.display = 'flex';
+}
 
 function autoSaveNickname() {
     const nick = document.getElementById('profile-nickname').value.trim();
     if (currentUser) {
         db.collection("users").doc(currentUser.uid).set({ nickname: nick }, { merge: true }).then(() => {
             userNickname = nick;
+            const preview = document.getElementById('profile-preview-name');
+            if (preview) preview.innerText = nick || "Modifier mon nom d'affichage";
             showToast("Surnom mis à jour ! ✨");
         });
     }
@@ -169,10 +187,35 @@ function autoSaveNickname() {
 
 function openShareModal(mode) {
     currentShareMode = mode;
-    document.getElementById('share-modal-title').innerText = "Partage Agenda 🤝";
+    document.getElementById('share-modal-title').innerText = "Agenda Partagé 🤝";
     if (document.getElementById('my-share-code')) document.getElementById('my-share-code').innerText = myAgendaCode;
-    renderFriendsList();
+    renderAgendaLinksList();
     document.getElementById('share-modal').style.display = 'flex';
+}
+
+function renderAgendaLinksList() {
+    const container = document.getElementById('friends-list-container');
+    if (!container) return;
+    if (agendaLinks.length === 0) {
+        container.innerHTML = `<p style='font-size:0.85rem; opacity:0.5; font-style:italic; text-align:center; width:100%; margin-top:10px;'>Aucun agenda lié pour l'instant.</p>`;
+        return;
+    }
+    container.innerHTML = agendaLinks.map(a => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(128,128,128,0.08); padding:10px 15px; border-radius:10px; margin-top:10px; border:1px solid rgba(128,128,128,0.2); width:100%;">
+            <span style="font-weight:bold; color:var(--primary-dark);">📅 ${a.nickname}</span>
+            <button onclick="removeAgendaLink('${a.uid}')" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:bold;">Retirer</button>
+        </div>`).join('');
+}
+
+function removeAgendaLink(uid) {
+    agendaLinks = agendaLinks.filter(a => a.uid !== uid);
+    db.collection("users").doc(currentUser.uid).update({ agendaLinks: agendaLinks }).then(() => {
+        if (friendUnsubscribes[uid]) { friendUnsubscribes[uid](); delete friendUnsubscribes[uid]; }
+        sharedTasks = sharedTasks.filter(t => t.userId !== uid);
+        if (typeof renderCalendar === 'function') renderCalendar();
+        renderAgendaLinksList();
+        showToast("Agenda retiré ! 🗑️");
+    });
 }
 
 function copyShareCode() {
@@ -180,10 +223,11 @@ function copyShareCode() {
     navigator.clipboard.writeText(code).then(() => showToast("Code copié ! 📋"));
 }
 
-// CORRECTION : une seule déclaration de copyUserCode
 function copyUserCode() {
-    const code = document.getElementById('my-user-code').innerText;
-    navigator.clipboard.writeText(code).then(() => showToast("Code copié ! Donnez-le à vos amis. 📋"));
+    navigator.clipboard.writeText(myFriendCode).then(() => showToast("Code ami copié ! 📋"));
+}
+function copyAgendaCode() {
+    navigator.clipboard.writeText(myAgendaCode).then(() => showToast("Code agenda copié ! 📋"));
 }
 
 // ---- LISTE D'AMIS (modal Agenda) ----
@@ -220,11 +264,11 @@ function addGlobalFriend() {
     if (!inputField) return;
     const code = inputField.value.trim().toUpperCase();
     if (!code) { showToast("Veuillez saisir un code ! ⚠️"); return; }
-    if (code === myAgendaCode) { showToast("Vous ne pouvez pas vous ajouter vous-même ! 😅"); return; }
+    if (code === myFriendCode) { showToast("Vous ne pouvez pas vous ajouter vous-même ! 😅"); return; }
 
     showToast("Recherche en cours... ⏳");
 
-    db.collection("users").where("shareCode", "==", code).get().then(snapshot => {
+    db.collection("users").where("friendCode", "==", code).get().then(snapshot => {
         if (snapshot.empty) { showToast("Code introuvable ! ❌"); return; }
         let friendDoc = snapshot.docs[0];
         let friendUid = friendDoc.id;
@@ -257,6 +301,8 @@ function addGlobalFriend() {
 function openFriendsModal() {
     const searchInput = document.getElementById('friend-search-input');
     if (searchInput) searchInput.value = "";
+    const codeEl = document.getElementById('my-friend-code-display');
+    if (codeEl) codeEl.innerText = myFriendCode || '------';
     renderGlobalFriends();
     document.getElementById('friends-list-modal').style.display = 'flex';
 }
