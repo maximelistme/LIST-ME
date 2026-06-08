@@ -117,7 +117,7 @@
 
             <div id="shopping-breadcrumb" style="margin-bottom: 15px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; font-weight: bold; color: var(--primary-dark); min-height: 28px;"></div>
             
-            <div id="shopping-categories" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px;"></div>
+            <div id="shopping-categories" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 20px;"></div>
             
             <div id="shopping-list-header" class="header-action header-centered" style="margin-top: 30px; margin-bottom: 5px; flex-direction: column; width: 100%;">
                 <h2>Ma Liste de Courses</h2>
@@ -145,42 +145,66 @@
 
         <section id="profile-page" style="display:none;">
             <div class="header-action header-centered"><h2>Mon Profil</h2></div>
-            <div class="profile-card">
-                <label style="text-align: center; display: block; width: 100%;">Nom profil</label>
-                <input type="text" id="profile-nickname" placeholder="Ex: Max, Julie..." onchange="autoSaveNickname()" style="text-align: center;">
-                
-                <hr style="opacity: 0.1; margin: 20px 0;">
-                <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 10px;">👥 Amis</h3>
-                
-                <div style="display: flex; gap: 10px; align-items: center; background: rgba(128,128,128,0.05); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.1); margin-bottom: 10px;">
-                    <span style="font-size: 0.85rem; opacity: 0.7; flex-shrink: 0;">Mon Code :</span>
-                    <span id="my-user-code" style="font-size: 1.1rem; font-weight: bold; letter-spacing: 1px; flex: 1; text-align: center; color: var(--primary);">------</span>
-                    <button onclick="copyUserCode()" style="background:none; border:none; cursor:pointer; font-size:1.2rem; flex-shrink: 0;" title="Copier le code">📋</button>
-                </div>
-                
-                <div style="display:flex; gap:10px; margin-bottom: 15px;">
-                    <input type="text" id="add-friend-input" placeholder="Ajouter via code..." style="flex:1; text-transform:uppercase; margin-bottom: 0; padding: 10px; font-size: 0.85rem;">
-                    <button class="btn-primary btn-validated-click" onclick="addGlobalFriend()" style="padding: 0 15px; font-size: 0.85rem;">Ajouter</button>
-                </div>
-                
-                <button onclick="openFriendsModal()" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 0.95rem; display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 15px;">
-                    Voir mes amis 
-                    <span id="friends-count-badge" style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">0</span>
+
+            <!-- 3 boutons principaux -->
+            <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 30px;">
+
+                <!-- Bouton Nom du profil -->
+                <button onclick="openProfileNicknameModal()" class="btn-validated-click" style="display:flex; align-items:center; gap:16px; background:var(--card-bg); border:none; border-radius:20px; padding:18px 22px; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.1); width:100%; text-align:left;">
+                    <span style="font-size:1.8rem;">👤</span>
+                    <div style="flex:1;">
+                        <div style="font-weight:bold; font-size:1rem; color:var(--text-color);">Mon Profil</div>
+                        <div id="profile-preview-name" style="font-size:0.82rem; opacity:0.55; margin-top:2px;">Modifier mon nom d'affichage</div>
+                    </div>
+                    <span style="opacity:0.35; font-size:1.2rem;">›</span>
                 </button>
 
-                <hr style="opacity: 0.1; margin: 20px 0;">
-                <button onclick="openShareModal('agenda')" class="btn-secondary btn-validated-click" style="font-size: 1rem; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;">Partage Agenda Historique 🤝</button>
+                <!-- Bouton Amis -->
+                <button onclick="openFriendsModal()" class="btn-validated-click" style="display:flex; align-items:center; gap:16px; background:var(--card-bg); border:none; border-radius:20px; padding:18px 22px; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.1); width:100%; text-align:left;">
+                    <span style="font-size:1.8rem;">👥</span>
+                    <div style="flex:1;">
+                        <div style="font-weight:bold; font-size:1rem; color:var(--text-color);">Mes Amis</div>
+                        <div style="font-size:0.82rem; opacity:0.55; margin-top:2px;">Gérer ma liste d'amis</div>
+                    </div>
+                    <span id="friends-count-badge" style="background:var(--primary); color:white; padding:3px 10px; border-radius:20px; font-size:0.78rem; font-weight:bold;">0</span>
+                </button>
 
-                <button id="btn-logout" class="btn-secondary" style="background:var(--danger); color:white; margin-top: 15px;">Se déconnecter</button>
+                <!-- Bouton Agenda partagé -->
+                <button onclick="openShareModal('agenda')" class="btn-validated-click" style="display:flex; align-items:center; gap:16px; background:var(--card-bg); border:none; border-radius:20px; padding:18px 22px; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.1); width:100%; text-align:left;">
+                    <span style="font-size:1.8rem;">🤝</span>
+                    <div style="flex:1;">
+                        <div style="font-weight:bold; font-size:1rem; color:var(--text-color);">Agenda Partagé</div>
+                        <div style="font-size:0.82rem; opacity:0.55; margin-top:2px;">Partager mon agenda avec des amis</div>
+                    </div>
+                    <span style="opacity:0.35; font-size:1.2rem;">›</span>
+                </button>
+
             </div>
 
-            <div class="header-action header-centered" style="margin-top: 30px;"><h2>Thèmes</h2></div>
+            <!-- Thèmes -->
+            <div class="header-action header-centered"><h2>Thèmes</h2></div>
             <div class="theme-selector">
                 <div class="theme-option pink" onclick="changeTheme('pink')">Bonbon</div>
                 <div class="theme-option dark" onclick="changeTheme('dark')">Sombre</div>
                 <div class="theme-option ocean" onclick="changeTheme('ocean')">Océan</div>
             </div>
+
+            <!-- Déconnexion -->
+            <button id="btn-logout" class="btn-secondary" style="background:var(--danger); color:white; width:100%; margin-top:25px;">Se déconnecter</button>
         </section>
+
+        <!-- Modal Nom du profil -->
+        <div id="profile-nickname-modal" class="modal modal-center" style="display:none; z-index:10010;">
+            <div class="modal-content content-center">
+                <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:15px;">👤 Mon Profil</h3>
+                <label>Nom d'affichage</label>
+                <input type="text" id="profile-nickname" placeholder="Ex: Max, Julie..." style="text-align:center;">
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button onclick="autoSaveNickname(); document.getElementById('profile-nickname-modal').style.display='none'" class="btn-primary btn-validated-click" style="flex:1;">Enregistrer</button>
+                    <button onclick="document.getElementById('profile-nickname-modal').style.display='none'" class="btn-secondary" style="flex:1;">Fermer</button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <div id="toast-notification" class="toast-hidden"></div>
@@ -257,17 +281,28 @@
     </div>
 
     <div id="share-modal" class="modal modal-center" style="display: none; justify-content: center; align-items: center; z-index: 10005;">
-        <div class="modal-content content-center">
-            <h3 id="share-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Partage Agenda</h3>
-            <div>
-                <label>Ajouter avec un code :</label>
-                <div style="display:flex; gap:10px; margin-top:5px;">
-                    <input type="text" id="friend-code-input" placeholder="Code..." style="flex:1; text-transform:uppercase;">
-                    <button id="btn-add-friend" class="btn-primary btn-validated-click">Lier</button>
+        <div class="modal-content content-center" style="max-height: 85vh; overflow-y: auto;">
+            <h3 id="share-modal-title" style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Agenda Partagé 🤝</h3>
+
+            <!-- Mon code agenda -->
+            <div style="background:rgba(128,128,128,0.06); border-radius:12px; padding:12px; border:1px solid rgba(128,128,128,0.15); margin-bottom:15px;">
+                <div style="font-size:0.78rem; opacity:0.55; margin-bottom:6px;">Mon code agenda — à donner pour partager votre agenda</div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <span id="my-share-code" style="font-size:1.3rem; font-weight:bold; letter-spacing:2px; color:var(--primary);">------</span>
+                    <button onclick="copyAgendaCode()" style="background:none; border:none; cursor:pointer; font-size:1.1rem;">📋</button>
                 </div>
-                <div id="friends-list-container" class="friend-list"></div>
             </div>
-            <button onclick="document.getElementById('share-modal').style.display='none'" class="btn-secondary" style="margin-top: 20px; width: 100%;">Fermer</button>
+
+            <!-- Lier un agenda via code -->
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <input type="text" id="friend-code-input" placeholder="Code agenda d'un ami..." style="flex:1; text-transform:uppercase; margin-bottom:0;">
+                <button id="btn-add-friend" class="btn-primary btn-validated-click">Lier</button>
+            </div>
+
+            <!-- Agendas liés -->
+            <div id="friends-list-container" class="friend-list"></div>
+
+            <button onclick="document.getElementById('share-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
         </div>
     </div>
 
@@ -302,33 +337,7 @@
             </div>
 
             <label style="font-weight: bold; display: block; margin-bottom: 5px;">Vos listes partagées actives :</label>
-            <div id="shopping-list-multi-share-modal" class="modal modal-center" style="display: none; z-index: 10006;">
-    <div class="modal-content content-center" style="max-height: 85vh; overflow-y: auto; width: 90%; max-width: 500px; box-sizing: border-box;">
-        <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Listes Partagées 🛒</h3>
-        
-        <div style="background: rgba(128,128,128,0.05); padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px solid rgba(128,128,128,0.1);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <label style="font-weight: bold; font-size: 1.1rem; margin: 0;">Créer une liste :</label>
-                <select id="new-list-type" style="padding: 6px; border-radius: 8px; border: 1px solid rgba(128,128,128,0.3);">
-                    <option value="standard">🤝 Partage classique</option>
-                    <option value="event">🎉 Liste Événement</option>
-                </select>
-            </div>
-            <input type="text" id="new-shared-list-name" placeholder="Nom de la liste..." style="width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 10px;">
-            <div id="create-list-friends-container" style="display: none; margin-bottom: 10px;">
-                <span style="font-size: 0.85rem; font-weight: bold; color: var(--primary-dark);">Inviter des amis :</span>
-                <div id="create-list-friends-checkboxes" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px;"></div>
-            </div>
-            <button onclick="createNewSharedShoppingList()" class="btn-primary" style="width: 100%; padding: 10px;">Créer & Générer un code</button>
-        </div>
-
-        <label style="font-weight: bold; display: block; margin-bottom: 8px;">Vos listes partagées actives :</label>
-        <div id="my-shared-lists-container" style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
-            </div>
-
-        <button onclick="document.getElementById('shopping-list-multi-share-modal').style.display='none'" class="btn-secondary" style="margin-top: 20px; width: 100%;">Fermer</button>
-    </div>
-</div>
+            <div id="my-shared-lists-container" style="width: 100%; display: flex; flex-direction: column; gap: 8px;"></div>
 
             <button onclick="document.getElementById('shopping-list-multi-share-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
         </div>
@@ -337,12 +346,26 @@
     <div id="friends-list-modal" class="modal modal-center" style="display: none; z-index: 10008;">
         <div class="modal-content content-center" style="max-height: 85vh; overflow-y: auto;">
             <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">👥 Mes Amis</h3>
-            
-            <input type="text" id="friend-search-input" placeholder="🔍 Rechercher un ami..." oninput="filterFriendsList()" style="width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 0.95rem;">
-            
-            <div id="global-friends-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; padding-right: 5px;">
+
+            <!-- Mon code ami -->
+            <div style="background:rgba(128,128,128,0.06); border-radius:12px; padding:12px; border:1px solid rgba(128,128,128,0.15); margin-bottom:15px;">
+                <div style="font-size:0.78rem; opacity:0.55; margin-bottom:6px;">Mon code ami — à donner à vos amis</div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <span id="my-friend-code-display" style="font-size:1.3rem; font-weight:bold; letter-spacing:2px; color:var(--primary);">------</span>
+                    <button onclick="copyUserCode()" style="background:none; border:none; cursor:pointer; font-size:1.1rem;">📋</button>
                 </div>
-            
+            </div>
+
+            <!-- Ajouter un ami via code -->
+            <div style="display:flex; gap:8px; margin-bottom:15px;">
+                <input type="text" id="add-friend-input" placeholder="Code d'un ami..." style="flex:1; text-transform:uppercase; margin-bottom:0; padding:10px; font-size:0.85rem;">
+                <button class="btn-primary btn-validated-click" onclick="addGlobalFriend()" style="padding:0 15px; font-size:0.85rem;">Ajouter</button>
+            </div>
+
+            <!-- Liste des amis -->
+            <input type="text" id="friend-search-input" placeholder="🔍 Rechercher un ami..." oninput="filterFriendsList()" style="width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 0.95rem;">
+            <div id="global-friends-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 40vh; overflow-y: auto; padding-right: 5px;"></div>
+
             <button onclick="document.getElementById('friends-list-modal').style.display='none'" class="btn-secondary" style="margin-top: 15px; width: 100%;">Fermer</button>
         </div>
     </div>
