@@ -17,11 +17,19 @@ body.theme-pink { --bg-main: #FAD0C4; --bg-line: rgba(255, 255, 255, 0.4); --car
 body.theme-dark { --bg-main: #121212; --bg-line: rgba(255, 255, 255, 0.05); --card-bg: #1e1e1e; --text-color: #ffffff; }
 body.theme-ocean { --bg-main: #1a2a3a; --bg-line: rgba(0, 206, 209, 0.1); --card-bg: #2c3e50; --text-color: #ecf0f1; }
 
-* { 
-    box-sizing: border-box; 
-    -webkit-tap-highlight-color: transparent; 
-    margin: 0; 
-    padding: 0; 
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    margin: 0;
+    padding: 0;
+}
+
+button {
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+    border: none;
+    box-shadow: none;
 }
 
 body { 
@@ -33,7 +41,8 @@ body {
     color: var(--text-color); transition: background 0.3s ease;
 }
 
-.navbar h1, h2, h3, .calendar-title, #add-task-btn, .bubble, #modal-title, .time-label, .theme-option, .weekly-day-title, #todo-modal-title, #cal-modal-date-title, .nav-bubble, .sub-menu-tab { font-family: 'Mogra', cursive; }
+.navbar h1, h2, h3, .calendar-title, #add-task-btn, .bubble, #modal-title, .time-label, .theme-option, .weekly-day-title, #todo-modal-title, #cal-modal-date-title, .nav-bubble, .sub-menu-tab,
+.btn-primary, .btn-add-bubble, .btn-secondary, .profile-action-btn-label { font-family: 'Mogra', cursive; }
 
 /* NAVBAR UNIFIÉE */
 .navbar { 
@@ -75,9 +84,10 @@ body.theme-ocean .sub-menu-tab.active { color: var(--primary); }
 .action-bar-left { display: flex; justify-content: flex-start; margin-bottom: 20px; padding-left: 5px; }
 
 .btn-add-bubble {
-    background: var(--primary); color: white; border: none;
-    padding: 12px 22px; border-radius: 30px; font-size: 0.95rem; font-weight: bold;
-    cursor: pointer; box-shadow: 0 4px 12px rgba(0, 206, 209, 0.3);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white; border: none;
+    padding: 12px 22px; border-radius: 30px; font-size: 0.95rem; font-weight: normal;
+    cursor: pointer; box-shadow: 0 3px 8px rgba(0,0,0,0.25);
 }
 
 /* NOUVEAU BOUTON D'AJOUT ANNIVERSAIRE (Grisé/Discret) */
@@ -304,8 +314,8 @@ select option { background: var(--card-bg); color: var(--text-color); }
 .content-center { width: 100% !important; max-width: 450px !important; border-radius: 25px !important; animation: popupScale 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 @keyframes popupScale { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-.btn-primary { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 20px; cursor: pointer; font-weight: bold; }
-.btn-secondary { background: rgba(128,128,128,0.2); color: inherit; border: none; padding: 15px; border-radius: 15px; font-weight: bold; cursor: pointer; text-align: center;}
+.btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none; outline: none; padding: 10px 18px; border-radius: 20px; cursor: pointer; font-weight: normal; box-shadow: 0 3px 8px rgba(0,0,0,0.25); -webkit-appearance: none; }
+.btn-secondary { background: rgba(128,128,128,0.2); color: inherit; border: none; outline: none; padding: 15px; border-radius: 15px; font-weight: normal; cursor: pointer; text-align: center; box-shadow: 0 3px 8px rgba(0,0,0,0.15); -webkit-appearance: none; }
 
 /* SÉLECTEUR D'HEURE MANUEL ERGONOMIQUE */
 .custom-time-container { display: flex; align-items: center; background: var(--card-bg); border: 1px solid rgba(128,128,128,0.3); border-radius: 10px; padding: 10px 14px; width: 100%; }
