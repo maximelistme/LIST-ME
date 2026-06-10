@@ -13,6 +13,25 @@ auth.onAuthStateChanged((user) => {
         unsubscribeUser = db.collection("users").doc(user.uid).onSnapshot((doc) => {
             try {
                 let data = doc.exists ? doc.data() : {};
+
+                // Vérifier suppression programmée
+                if (data.deletionScheduledAt) {
+                    const deletionDate = new Date(data.deletionScheduledAt);
+                    const now = new Date();
+                    const daysLeft = Math.ceil((deletionDate - now) / (1000 * 60 * 60 * 24));
+                    if (daysLeft <= 0) {
+                        // 10 jours écoulés → suppression effective
+                        _eraseAllData().catch(() => {});
+                        return;
+                    } else {
+                        // Encore du temps → proposer la récupération
+                        const msg = document.getElementById('recovery-days-msg');
+                        if (msg) msg.innerHTML = `Votre compte sera supprimé dans <strong>${daysLeft} jour(s)</strong>.<br>Voulez-vous récupérer vos données ?`;
+                        const modal = document.getElementById('recovery-account-modal');
+                        if (modal) modal.style.display = 'flex';
+                    }
+                }
+
                 userNickname = data.nickname || "";
                 if (document.getElementById('profile-nickname')) document.getElementById('profile-nickname').value = userNickname;
                 const preview = document.getElementById('profile-preview-name');
@@ -170,7 +189,165 @@ function stopRealtimeSync() {
 function openProfileNicknameModal() {
     if (document.getElementById('profile-nickname'))
         document.getElementById('profile-nickname').value = userNickname;
+
+    // Afficher email actuel
+    const emailEl = document.getElementById('profile-current-email');
+    if (emailEl && currentUser) emailEl.innerText = currentUser.email || '';
+
+    // Détecter si compte Google
+    const isGoogle = currentUser?.providerData?.some(p => p.providerId === 'google.com');
+    const emailSection = document.getElementById('profile-email-section');
+    const passSection  = document.getElementById('profile-password-section');
+    const googleMsg    = document.getElementById('profile-google-msg');
+    if (isGoogle) {
+        if (emailSection) emailSection.style.display = 'none';
+        if (passSection)  passSection.style.display  = 'none';
+        if (googleMsg)    googleMsg.style.display     = 'block';
+    } else {
+        if (emailSection) emailSection.style.display = 'block';
+        if (passSection)  passSection.style.display  = 'block';
+        if (googleMsg)    googleMsg.style.display     = 'none';
+    }
+
+    // Reset champs
+    ['profile-new-email','profile-email-confirm-pass','profile-new-pass'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const disp = document.getElementById('profile-current-pass-display');
+    const real = document.getElementById('profile-current-pass-real');
+    if (disp) disp.value = ''; if (real) real.value = '';
+
     document.getElementById('profile-nickname-modal').style.display = 'flex';
+}
+
+// Masque le mot de passe : 3 premiers chars visibles + *
+function updatePassMask() {
+    const real = document.getElementById('profile-current-pass-real');
+    const disp = document.getElementById('profile-current-pass-display');
+    if (!real || !disp) return;
+    const val = real.value;
+    const visible = val.substring(0, 3);
+    const masked  = '*'.repeat(Math.max(0, val.length - 3));
+    disp.value = visible + masked;
+}
+
+function changeEmail() {
+    const newEmail  = document.getElementById('profile-new-email')?.value.trim();
+    const pass      = document.getElementById('profile-email-confirm-pass')?.value;
+    if (!newEmail || !pass) { showToast("Remplissez tous les champs ⚠️"); return; }
+    const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, pass);
+    currentUser.reauthenticateWithCredential(credential)
+        .then(() => currentUser.updateEmail(newEmail))
+        .then(() => {
+            db.collection("users").doc(currentUser.uid).set({ email: newEmail }, { merge: true });
+            showToast("E-mail mis à jour ✅");
+            document.getElementById('profile-current-email').innerText = newEmail;
+            document.getElementById('profile-new-email').value = '';
+            document.getElementById('profile-email-confirm-pass').value = '';
+        })
+        .catch(err => showToast("Erreur : " + err.message));
+}
+
+function changePassword() {
+    const currentPass = document.getElementById('profile-current-pass-real')?.value;
+    const newPass     = document.getElementById('profile-new-pass')?.value;
+    if (!currentPass || !newPass) { showToast("Remplissez tous les champs ⚠️"); return; }
+    if (newPass.length < 6) { showToast("Le mot de passe doit faire au moins 6 caractères ⚠️"); return; }
+    const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, currentPass);
+    currentUser.reauthenticateWithCredential(credential)
+        .then(() => currentUser.updatePassword(newPass))
+        .then(() => {
+            showToast("Mot de passe mis à jour ✅");
+            document.getElementById('profile-current-pass-real').value = '';
+            document.getElementById('profile-current-pass-display').value = '';
+            document.getElementById('profile-new-pass').value = '';
+        })
+        .catch(err => showToast("Erreur : " + err.message));
+}
+
+function sendResetPasswordEmail() {
+    const email = currentUser?.email;
+    if (!email) { showToast("Aucun e-mail associé ⚠️"); return; }
+    auth.sendPasswordResetEmail(email)
+        .then(() => showToast("E-mail de réinitialisation envoyé à " + email + " 📧"))
+        .catch(err => showToast("Erreur : " + err.message));
+}
+
+function openDeleteAccountModal() {
+    const isGoogle = currentUser?.providerData?.some(p => p.providerId === 'google.com');
+    document.getElementById('delete-account-email-block').style.display = isGoogle ? 'none' : 'block';
+    document.getElementById('delete-account-google-msg').style.display = isGoogle ? 'block' : 'none';
+    const passEl = document.getElementById('delete-account-pass');
+    if (passEl) passEl.value = '';
+    document.getElementById('profile-nickname-modal').style.display = 'none';
+    document.getElementById('delete-account-modal').style.display = 'flex';
+}
+
+async function _reauthenticate() {
+    const isGoogle = currentUser.providerData?.some(p => p.providerId === 'google.com');
+    if (isGoogle) {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await currentUser.reauthenticateWithPopup(provider);
+    } else {
+        const pass = document.getElementById('delete-account-pass')?.value;
+        if (!pass) throw new Error("Mot de passe requis ⚠️");
+        const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, pass);
+        await currentUser.reauthenticateWithCredential(credential);
+    }
+}
+
+async function _eraseAllData() {
+    const uid = currentUser.uid;
+    const batch = db.batch();
+    const collections = ['tasks', 'shopping', 'dailyTodo', 'weeklyTodo', 'routineTodo', 'birthdays'];
+    for (const col of collections) {
+        const snap = await db.collection(col).where('userId', '==', uid).get();
+        snap.forEach(doc => batch.delete(doc.ref));
+    }
+    const listsSnap = await db.collection('shoppingLists').where('members', 'array-contains', uid).get();
+    listsSnap.forEach(doc => {
+        const members = (doc.data().members || []).filter(m => m !== uid);
+        members.length === 0 ? batch.delete(doc.ref) : batch.update(doc.ref, { members });
+    });
+    batch.delete(db.collection('users').doc(uid));
+    await batch.commit();
+    await currentUser.delete();
+}
+
+async function confirmDeleteAccount() {
+    if (!currentUser) return;
+    try {
+        await _reauthenticate();
+        // Planifier la suppression dans 10 jours (soft delete)
+        const deletionDate = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+        await db.collection('users').doc(currentUser.uid).update({ deletionScheduledAt: deletionDate });
+        document.getElementById('delete-account-modal').style.display = 'none';
+        showToast("Suppression programmée dans 10 jours. Reconnectez-vous pour annuler.");
+        await auth.signOut();
+    } catch (err) {
+        showToast("Erreur : " + err.message);
+    }
+}
+
+async function confirmDeleteNow() {
+    if (!currentUser) return;
+    try {
+        showToast("Suppression en cours... ⏳");
+        await _eraseAllData();
+        document.getElementById('recovery-account-modal').style.display = 'none';
+        showToast("Compte supprimé. À bientôt ! 👋");
+    } catch (err) {
+        showToast("Erreur : " + err.message);
+    }
+}
+
+async function cancelAccountDeletion() {
+    if (!currentUser) return;
+    await db.collection('users').doc(currentUser.uid).update({
+        deletionScheduledAt: firebase.firestore.FieldValue.delete()
+    });
+    document.getElementById('recovery-account-modal').style.display = 'none';
+    showToast("Suppression annulée, bon retour ! 🎉");
 }
 
 function autoSaveNickname() {
