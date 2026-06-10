@@ -29,7 +29,7 @@
             <button class="nav-bubble active" id="nav-btn-tasks" onclick="showPage('tasks')">Tâches</button>
             <button class="nav-bubble" id="nav-btn-todo" onclick="showPage('todo')">To-Do List</button>
             <button class="nav-bubble" id="nav-btn-calendar" onclick="showPage('calendar')">Calendrier</button>
-            <button class="nav-bubble" id="nav-btn-shopping" onclick="showPage('shopping')">Courses 🛒</button>
+            <button class="nav-bubble" id="nav-btn-shopping" onclick="showPage('shopping')">Courses</button>
             <button class="nav-bubble" id="nav-btn-profile" onclick="showPage('profile')">Profil</button>
         </div>
     </nav>
@@ -55,7 +55,11 @@
                 <button id="sub-btn-active-tasks" class="sub-menu-tab active" onclick="switchTaskSubView('active')">Mes Tâches</button>
                 <button id="sub-btn-archived-tasks" class="sub-menu-tab" onclick="switchTaskSubView('archive')">Archives</button>
             </div>
-            <div id="archive-search-bar" class="action-bar-left" style="display: none; justify-content: flex-end; align-items: center; width: 100%; margin-bottom: 15px;">
+            <div id="archive-search-bar" class="action-bar-left" style="display: none; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px; gap: 10px;">
+                <div style="flex:1; position:relative; display:flex; align-items:center;">
+                    <span style="position:absolute; left:12px; font-size:0.9rem; pointer-events:none;">🔍</span>
+                    <input type="text" id="archive-search-input" placeholder="Rechercher..." oninput="renderTasks()" style="width:100%; padding: 10px 14px 10px 34px; font-size: 0.85rem; border-radius: 20px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); outline: none; box-sizing:border-box;">
+                </div>
                 <select id="archive-sort-filter" onchange="renderTasks()" style="padding: 10px 15px; font-size: 0.85rem; border-radius: 20px; font-weight: bold; cursor: pointer; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color);">
                     <option value="desc">⬇️ Plus récentes</option>
                     <option value="asc">⬆️ Plus anciennes</option>
@@ -63,7 +67,11 @@
             </div>
             <div id="tasks-action-bar" class="action-bar-left" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px;">
                 <button id="add-task-btn" class="btn-add-bubble btn-validated-click">+ Ajouter une tâche</button>
-                <div style="position:relative; display:inline-block;">
+                <div style="flex:1; position:relative; display:flex; align-items:center;">
+                    <span style="position:absolute; left:12px; font-size:0.9rem; pointer-events:none;">🔍</span>
+                    <input type="text" id="task-search-input" placeholder="Rechercher..." oninput="renderTasks()" style="width:100%; padding: 10px 14px 10px 34px; font-size: 0.85rem; border-radius: 20px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); outline: none; box-sizing:border-box;">
+                </div>
+                <div style="position:relative; display:inline-block; flex-shrink:0;">
                     <button style="padding:10px 16px; font-size:0.85rem; border-radius:20px; font-weight:bold; cursor:pointer; background:var(--card-bg); color:var(--text-color); border:1px solid rgba(128,128,128,0.3); pointer-events:none;">⏳ Tri ▾</button>
                     <select id="task-sort-filter" onchange="renderTasks()" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
                         <option value="chrono">Chronologique</option>
@@ -118,7 +126,7 @@
                     <div id="shopping-list-dropdown-menu-top" style="display:none; position:absolute; top:calc(100% + 8px); left:0; background:var(--card-bg); border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,0.2); min-width:200px; z-index:999; overflow:hidden; border:1px solid rgba(128,128,128,0.15);"></div>
                 </div>
                 <button onclick="scrollToShoppingList()" class="btn-primary" style="padding: 10px 18px; font-size: 0.9rem; border-radius: 20px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    🛒 Voir ma liste ⬇️
+                    Voir ma liste
                 </button>
                 <button onclick="openCustomShoppingListShareModal()" class="btn-primary" style="padding: 10px 18px; font-size: 0.9rem; border-radius: 20px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     🤝 Partager ma liste
@@ -195,19 +203,49 @@
                     <span style="opacity:0.6; font-size:1.2rem;">›</span>
                 </button>
 
-            </div>
+                <!-- Bouton Gestion -->
+                <button onclick="openGestionModal()" class="btn-validated-click" style="display:flex; align-items:center; gap:15px; background:linear-gradient(135deg, var(--primary), var(--primary-dark)); border:none; border-radius:20px; padding:16px 20px; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,0.25); width:100%; text-align:left; color:white;">
+                    <span style="font-size:1.6rem; background:rgba(255,255,255,0.2); border-radius:12px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">⚙️</span>
+                    <div style="flex:1;">
+                        <div class="profile-action-btn-label" style="font-size:1rem;">Gestion</div>
+                        <div style="font-size:0.8rem; opacity:0.75; margin-top:2px; font-family:-apple-system,sans-serif;">Thèmes & produits personnalisés</div>
+                    </div>
+                    <span style="opacity:0.6; font-size:1.2rem;">›</span>
+                </button>
 
-            <!-- Thèmes -->
-            <div class="header-action header-centered"><h2>Thèmes</h2></div>
-            <div class="theme-selector">
-                <div class="theme-option pink" onclick="changeTheme('pink')">Bonbon</div>
-                <div class="theme-option dark" onclick="changeTheme('dark')">Sombre</div>
-                <div class="theme-option ocean" onclick="changeTheme('ocean')">Océan</div>
             </div>
 
             <!-- Déconnexion -->
             <button id="btn-logout" class="btn-secondary" style="background:var(--danger); color:white; width:100%; margin-top:25px;">Se déconnecter</button>
         </section>
+
+        <!-- Modal Gestion -->
+        <div id="gestion-modal" class="modal modal-center" style="display:none; z-index:10010;">
+            <div class="modal-content" style="max-height:80vh; overflow-y:auto; padding:24px;">
+                <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:20px; font-family:'Mogra',cursive; font-weight:normal;">⚙️ Gestion</h3>
+
+                <!-- Thèmes -->
+                <div style="margin-bottom:24px;">
+                    <h4 style="font-family:'Mogra',cursive; font-weight:normal; color:var(--primary-dark); margin-bottom:12px;">🎨 Thèmes</h4>
+                    <div class="theme-selector">
+                        <div class="theme-option pink" onclick="changeTheme('pink')">Bonbon</div>
+                        <div class="theme-option dark" onclick="changeTheme('dark')">Sombre</div>
+                        <div class="theme-option ocean" onclick="changeTheme('ocean')">Océan</div>
+                    </div>
+                </div>
+
+                <hr style="border:none; border-top:1px solid rgba(128,128,128,0.2); margin-bottom:20px;">
+
+                <!-- Cartes personnalisées -->
+                <div>
+                    <h4 style="font-family:'Mogra',cursive; font-weight:normal; color:var(--primary-dark); margin-bottom:12px;">🗂️ Mes produits personnalisés</h4>
+                    <div id="gestion-custom-cards-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+                    <p id="gestion-no-cards" style="text-align:center; opacity:0.45; font-style:italic; display:none;">Aucun produit personnalisé</p>
+                </div>
+
+                <button onclick="document.getElementById('gestion-modal').style.display='none'" class="btn-secondary" style="margin-top:20px; width:100%;">Fermer</button>
+            </div>
+        </div>
 
         <!-- Modal Nom du profil -->
         <div id="profile-nickname-modal" class="modal modal-center" style="display:none; z-index:10010;">
@@ -269,8 +307,14 @@
             <h3 style="text-align: center; color: var(--primary-dark); margin-bottom: 15px;">Nouveau Produit ✏️</h3>
             
             <label>Rayon de rangement</label>
-            <select id="custom-card-category" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; margin-bottom: 10px;">
+            <select id="custom-card-category" onchange="updateCustomCardSubcategory()" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; margin-bottom: 10px;">
             </select>
+
+            <div id="custom-card-subcategory-block" style="display:none; margin-bottom:10px;">
+                <label>Sous-rayon (optionnel)</label>
+                <select id="custom-card-subcategory" style="padding: 14px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); background: var(--card-bg); color: var(--text-color); font-size: 1rem; width: 100%; margin-top:5px;">
+                </select>
+            </div>
 
             <label>Nom du produit</label>
             <input type="text" id="custom-card-name" placeholder="Ex: Gaufres, Épices...">
@@ -286,6 +330,7 @@
                     <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" class="custom-unit-cb" value="Pack"> Pack(s)</label>
                     <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" class="custom-unit-cb" value="Rouleau"> Rouleau(x)</label>
                     <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" class="custom-unit-cb" value="Boîte"> Boîte(s)</label>
+                    <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" class="custom-unit-cb" value="Carton"> Carton(s)</label>
                 </div>
             </div>
 
