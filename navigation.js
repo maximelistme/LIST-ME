@@ -27,12 +27,34 @@ if (btnLogin) {
 }
 
 let btnRegister = document.getElementById('btn-register');
+let _registerMode = false;
 if (btnRegister) {
     btnRegister.onclick = () => {
-        const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-pass').value;
-        if (email && pass) auth.createUserWithEmailAndPassword(email, pass)
-            .then(() => showToast("Compte créé avec succès ! 🎉"))
-            .catch(err => showToast("Erreur : " + err.message));
+        _registerMode = !_registerMode;
+        const rgpdBlock = document.getElementById('rgpd-check-block');
+        if (_registerMode) {
+            btnRegister.innerText = "Créer mon compte";
+            if (rgpdBlock) rgpdBlock.style.display = 'block';
+        } else {
+            // 2ème clic = création du compte
+            const email = document.getElementById('auth-email').value;
+            const pass  = document.getElementById('auth-pass').value;
+            const rgpd  = document.getElementById('rgpd-checkbox')?.checked;
+            if (!rgpd) { showToast("Veuillez accepter la politique de confidentialité ⚠️"); return; }
+            if (email && pass) auth.createUserWithEmailAndPassword(email, pass)
+                .then(cred => {
+                    db.collection("users").doc(cred.user.uid).set({
+                        email: email,
+                        rgpdAcceptedAt: new Date().toISOString(),
+                        createdAt: Date.now()
+                    }, { merge: true });
+                    showToast("Compte créé avec succès ! 🎉");
+                    if (rgpdBlock) rgpdBlock.style.display = 'none';
+                    btnRegister.innerText = "Pas de compte ? S'inscrire";
+                    _registerMode = false;
+                })
+                .catch(err => { showToast("Erreur : " + err.message); _registerMode = true; });
+        }
     };
 }
 
