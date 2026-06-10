@@ -6,7 +6,7 @@
 // ---- NAVIGATION CATÉGORIES ----
 function shoppingNavigateTo(cat) { shoppingSearchQuery = ""; currentShoppingPath.push(cat); renderShoppingCategories(); }
 function shoppingNavigateBack() { shoppingSearchQuery = ""; currentShoppingPath.pop(); renderShoppingCategories(); }
-function handleShoppingSearch(val) { shoppingSearchQuery = val; renderShoppingCategories(); }
+function handleShoppingSearch(val) { shoppingSearchQuery = val; renderShoppingCategories(); const s = document.getElementById('shopping-search'); if (s) { s.focus(); const len = s.value.length; s.setSelectionRange(len, len); } }
 
 function formatProductDisplay(name) {
     return (name || "").replace(/\(([^)]+)\)/g, '<span style="color:transparent; font-size:0; opacity:0; pointer-events:none;">($1)</span>');
@@ -31,7 +31,10 @@ function renderShoppingCategories() {
 
     container.innerHTML += `<div style="grid-column: 1 / -1; display: flex; gap: 10px; width: 100%; align-items: center; margin-bottom: 5px;">
         <div onclick="${currentShoppingPath.length === 0 ? '' : 'shoppingNavigateBack()'}" style="flex: 1; background:rgba(128,128,128,0.1); padding:12px; border-radius:12px; text-align:center; font-weight:normal; cursor:pointer; font-family:'Mogra',cursive; box-shadow:0 3px 8px rgba(0,0,0,0.15);">⬅️ Retour</div>
-        <input type="text" id="shopping-search" placeholder="🔍 Rechercher..." oninput="handleShoppingSearch(this.value)" value="${shoppingSearchQuery}" style="flex: 2; padding: 12px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.3);">
+        <div style="flex:2; position:relative; display:flex; align-items:center;">
+            <span style="position:absolute; left:12px; font-size:0.9rem; pointer-events:none;">🔍</span>
+            <input type="text" id="shopping-search" placeholder="Rechercher..." oninput="handleShoppingSearch(this.value)" value="${shoppingSearchQuery}" style="width:100%; padding: 12px 12px 12px 34px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.3); box-sizing:border-box;">
+        </div>
     </div>`;
     container.innerHTML += `<div onclick="openCustomCardModal()" style="grid-column: 1 / -1; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:white; padding:10px; border-radius:20px; text-align:center; cursor:pointer; width: 70%; margin: 0 auto 10px auto; font-weight:bold; font-size:0.95rem; box-shadow:0 3px 8px rgba(0,0,0,0.25);">+ Nouveau Produit</div>`;
 
@@ -47,7 +50,7 @@ function renderShoppingCategories() {
         customShoppingCards.forEach(c => { if (c.name.toLowerCase().includes(q)) results.push({ name: c.name, isCustom: true, id: c.id }); });
         if (results.length === 0) { container.innerHTML += `<div style="grid-column:1/-1; text-align:center; opacity:0.5; font-style:italic; padding:20px;">Aucun résultat pour "${shoppingSearchQuery}"</div>`; return; }
         results.forEach(r => {
-            if (r.isCustom) container.innerHTML += `<div onclick="openShoppingItemModal('${r.id.replace(/'/g, "\\'")}', true)" style="background:var(--card-bg); padding:8px 10px; border-radius:12px; text-align:center; cursor:pointer; border:2px dashed var(--primary); font-size:0.85rem;">+ ${r.name}</div>`;
+            if (r.isCustom) container.innerHTML += `<div onclick="openShoppingItemModal('${r.id.replace(/'/g, "\\'")}', true)" style="background:var(--card-bg); padding:8px 10px; border-radius:12px; text-align:center; cursor:pointer; border:1px solid rgba(128,128,128,0.2); font-size:0.85rem;">+ ${r.name}</div>`;
             else container.innerHTML += `<div onclick="openShoppingItemModal('${r.name.replace(/'/g, "\\'")}', false)" style="background:var(--card-bg); padding:8px 10px; border-radius:12px; text-align:center; cursor:pointer; border:1px solid rgba(128,128,128,0.2); font-size:0.85rem;">+ ${formatProductDisplay(r.name)}</div>`;
         });
         return;
@@ -66,8 +69,132 @@ function renderShoppingCategories() {
         container.innerHTML += `<div onclick="openShoppingItemModal('${p.replace(/'/g, "\\'")}', false)" style="background:var(--card-bg); padding:8px 10px; border-radius:12px; text-align:center; cursor:pointer; border:1px solid rgba(128,128,128,0.2); font-size:0.85rem;">+ ${formatProductDisplay(p)}</div>`;
     });
     customShoppingCards.filter(c => c.path === currentShoppingPath.join('/')).forEach(p => {
-        container.innerHTML += `<div onclick="openShoppingItemModal('${p.id.replace(/'/g, "\\'")}', true)" style="background:var(--card-bg); padding:8px 10px; border-radius:12px; text-align:center; cursor:pointer; border:2px dashed var(--primary); font-size:0.85rem;">+ ${p.name}</div>`;
+        container.innerHTML += `<div onclick="openShoppingItemModal('${p.id.replace(/'/g, "\\'")}', true)" style="background:var(--card-bg); padding:8px 10px; border-radius:12px; text-align:center; cursor:pointer; border:1px solid rgba(128,128,128,0.2); font-size:0.85rem;">+ ${p.name}</div>`;
     });
+}
+
+// ---- MAPPING UNITÉS PAR CATÉGORIE ----
+function getUnitsForCurrentPath(productName) {
+    const cat    = (currentShoppingPath[0] || '').toLowerCase();
+    const subcat = (currentShoppingPath[1] || '').toLowerCase();
+    const sub2   = (currentShoppingPath[2] || '').toLowerCase();
+    const name   = productName.toLowerCase();
+
+    // — VIANDES & VOLAILLES —
+    if (cat.includes('viande') || cat.includes('volaille'))
+        return ["", "g", "kg"];
+
+    // — POISSONS —
+    if (cat.includes('poisson'))
+        return ["", "g", "kg"];
+
+    // — LÉGUMES —
+    if (cat.includes('légume') || cat.includes('legume'))
+        return ["", "g", "kg"];
+
+    // — FRUITS —
+    if (cat.includes('fruit'))
+        return ["", "g", "kg"];
+
+    // — LAITAGES —
+    if (cat.includes('laitage')) {
+        if (subcat.includes('fromage'))
+            return ["", "g", "kg"];
+        if (subcat.includes('crèmerie') || subcat.includes('cremerie')) {
+            if (name.includes('lait') || name.includes('crème') || name.includes('creme'))
+                return ["", "L", "cl", "Pack"];
+            if (name.includes('beurre'))
+                return ["", "g", "kg"];
+            if (name.includes('oeuf') || name.includes('œuf'))
+                return ["", "Boîte"];
+            return ["", "L", "cl", "Pack"]; // défaut crèmerie
+        }
+        return ["", "g", "kg"]; // défaut laitages
+    }
+
+    // — ÉPICERIE SALÉE —
+    if (cat.includes('épicerie') || cat.includes('epicerie')) {
+        if (subcat.includes('féculent') || subcat.includes('feculent') || subcat.includes('pâte') || subcat.includes('pate') || subcat.includes('conserve'))
+            return ["", "g", "kg", "Boîte"];
+        if (subcat.includes('condiment')) {
+            if (name.includes('huile') || name.includes('vinaigre'))
+                return ["", "L", "cl"];
+            return [""];
+        }
+        if (subcat.includes('apéritif') || subcat.includes('aperitif')) {
+            // Chips & Snacks, Tartinables → pièce uniquement
+            return [""];
+        }
+        return ["", "g", "kg", "Boîte"]; // défaut épicerie salée
+    }
+
+    // — SURGELÉS —
+    if (cat.includes('surgelé') || cat.includes('surgele')) {
+        if (subcat.includes('glace'))
+            return ["", "Boîte"];
+        return [""];
+    }
+
+    // — BOISSONS —
+    if (cat.includes('boisson')) {
+        if (subcat.includes('eau'))    return ["", "L", "cl", "Pack"];
+        if (subcat.includes('jus'))    return ["", "L", "cl", "Pack"];
+        if (subcat.includes('sirop'))  return ["", "L", "cl"];
+        if (subcat.includes('soda'))   return ["", "L", "cl", "Pack"];
+        return ["", "L", "cl", "Pack"]; // défaut boissons
+    }
+
+    // — CAVE —
+    if (cat.includes('cave')) {
+        if (subcat.includes('vin'))        return ["", "Carton"];
+        if (subcat.includes('bière') || subcat.includes('biere')) return ["", "L", "cl", "Pack"];
+        if (subcat.includes('spiritueux')) return ["", "L", "cl"];
+        return ["", "L", "cl"];
+    }
+
+    // — BOULANGERIE —
+    if (cat.includes('boulangerie')) {
+        return [""]; // pains, viennoiseries, pâtisserie, aide pâtisserie → pièce uniquement
+    }
+
+    // — CHARCUTERIE —
+    if (cat.includes('charcuterie'))
+        return ["", "g", "kg"];
+
+    // — BÉBÉ —
+    if (cat.includes('bébé') || cat.includes('bebe')) {
+        if (subcat.includes('repas'))
+            return ["", "Boîte"];
+        if (subcat.includes('change') || subcat.includes('soin')) {
+            if (name.includes('couche'))
+                return ["", "Boîte", "Pack"];
+            return ["", "Boîte"];
+        }
+        return [""];
+    }
+
+    // — ANIMAUX —
+    if (cat.includes('animaux') || cat.includes('animal'))
+        return [""];
+
+    // — SOIN & BEAUTÉ —
+    if (cat.includes('soin') || cat.includes('beauté') || cat.includes('beaute')) {
+        if (subcat.includes('douche') || subcat.includes('cheveux'))
+            return ["", "L", "cl"];
+        return [""]; // hygiène & visage
+    }
+
+    // — ENTRETIEN & HYGIÈNE —
+    if (cat.includes('entretien') || cat.includes('hygiène') || cat.includes('hygiene')) {
+        if (subcat.includes('papier')) {
+            if (name.includes('mouchoir')) return ["", "Boîte"];
+            return ["", "Pack"];
+        }
+        return [""]; // ménage
+    }
+
+    // — DÉFAUT (autres catégories non encore mappées) —
+    return ["", "g", "kg", "L", "cl", "Pack", "Boîte"];
 }
 
 // ---- MODALE AJOUT PRODUIT ----
@@ -84,11 +211,7 @@ function openShoppingItemModal(nameOrId, isCustom) {
         const card = customShoppingCards.find(c => c.id === nameOrId);
         if (card) { displayName = card.name; allowedUnits = card.units || [""]; }
     } else {
-        // Unités par défaut selon catégorie
-        const nameLower = nameOrId.toLowerCase();
-        if (["lait", "jus", "eau", "sirop", "vin", "bière"].some(k => nameLower.includes(k))) allowedUnits = ["", "L", "cl", "Pack"];
-        else if (["farine", "sucre", "riz", "pâtes", "lentille"].some(k => nameLower.includes(k))) allowedUnits = ["", "g", "kg"];
-        else allowedUnits = ["", "g", "kg", "L", "cl", "Pack", "Boîte"];
+        allowedUnits = getUnitsForCurrentPath(nameOrId);
     }
 
     document.getElementById('shopping-modal-title').innerText = "Ajouter : " + displayName.replace(/\s*\(.*?\)/g, '');
@@ -158,6 +281,81 @@ function saveShoppingItem() {
     });
 }
 
+// ---- MODAL GESTION ----
+let _editingCustomCardId = null;
+
+function openGestionModal() {
+    const list = document.getElementById('gestion-custom-cards-list');
+    const empty = document.getElementById('gestion-no-cards');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!customShoppingCards || customShoppingCards.length === 0) {
+        if (empty) empty.style.display = 'block';
+    } else {
+        if (empty) empty.style.display = 'none';
+        customShoppingCards.forEach(card => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; background:rgba(128,128,128,0.08); border-radius:14px; padding:12px 16px; gap:8px;';
+            row.innerHTML = `
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:bold; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${card.name}</div>
+                    <div style="font-size:0.78rem; opacity:0.5; margin-top:2px;">${card.path || 'Sans catégorie'}</div>
+                </div>
+                <div style="display:flex; gap:6px; flex-shrink:0;">
+                    <button onclick="editCustomCard('${card.id}')" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:white; border:none; border-radius:10px; padding:7px 13px; cursor:pointer; font-size:0.85rem;">✎ Modifier</button>
+                    <button onclick="deleteCustomCard('${card.id}')" style="background:var(--danger); color:white; border:none; border-radius:10px; padding:7px 13px; cursor:pointer; font-size:0.85rem;">🗑️</button>
+                </div>`;
+            list.appendChild(row);
+        });
+    }
+    document.getElementById('gestion-modal').style.display = 'flex';
+}
+
+function editCustomCard(cardId) {
+    const card = customShoppingCards.find(c => c.id === cardId);
+    if (!card) return;
+    _editingCustomCardId = cardId;
+
+    // Fermer gestion, ouvrir le modal custom avec les données pré-remplies
+    document.getElementById('gestion-modal').style.display = 'none';
+
+    const select = document.getElementById('custom-card-category');
+    if (select) {
+        select.innerHTML = Object.keys(foodCategories).map(k => `<option value="${k}">${k}</option>`).join('');
+        // Sélectionner le bon rayon (path peut être "Rayon/SousRayon" ou "Rayon")
+        const parts = (card.path || '').split('/');
+        select.value = parts[0] || select.options[0]?.value;
+    }
+    updateCustomCardSubcategory();
+    // Sélectionner le bon sous-rayon si présent
+    if (card.path && card.path.includes('/')) {
+        const sub = card.path.split('/')[1];
+        const subSel = document.getElementById('custom-card-subcategory');
+        if (subSel) subSel.value = sub;
+    }
+
+    document.getElementById('custom-card-name').value = card.name;
+    const allowedUnits = card.units || [""];
+    document.querySelectorAll('.custom-unit-cb').forEach(cb => {
+        cb.checked = allowedUnits.includes(cb.value);
+    });
+
+    // Changer le titre du modal
+    const title = document.querySelector('#custom-card-modal h3');
+    if (title) title.innerText = 'Modifier le produit ✏️';
+
+    document.getElementById('custom-card-modal').style.display = 'flex';
+}
+
+function deleteCustomCard(cardId) {
+    customShoppingCards = customShoppingCards.filter(c => c.id !== cardId);
+    db.collection("users").doc(currentUser.uid).set({ customCards: customShoppingCards }, { merge: true }).then(() => {
+        showToast("Produit supprimé ! 🗑️");
+        openGestionModal();
+        renderShoppingCategories();
+    });
+}
+
 // ---- NOUVEAU PRODUIT PERSONNALISÉ ----
 function openCustomCardModal() {
     const select = document.getElementById('custom-card-category');
@@ -166,29 +364,89 @@ function openCustomCardModal() {
     }
     document.getElementById('custom-card-name').value = '';
     document.querySelectorAll('.custom-unit-cb').forEach(cb => cb.checked = cb.value === "");
+    // Initialiser le sous-rayon selon la 1ère catégorie
+    updateCustomCardSubcategory();
     document.getElementById('custom-card-modal').style.display = 'flex';
+}
+
+function updateCustomCardSubcategory() {
+    const cat = document.getElementById('custom-card-category').value;
+    const block = document.getElementById('custom-card-subcategory-block');
+    const subSelect = document.getElementById('custom-card-subcategory');
+    if (!cat || !block || !subSelect) return;
+
+    const catObj = foodCategories[cat];
+    // Sous-rayons = clés de l'objet si ce n'est pas un tableau
+    const subKeys = (!Array.isArray(catObj) && typeof catObj === 'object') ? Object.keys(catObj) : [];
+
+    if (subKeys.length > 0) {
+        subSelect.innerHTML = `<option value="">— Rayon principal uniquement —</option>` +
+            subKeys.map(k => `<option value="${k}">${k}</option>`).join('');
+        block.style.display = 'block';
+    } else {
+        subSelect.innerHTML = '';
+        block.style.display = 'none';
+    }
 }
 
 function saveCustomCard() {
     const name = document.getElementById('custom-card-name').value.trim();
     const category = document.getElementById('custom-card-category').value;
+    const subcategory = document.getElementById('custom-card-subcategory')?.value || '';
     const units = Array.from(document.querySelectorAll('.custom-unit-cb:checked')).map(cb => cb.value);
     if (!name) { showToast("Veuillez saisir un nom ! ⚠️"); return; }
+
+    // Path = "Rayon/Sous-rayon" si sous-rayon choisi, sinon juste "Rayon"
+    const path = subcategory ? `${category}/${subcategory}` : category;
 
     const newCard = {
         id: 'custom_' + Date.now(),
         name: name,
-        path: category,
+        path: path,
         units: units,
         createdAt: Date.now()
     };
 
+    // Réinitialiser le titre du modal
+    const modalTitle = document.querySelector('#custom-card-modal h3');
+    if (modalTitle) modalTitle.innerText = 'Nouveau Produit ✏️';
+
+    // Mode édition : remplacer la carte existante
+    if (_editingCustomCardId) {
+        const idx = customShoppingCards.findIndex(c => c.id === _editingCustomCardId);
+        if (idx !== -1) { customShoppingCards[idx] = { ...customShoppingCards[idx], name, path, units }; }
+        _editingCustomCardId = null;
+        db.collection("users").doc(currentUser.uid).set({ customCards: customShoppingCards }, { merge: true }).then(() => {
+            showToast(`Produit "${name}" modifié ! ✅`);
+            document.getElementById('custom-card-modal').style.display = 'none';
+            renderShoppingCategories();
+            openGestionModal();
+        });
+        return;
+    }
+
+    // Sauvegarder dans les cartes perso de l'utilisateur
     customShoppingCards.push(newCard);
-    db.collection("users").doc(currentUser.uid).set({ customCards: customShoppingCards }, { merge: true }).then(() => {
-        showToast(`Produit "${name}" créé ! ✨`);
-        document.getElementById('custom-card-modal').style.display = 'none';
-        renderShoppingCategories();
-    });
+    db.collection("users").doc(currentUser.uid).set({ customCards: customShoppingCards }, { merge: true });
+
+    // Si on est dans une liste partagée, propager la carte à tous les participants
+    if (currentShoppingListId !== 'personal') {
+        const listRef = db.collection("shoppingLists").doc(currentShoppingListId);
+        listRef.get().then(doc => {
+            if (!doc.exists) return;
+            const listData = doc.data();
+            const sharedCards = listData.sharedCustomCards || [];
+            // Éviter les doublons par nom
+            if (!sharedCards.find(c => c.name === newCard.name)) {
+                sharedCards.push(newCard);
+                listRef.update({ sharedCustomCards: sharedCards });
+            }
+        });
+    }
+
+    showToast(`Produit "${name}" créé et partagé ! ✨`);
+    document.getElementById('custom-card-modal').style.display = 'none';
+    renderShoppingCategories();
 }
 
 // ---- DROPDOWN SÉLECTEUR DE LISTE ----
@@ -267,7 +525,30 @@ function switchShoppingListTab(listId) {
     renderShoppingCategories();
     syncCurrentShoppingItems();
     updateParticipantsDisplay();
+    // Sync les cartes partagées de la liste vers les cartes perso du participant
+    if (listId !== 'personal') syncSharedCustomCards(listId);
     requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: 'instant' }));
+}
+
+function syncSharedCustomCards(listId) {
+    db.collection("shoppingLists").doc(listId).get().then(doc => {
+        if (!doc.exists) return;
+        const sharedCards = doc.data().sharedCustomCards || [];
+        if (sharedCards.length === 0) return;
+        let updated = false;
+        sharedCards.forEach(card => {
+            // Ajouter uniquement si pas déjà dans les cartes perso (par nom)
+            if (!customShoppingCards.find(c => c.name === card.name)) {
+                customShoppingCards.push(card);
+                updated = true;
+            }
+        });
+        if (updated) {
+            db.collection("users").doc(currentUser.uid).set({ customCards: customShoppingCards }, { merge: true });
+            renderShoppingCategories();
+            showToast("Nouveaux produits partagés ajoutés ! 🛒");
+        }
+    });
 }
 
 function syncCurrentShoppingItems() {
