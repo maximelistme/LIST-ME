@@ -46,6 +46,12 @@
                 <input type="password" id="auth-pass" placeholder="••••••••">
                 <button id="btn-login" class="btn-primary btn-validated-click" style="margin-top: 10px;">Se connecter</button>
                 <button id="btn-google" class="btn-primary btn-validated-click" style="margin-top: 10px; background: #ffffff; color: #2C3E50; border: 1px solid rgba(128,128,128,0.3); display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;">Continuer avec Google</button>
+                <div id="rgpd-check-block" style="display:none; margin-top:12px; background:rgba(128,128,128,0.07); border-radius:12px; padding:10px 14px;">
+                    <label style="display:flex; align-items:flex-start; gap:10px; font-size:0.83rem; cursor:pointer; line-height:1.5;">
+                        <input type="checkbox" id="rgpd-checkbox" style="margin-top:3px; flex-shrink:0;">
+                        <span>J'ai lu et j'accepte la <span onclick="document.getElementById('mentions-legales-modal').style.display='flex'" style="color:var(--primary-dark); text-decoration:underline; cursor:pointer;">politique de confidentialité</span> de LIST'ME.</span>
+                    </label>
+                </div>
                 <button id="btn-register" class="btn-secondary" style="background:none; color:var(--primary-dark); font-size:0.9rem; text-decoration:underline; cursor:pointer; margin-top: 5px;">Pas de compte ? S'inscrire</button>
             </div>
         </section>
@@ -248,15 +254,124 @@
         </div>
 
         <!-- Modal Nom du profil -->
+        <!-- Modal Mon Profil -->
         <div id="profile-nickname-modal" class="modal modal-center" style="display:none; z-index:10010;">
-            <div class="modal-content content-center">
-                <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:15px;">👤 Mon Profil</h3>
+            <div class="modal-content content-center" style="max-height:85vh; overflow-y:auto; padding:18px;">
+                <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:14px; font-family:'Mogra',cursive; font-weight:normal;">👤 Mon Profil</h3>
+
+                <!-- Nom d'affichage -->
                 <label>Nom d'affichage</label>
-                <input type="text" id="profile-nickname" placeholder="Ex: Max, Julie..." style="text-align:center;">
-                <div style="display:flex; gap:10px; margin-top:15px;">
-                    <button onclick="autoSaveNickname(); document.getElementById('profile-nickname-modal').style.display='none'" class="btn-primary btn-validated-click" style="flex:1;">Enregistrer</button>
-                    <button onclick="document.getElementById('profile-nickname-modal').style.display='none'" class="btn-secondary" style="flex:1;">Fermer</button>
+                <div style="display:flex; gap:8px; align-items:center; margin-top:5px;">
+                    <input type="text" id="profile-nickname" placeholder="Ex: Max, Julie..." style="flex:1; margin-bottom:0;">
+                    <button onclick="autoSaveNickname(); showToast('Nom mis à jour ✅');" class="btn-primary btn-validated-click" style="flex-shrink:0; padding:10px 14px;">✓</button>
                 </div>
+
+                <hr style="border:none; border-top:1px solid rgba(128,128,128,0.2); margin:12px 0;">
+
+                <!-- Changer email (masqué pour Google) -->
+                <div id="profile-email-section">
+                    <label>E-mail <span id="profile-current-email" style="font-size:0.8rem; opacity:0.5; font-weight:normal;"></span></label>
+                    <input type="email" id="profile-new-email" placeholder="Nouvelle adresse e-mail" style="margin-top:5px;">
+                    <input type="password" id="profile-email-confirm-pass" placeholder="Confirmer avec votre mot de passe" style="margin-top:6px;">
+                    <button onclick="changeEmail()" class="btn-primary btn-validated-click" style="width:100%; margin-top:8px; padding:9px;">Changer l'e-mail</button>
+                </div>
+
+                <hr style="border:none; border-top:1px solid rgba(128,128,128,0.2); margin:12px 0;">
+
+                <!-- Changer mot de passe (masqué pour Google) -->
+                <div id="profile-password-section">
+                    <label>Mot de passe</label>
+                    <div style="position:relative; margin-top:5px;">
+                        <input type="text" id="profile-current-pass-display" readonly placeholder="Mot de passe actuel →" style="background:rgba(128,128,128,0.07); cursor:default; color:var(--text-color); letter-spacing:2px;">
+                        <input type="password" id="profile-current-pass-real" oninput="updatePassMask()" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:text;">
+                    </div>
+                    <input type="password" id="profile-new-pass" placeholder="Nouveau mot de passe (6 car. min)" style="margin-top:6px;">
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <button onclick="changePassword()" class="btn-primary btn-validated-click" style="flex:1; padding:9px;">Changer</button>
+                        <button onclick="sendResetPasswordEmail()" class="btn-secondary" style="flex:1; font-size:0.8rem; padding:9px;">Oublié ?</button>
+                    </div>
+                </div>
+
+                <!-- Message Google -->
+                <div id="profile-google-msg" style="display:none; text-align:center; padding:10px; background:rgba(128,128,128,0.08); border-radius:12px; font-size:0.83rem; opacity:0.7;">
+                    🔗 Compte Google — géré par Google
+                </div>
+
+                <hr style="border:none; border-top:1px solid rgba(128,128,128,0.2); margin:12px 0;">
+
+                <div style="display:flex; gap:8px;">
+                    <button onclick="document.getElementById('profile-nickname-modal').style.display='none'; document.getElementById('mentions-legales-modal').style.display='flex';" class="btn-secondary" style="flex:1; font-size:0.8rem; padding:9px;">📄 Mentions légales</button>
+                    <button onclick="openDeleteAccountModal()" style="flex:1; background:none; border:1px solid var(--danger); color:var(--danger); border-radius:20px; padding:9px; font-size:0.8rem; cursor:pointer;">🗑️ Supprimer</button>
+                </div>
+
+                <button onclick="document.getElementById('profile-nickname-modal').style.display='none'" class="btn-secondary" style="width:100%; margin-top:8px; padding:9px;">Fermer</button>
+            </div>
+        </div>
+
+        <!-- Modal Suppression de compte -->
+        <div id="delete-account-modal" class="modal modal-center" style="display:none; z-index:10012;">
+            <div class="modal-content content-center" style="padding:24px;">
+                <h3 style="text-align:center; color:var(--danger); margin-bottom:15px; font-family:'Mogra',cursive; font-weight:normal;">⚠️ Supprimer mon compte</h3>
+                <p style="font-size:0.88rem; text-align:center; opacity:0.8; margin-bottom:20px; line-height:1.6;">Vos données seront supprimées dans <strong>10 jours</strong>. Vous pouvez annuler en vous reconnectant avant ce délai.</p>
+
+                <div id="delete-account-email-block">
+                    <label>Confirmez avec votre mot de passe</label>
+                    <input type="password" id="delete-account-pass" placeholder="Votre mot de passe actuel" style="margin-bottom:10px;">
+                </div>
+                <div id="delete-account-google-msg" style="display:none; text-align:center; padding:10px; background:rgba(128,128,128,0.08); border-radius:12px; font-size:0.85rem; opacity:0.7; margin-bottom:15px;">
+                    🔗 Vous serez redirigé vers Google pour confirmer
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:5px;">
+                    <button onclick="confirmDeleteAccount()" style="flex:1; background:var(--danger); color:white; border:none; border-radius:20px; padding:12px; cursor:pointer; font-size:0.9rem;">Supprimer définitivement</button>
+                    <button onclick="document.getElementById('delete-account-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Récupération de compte -->
+        <div id="recovery-account-modal" class="modal modal-center" style="display:none; z-index:10013;">
+            <div class="modal-content content-center" style="padding:24px;">
+                <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:12px; font-family:'Mogra',cursive; font-weight:normal;">🔄 Compte en cours de suppression</h3>
+                <p id="recovery-days-msg" style="font-size:0.88rem; text-align:center; opacity:0.8; margin-bottom:20px; line-height:1.6;"></p>
+                <button onclick="cancelAccountDeletion()" class="btn-primary btn-validated-click" style="width:100%; margin-bottom:10px;">✅ Récupérer mon compte</button>
+                <button onclick="confirmDeleteNow()" style="width:100%; background:none; border:1px solid var(--danger); color:var(--danger); border-radius:20px; padding:10px; font-size:0.85rem; cursor:pointer;">🗑️ Supprimer maintenant quand même</button>
+            </div>
+        </div>
+
+        <!-- Modal Mentions légales -->
+        <div id="mentions-legales-modal" class="modal modal-center" style="display:none; z-index:10011;">
+            <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding:24px;">
+                <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:20px; font-family:'Mogra',cursive; font-weight:normal;">📄 Mentions légales & Confidentialité</h3>
+
+                <h4 style="color:var(--primary-dark); margin-bottom:6px;">Éditeur</h4>
+                <p style="font-size:0.88rem; opacity:0.8; margin-bottom:16px;">LIST'ME est une application personnelle développée à titre privé. Pour toute question : <strong>contact@listme.app</strong></p>
+
+                <h4 style="color:var(--primary-dark); margin-bottom:6px;">Hébergement</h4>
+                <p style="font-size:0.88rem; opacity:0.8; margin-bottom:16px;">Les données sont hébergées sur les serveurs de Google Firebase (Google LLC, USA) dans le cadre du RGPD.</p>
+
+                <h4 style="color:var(--primary-dark); margin-bottom:6px;">Données collectées</h4>
+                <p style="font-size:0.88rem; opacity:0.8; margin-bottom:8px;">Dans le cadre de l'utilisation de LIST'ME, les données suivantes sont collectées :</p>
+                <ul style="font-size:0.88rem; opacity:0.8; margin-bottom:16px; padding-left:18px; line-height:1.8;">
+                    <li>Adresse e-mail (identifiant de connexion)</li>
+                    <li>Nom d'affichage choisi par l'utilisateur</li>
+                    <li>Tâches, listes de courses et événements créés</li>
+                    <li>Données de partage entre utilisateurs (codes de liaison)</li>
+                </ul>
+
+                <h4 style="color:var(--primary-dark); margin-bottom:6px;">Finalité</h4>
+                <p style="font-size:0.88rem; opacity:0.8; margin-bottom:16px;">Ces données sont utilisées exclusivement pour le fonctionnement de l'application. Elles ne sont ni vendues, ni transmises à des tiers.</p>
+
+                <h4 style="color:var(--primary-dark); margin-bottom:6px;">Vos droits (RGPD)</h4>
+                <p style="font-size:0.88rem; opacity:0.8; margin-bottom:16px;">Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, de suppression et de portabilité de vos données. Pour exercer ces droits, contactez-nous à <strong>contact@listme.app</strong>.</p>
+
+                <h4 style="color:var(--primary-dark); margin-bottom:6px;">Conservation</h4>
+                <p style="font-size:0.88rem; opacity:0.8; margin-bottom:16px;">Les données sont conservées tant que le compte est actif. La suppression du compte entraîne la suppression des données associées.</p>
+
+                <h4 style="color:var(--primary-dark); margin-bottom:6px;">Cookies</h4>
+                <p style="font-size:0.88rem; opacity:0.8; margin-bottom:20px;">L'application utilise uniquement les cookies techniques de Firebase nécessaires à l'authentification. Aucun cookie publicitaire ou de tracking tiers n'est utilisé.</p>
+
+                <button onclick="document.getElementById('mentions-legales-modal').style.display='none'" class="btn-secondary" style="width:100%;">Fermer</button>
             </div>
         </div>
     </main>
