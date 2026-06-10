@@ -688,7 +688,12 @@ function scrollToTopShopping() {
 }
 
 // ---- ACTIONS ARTICLES ----
-function toggleShoppingCheck(id, isCompleted) { db.collection("shopping").doc(id).update({ completed: !isCompleted }); }
+function toggleShoppingCheck(id, isCompleted) {
+    const update = { completed: !isCompleted };
+    if (!isCompleted) update.completedAt = new Date().toISOString().split('T')[0];
+    else update.completedAt = firebase.firestore.FieldValue.delete();
+    db.collection("shopping").doc(id).update(update);
+}
 function deleteShoppingItem(id) { db.collection("shopping").doc(id).delete(); }
 function clearCompletedShopping() {
     const completeds = shoppingItems.filter(i => i.completed);
@@ -699,8 +704,9 @@ function autoArchiveShoppingItems() {
     const today = new Date().toISOString().split('T')[0];
     db.collection("shopping").where("completed", "==", true).get().then(snap => {
         snap.forEach(doc => {
-            if (doc.data().createdAt && new Date(doc.data().createdAt).toISOString().split('T')[0] < today)
-                doc.ref.delete();
+            const d = doc.data();
+            const refDate = d.completedAt || (d.createdAt ? new Date(d.createdAt).toISOString().split('T')[0] : null);
+            if (refDate && refDate < today) doc.ref.delete();
         });
     });
 }
