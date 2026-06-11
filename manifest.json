@@ -2,7 +2,7 @@
   "name": "LIST'ME",
   "short_name": "LIST'ME",
   "description": "Ton app de tâches, courses et agenda partagé",
-  "start_url": "/",
+  "start_url": "/LISTE-MOI/",
   "display": "standalone",
   "background_color": "#0a1628",
   "theme_color": "#00CED1",
