@@ -12,9 +12,9 @@ self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
         self.registration.showNotification(event.data.title, {
             body: event.data.body,
-            icon: 'https://cdn-icons-png.flaticon.com/512/906/906334.png',
-            vibrate: [200, 100, 200], // Fait vibrer le téléphone !
-            badge: 'https://cdn-icons-png.flaticon.com/512/906/906334.png'
+            icon: '/LIST-ME/icons/icon-192.png',
+            vibrate: [200, 100, 200],
+            badge: '/LIST-ME/icons/icon-192.png'
         });
     }
 });
