@@ -531,3 +531,31 @@ function removeGlobalFriend(fUid) {
         showToast("Ami retiré ! 🗑️");
     });
 }
+
+// ---- PRÉFÉRENCES NOTIFICATIONS ----
+function loadNotifPrefs() {
+    const prefs = JSON.parse(localStorage.getItem('notifPrefs') || '{"tasks":true,"birthdays":true,"shopping":true}');
+    ['tasks','birthdays','shopping'].forEach(key => {
+        _applyNotifToggle(key, prefs[key]);
+    });
+}
+
+function toggleNotifPref(key) {
+    const prefs = JSON.parse(localStorage.getItem('notifPrefs') || '{"tasks":true,"birthdays":true,"shopping":true}');
+    prefs[key] = !prefs[key];
+    localStorage.setItem('notifPrefs', JSON.stringify(prefs));
+    _applyNotifToggle(key, prefs[key]);
+}
+
+function _applyNotifToggle(key, active) {
+    const toggle = document.getElementById(`notif-toggle-${key}`);
+    const thumb = document.getElementById(`notif-thumb-${key}`);
+    if (!toggle || !thumb) return;
+    toggle.style.background = active ? 'var(--primary)' : 'rgba(128,128,128,0.4)';
+    thumb.style.left = active ? '23px' : '3px';
+}
+
+function isNotifEnabled(key) {
+    const prefs = JSON.parse(localStorage.getItem('notifPrefs') || '{"tasks":true,"birthdays":true,"shopping":true}');
+    return prefs[key] !== false;
+}
