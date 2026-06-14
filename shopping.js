@@ -285,6 +285,7 @@ function saveShoppingItem() {
 let _editingCustomCardId = null;
 
 function openGestionModal() {
+    if (typeof loadNotifPrefs === 'function') loadNotifPrefs();
     const list = document.getElementById('gestion-custom-cards-list');
     const empty = document.getElementById('gestion-no-cards');
     if (!list) return;
