@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Mogra&display=swap" rel="stylesheet">
     <title>LIST'ME</title>
     <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
         /* Force l'affichage des flèches pour les champs quantité */
@@ -20,19 +21,70 @@
         #toast-notification {
             pointer-events: none;
         }
+        /* Placeholder contenteditable bloc-note */
+        #blocnote-editor-content[data-empty="true"]::before {
+            content: attr(data-placeholder);
+            color: rgba(128,128,128,0.38);
+            pointer-events: none;
+            position: absolute;
+            top: 14px;
+            left: 0;
+        }
+        #blocnote-editor-content:focus { outline: none; }
+        #blocnote-editor-content h2 { font-size:1.15rem; font-weight:bold; color:var(--primary); margin:10px 0 4px; font-family:inherit; }
+        #blocnote-editor-content h2:first-child { margin-top: 0; }
+        .bn-fmt-btn { background:none; border:1px solid rgba(128,128,128,0.2); border-radius:8px; padding:4px 9px; font-size:0.85rem; cursor:pointer; color:var(--text-color); transition: background 0.15s, border-color 0.15s; }
+        .bn-fmt-btn.active { background:rgba(0,206,209,0.18); border-color:var(--primary); color:var(--primary); }
+        #blocnote-editor-content ul { padding-left:20px; margin:4px 0; }
+        #blocnote-editor-content ol { padding-left:20px; margin:4px 0; }
+        #blocnote-editor-content li { margin:2px 0; }
+        #blocnote-editor-content span[style*="background-color"],
+        #blocnote-editor-content font[style*="background-color"] {
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body class="theme-pink">
 
-    <nav class="navbar">
-        <h1>LIST'ME</h1>
-        <div class="main-nav-container" id="main-nav" style="display:none; overflow-x: auto; white-space: nowrap;">
-            <button class="nav-bubble active" id="nav-btn-tasks" onclick="showPage('tasks')">Tâches</button>
-            <button class="nav-bubble" id="nav-btn-todo" onclick="showPage('todo')">To-Do List</button>
-            <button class="nav-bubble" id="nav-btn-calendar" onclick="showPage('calendar')">Calendrier</button>
-            <button class="nav-bubble" id="nav-btn-shopping" onclick="showPage('shopping')">Courses</button>
-            <button class="nav-bubble" id="nav-btn-profile" onclick="showPage('profile')">Profil</button>
+    <!-- Overlay menu -->
+    <div id="sidebar-overlay" onclick="closeSidebar()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9000;"></div>
+
+    <!-- Menu latéral -->
+    <div id="sidebar" style="position:fixed; top:0; left:-280px; width:270px; height:100vh; background:var(--card-bg); z-index:9001; transition:left 0.3s ease; box-shadow:4px 0 20px rgba(0,0,0,0.3); display:flex; flex-direction:column; overflow-y:auto;">
+        <div style="padding:28px 20px 16px; background:linear-gradient(135deg,var(--primary),var(--primary-dark));">
+            <h1 style="font-family:'Mogra',cursive; font-weight:normal; color:white; font-size:1.8rem; margin:0;">LIST'ME</h1>
+            <p style="color:rgba(255,255,255,0.8); font-size:0.82rem; margin:4px 0 0;">Ton assistant quotidien</p>
         </div>
+
+        <div style="padding:16px 12px; flex:1;">
+            <!-- Quotidien -->
+            <p style="font-size:0.72rem; text-transform:uppercase; letter-spacing:1px; opacity:0.45; margin:0 8px 8px;">Quotidien</p>
+            <button class="sidebar-btn" id="nav-btn-tasks" onclick="showPage('tasks'); closeSidebar()">📋 Tâches</button>
+            <button class="sidebar-btn" id="nav-btn-todo" onclick="showPage('todo'); closeSidebar()">✅ To-Do List</button>
+            <button class="sidebar-btn" id="nav-btn-calendar" onclick="showPage('calendar'); closeSidebar()">📅 Calendrier</button>
+
+            <!-- Pratique -->
+            <p style="font-size:0.72rem; text-transform:uppercase; letter-spacing:1px; opacity:0.45; margin:16px 8px 8px;">Pratique</p>
+            <button class="sidebar-btn" id="nav-btn-shopping" onclick="showPage('shopping'); closeSidebar()">🛒 Courses</button>
+            <button class="sidebar-btn" id="nav-btn-tricount" onclick="showPage('tricount'); closeSidebar()">⚖️ Tricount</button>
+            <button class="sidebar-btn" id="nav-btn-blocnote" onclick="showPage('blocnote'); closeSidebar()">📝 Bloc-note</button>
+
+            <!-- Loisirs -->
+            <p style="font-size:0.72rem; text-transform:uppercase; letter-spacing:1px; opacity:0.45; margin:16px 8px 8px;">Loisirs</p>
+            <button class="sidebar-btn sidebar-soon" disabled>✈️ Voyage <span class="soon-badge">Bientôt</span></button>
+            <button class="sidebar-btn sidebar-soon" disabled>🍳 Cuisine <span class="soon-badge">Bientôt</span></button>
+
+            <!-- Compte -->
+            <p style="font-size:0.72rem; text-transform:uppercase; letter-spacing:1px; opacity:0.45; margin:16px 8px 8px;">Compte</p>
+            <button class="sidebar-btn" id="nav-btn-profile" onclick="showPage('profile'); closeSidebar()">👤 Profil</button>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <button id="hamburger-btn" onclick="openSidebar()" style="display:none; background:none; border:none; color:white; font-size:1.5rem; cursor:pointer; padding:4px 8px; line-height:1;">☰</button>
+        <h1>LIST'ME</h1>
+        <div id="main-nav" style="display:none;"></div>
+        <button id="nav-shortcut-btn" style="display:none; background:rgba(255,255,255,0.2); border:none; color:white; border-radius:20px; padding:6px 12px; cursor:pointer; font-size:0.85rem; white-space:nowrap;"></button>
     </nav>
 
     <main id="app">
@@ -177,6 +229,397 @@
                 </button>
             </div>
         </section>
+
+        <!-- ===================== TRICOUNT ===================== -->
+        <section id="tricount-page" style="display:none;">
+
+            <!-- Vue liste des groupes -->
+            <div id="tricount-home">
+                <div class="header-action header-centered" style="justify-content:space-between;">
+                    <h2>⚖️ Tricount</h2>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="openTricountJoinModal()" class="btn-secondary btn-validated-click" style="font-size:0.82rem; padding:8px 14px; border-radius:20px;">🔑 Rejoindre</button>
+                        <button onclick="openTricountCreateModal()" class="btn-add-bubble btn-validated-click" style="font-size:0.85rem; padding:8px 16px;">+ Groupe</button>
+                    </div>
+                </div>
+                <div id="tricount-groups-list" style="margin-top:10px;"></div>
+                <button onclick="toggleTricountArchived()" id="tricount-archive-toggle-btn" style="width:100%; margin-top:6px; background:none; border:1px solid rgba(128,128,128,0.2); border-radius:14px; padding:10px; color:var(--text-color); opacity:0.5; font-size:0.82rem; cursor:pointer; display:none;">📦 Voir les groupes archivés</button>
+                <div id="tricount-archived-list" style="display:none; margin-top:8px;"></div>
+            </div>
+
+            <!-- Vue détail d'un groupe -->
+            <div id="tricount-detail" style="display:none;">
+
+                <!-- Bouton retour -->
+                <div style="padding:8px 0 0;">
+                    <button onclick="closeTricountGroup()" style="background:none; border:none; color:var(--primary-dark); font-size:0.9rem; cursor:pointer; padding:4px 0; display:flex; align-items:center; gap:6px;">← Retour</button>
+                </div>
+
+                <!-- Bandeau groupe -->
+                <div style="background:linear-gradient(135deg,var(--primary),var(--primary-dark)); border-radius:18px; padding:14px 18px; margin:10px 0 16px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <div style="flex:1; min-width:0;">
+                        <div id="tricount-banner-name" style="font-family:'Mogra',cursive; font-weight:normal; color:white; font-size:1.1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+                        <div style="display:flex; gap:8px; margin-top:5px; flex-wrap:wrap;">
+                            <button id="tricount-banner-members" onclick="openTricountMembersModal()" style="background:rgba(255,255,255,0.2); border:none; color:white; border-radius:20px; padding:3px 10px; font-size:0.75rem; cursor:pointer;"></button>
+                            <span id="tricount-banner-code" style="background:rgba(255,255,255,0.15); color:white; border-radius:20px; padding:3px 10px; font-size:0.75rem;"></span>
+                            <span id="tricount-banner-total" style="background:rgba(255,255,255,0.15); color:white; border-radius:20px; padding:3px 10px; font-size:0.75rem;"></span>
+                            <span id="tricount-banner-dates" style="display:none; background:rgba(255,255,255,0.15); color:white; border-radius:20px; padding:3px 10px; font-size:0.75rem;"></span>
+                        </div>
+                    </div>
+                    <select id="tricount-currency-select" onchange="changeTricountCurrency(this.value)" style="background:rgba(255,255,255,0.2); border:none; color:white; border-radius:12px; padding:5px 8px; font-size:0.85rem; cursor:pointer; flex-shrink:0;">
+                        <option value="€">€</option>
+                        <option value="$">$</option>
+                        <option value="£">£</option>
+                        <option value="¥">¥</option>
+                        <option value="CHF">CHF</option>
+                    </select>
+                </div>
+
+                <!-- Bouton ajouter dépense -->
+                <button onclick="openTricountAddExpense()" class="btn-primary btn-validated-click" style="width:100%; margin-bottom:16px;">+ Ajouter une dépense</button>
+
+                <!-- Graphiques -->
+                <div id="tricount-charts-section" style="display:none;">
+                    <div style="background:var(--card-bg); border-radius:16px; padding:14px; border:1px solid rgba(128,128,128,0.15); margin-bottom:10px;">
+                        <div style="font-family:'Mogra',cursive; font-weight:normal; color:var(--primary-dark); font-size:0.88rem; margin-bottom:8px;">💸 Dépenses par participant</div>
+                        <div style="position:relative; height:160px; width:100%;">
+                            <canvas id="tricount-chart-depenses"></canvas>
+                        </div>
+                    </div>
+                    <!-- Remboursements -->
+                    <div id="tricount-remboursements-section" style="background:var(--card-bg); border-radius:16px; padding:14px; border:1px solid rgba(128,128,128,0.15); margin-bottom:10px; display:none;">
+                        <div style="font-family:'Mogra',cursive; font-weight:normal; color:var(--primary-dark); font-size:0.88rem; margin-bottom:10px;">💸 Rembourser</div>
+                        <div id="tricount-remboursements-btns" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                    </div>
+
+                    <!-- Soldes -->
+                    <div style="background:var(--card-bg); border-radius:16px; padding:14px; border:1px solid rgba(128,128,128,0.15); margin-bottom:10px;">
+                        <div style="font-family:'Mogra',cursive; font-weight:normal; color:var(--primary-dark); font-size:0.88rem; margin-bottom:8px;">⚖️ Soldes à devoir</div>
+                        <div id="tricount-soldes-list"></div>
+                    </div>
+                </div>
+
+                <!-- Filtres historique -->
+                <div style="font-family:'Mogra',cursive; font-weight:normal; color:var(--primary-dark); font-size:0.88rem; margin-bottom:8px;">🕓 Historique</div>
+                <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+                    <select id="tricount-filter-member" onchange="renderTricountHistory()" style="flex:1; padding:8px 12px; border-radius:12px; border:1px solid rgba(128,128,128,0.25); background:var(--card-bg); color:var(--text-color); font-size:0.82rem;">
+                        <option value="">Tous les participants</option>
+                    </select>
+                    <select id="tricount-filter-sort" onchange="renderTricountHistory()" style="flex:1; padding:8px 12px; border-radius:12px; border:1px solid rgba(128,128,128,0.25); background:var(--card-bg); color:var(--text-color); font-size:0.82rem;">
+                        <option value="date-desc">Date ↓</option>
+                        <option value="date-asc">Date ↑</option>
+                        <option value="amount-desc">Montant ↓</option>
+                        <option value="amount-asc">Montant ↑</option>
+                    </select>
+                </div>
+                <div id="tricount-expenses-list"></div>
+            </div>
+        </section>
+
+        <!-- ===================== BLOC-NOTE ===================== -->
+        <section id="blocnote-page" style="display:none;">
+
+            <!-- Vue liste des notes -->
+            <div id="blocnote-list-view">
+                <!-- Titre -->
+                <div class="header-action header-centered" style="justify-content:space-between; margin-bottom:8px;">
+                    <h2>📝 Bloc-note</h2>
+                </div>
+
+                <!-- Barre d'actions contextuelle -->
+                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+                    <button onclick="newNote()" class="btn-primary btn-validated-click" style="font-size:0.8rem; padding:7px 14px; border-radius:16px;">+ Note</button>
+                    <button onclick="blocNoteAction('modifier')" id="bn-btn-modifier" class="btn-secondary" style="font-size:0.8rem; padding:7px 14px; border-radius:16px; opacity:0.4;" disabled>Modifier</button>
+                    <button onclick="blocNoteAction('fusionner')" id="bn-btn-fusionner" class="btn-secondary" style="font-size:0.8rem; padding:7px 14px; border-radius:16px; opacity:0.4;" disabled>Fusionner</button>
+                    <button onclick="blocNoteAction('supprimer')" id="bn-btn-supprimer" class="btn-secondary" style="font-size:0.8rem; padding:7px 14px; border-radius:16px; opacity:0.4; color:var(--danger);" disabled>Supprimer</button>
+                    <button onclick="blocNoteAction('exporter')" id="bn-btn-exporter" class="btn-secondary" style="font-size:0.8rem; padding:7px 14px; border-radius:16px; opacity:0.4;" disabled>⬇ PDF</button>
+                </div>
+
+                <!-- Recherche + Tri -->
+                <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center;">
+                    <input id="bn-search" type="text" placeholder="🔍 Rechercher..." oninput="setBnSearch(this.value)"
+                        style="flex:1; padding:7px 12px; border-radius:16px; border:1px solid rgba(128,128,128,0.25); background:var(--card-bg); color:var(--text-color); font-size:0.85rem; outline:none;" />
+                    <select id="bn-sort" onchange="setBnSort(this.value)"
+                        style="padding:7px 10px; border-radius:16px; border:1px solid rgba(128,128,128,0.25); background:var(--card-bg); color:var(--text-color); font-size:0.82rem; cursor:pointer; outline:none;">
+                        <option value="recent">Plus récent</option>
+                        <option value="oldest">Plus ancien</option>
+                        <option value="alpha">A → Z</option>
+                    </select>
+                </div>
+
+                <!-- Dossiers / onglets colorés -->
+                <div id="blocnote-folders-bar" style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center;">
+                    <button onclick="selectBlocNoteFolder(null)" id="folder-btn-all" style="background:var(--primary); color:#fff; border:none; border-radius:20px; padding:6px 14px; font-size:0.8rem; cursor:pointer;">Toutes</button>
+                    <div id="blocnote-folder-tabs" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+                    <button onclick="openCreateFolderModal()" style="background:none; border:1.5px dashed rgba(128,128,128,0.4); border-radius:20px; padding:6px 12px; font-size:0.8rem; color:var(--text-color); opacity:0.6; cursor:pointer;">+ Dossier</button>
+                </div>
+
+                <div id="blocnote-list" style="margin-top:4px;"></div>
+            </div>
+
+            <!-- Vue éditeur -->
+            <div id="blocnote-editor-view" style="display:none; flex-direction:column; height:calc(100vh - 64px);">
+                <div style="display:flex; align-items:center; gap:10px; padding:12px 0 8px;">
+                    <button onclick="closeNote()" style="background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--text-color); padding:4px;">←</button>
+                    <div style="flex:1;"></div>
+                    <button onclick="deleteNote()" style="background:none; border:none; font-size:1.1rem; cursor:pointer; color:var(--danger); padding:4px;" title="Supprimer">🗑️</button>
+                    <button onclick="saveNote()" class="btn-primary btn-validated-click" style="padding:7px 16px; font-size:0.85rem;">Enregistrer</button>
+                </div>
+
+                <!-- Barre de formatage -->
+                <div style="display:flex; gap:4px; padding:5px 0; border-top:1px solid rgba(128,128,128,0.1); flex-wrap:wrap; align-items:center;">
+                    <button id="bn-fmt-bold" onmousedown="event.preventDefault(); formatText('bold')" title="Gras" class="bn-fmt-btn" style="font-weight:bold;">B</button>
+                    <button id="bn-fmt-italic" onmousedown="event.preventDefault(); formatText('italic')" title="Italique" class="bn-fmt-btn" style="font-style:italic;">I</button>
+                    <button id="bn-fmt-underline" onmousedown="event.preventDefault(); formatText('underline')" title="Souligné" class="bn-fmt-btn" style="text-decoration:underline;">U</button>
+                    <div style="width:1px; height:20px; background:rgba(128,128,128,0.2); margin:0 2px;"></div>
+                    <button id="bn-fmt-ul" onmousedown="event.preventDefault(); formatText('insertUnorderedList')" title="Liste à puces" class="bn-fmt-btn">• —</button>
+                    <button id="bn-fmt-ol" onmousedown="event.preventDefault(); formatText('insertOrderedList')" title="Liste numérotée" class="bn-fmt-btn">1.</button>
+                    <div style="width:1px; height:20px; background:rgba(128,128,128,0.2); margin:0 2px;"></div>
+                    <button id="bn-fmt-p" onmousedown="event.preventDefault(); formatText('p')" title="Texte normal" class="bn-fmt-btn" style="font-size:1rem;">T</button>
+                    <button id="bn-fmt-h2" onmousedown="event.preventDefault(); formatText('h2')" title="Titre" class="bn-fmt-btn" style="font-weight:bold;">H</button>
+                    <div style="width:1px; height:20px; background:rgba(128,128,128,0.2); margin:0 2px;"></div>
+                    <button id="bn-fmt-mark" onmousedown="event.preventDefault(); openHighlightPicker()" title="Surligner" class="bn-fmt-btn" style="background:rgba(255,220,50,0.25); border-color:rgba(255,200,0,0.4);">✏</button>
+                    <button onmousedown="event.preventDefault(); formatText('removeFormat')" title="Effacer formatage" class="bn-fmt-btn" style="opacity:0.6;">✕</button>
+                </div>
+
+                <!-- Barre de surlignage -->
+                <div id="blocnote-highlight-bar" style="display:flex; gap:6px; padding:6px 0; border-top:1px solid rgba(128,128,128,0.1); border-bottom:1px solid rgba(128,128,128,0.1); flex-wrap:wrap; align-items:center;">
+                    <span style="font-size:0.75rem; opacity:0.45; margin-right:2px;">Surligner :</span>
+                    <div id="blocnote-highlight-btns" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+                    <span id="blocnote-highlight-hint" style="font-size:0.72rem; opacity:0.35; margin-left:4px;">Sélectionne du texte puis clique un dossier</span>
+                    <button onclick="openCreateFolderModal()" style="margin-left:auto; background:none; border:1.5px dashed rgba(128,128,128,0.4); border-radius:14px; padding:3px 10px; font-size:0.75rem; color:var(--primary); cursor:pointer; flex-shrink:0;">+ Dossier</button>
+                </div>
+
+                <!-- Titre de la note -->
+                <input id="blocnote-editor-title" type="text" placeholder="Titre (optionnel)..."
+                    style="width:100%; background:none; border:none; border-bottom:1px solid rgba(128,128,128,0.15); outline:none; font-size:1.05rem; font-weight:600; color:var(--text-color); padding:10px 0 8px; margin-top:6px; font-family:inherit; box-sizing:border-box;">
+
+                <!-- Zone de texte contenteditable avec contour discret en haut -->
+                <div id="blocnote-editor-content"
+                    contenteditable="true"
+                    oninput="updateBlocNotePlaceholder(this)"
+                    data-placeholder="Commence à écrire ici..."
+                    data-empty="true"
+                    style="flex:1; position:relative; outline:none; font-size:0.95rem; color:var(--text-color); line-height:1.7; padding:14px 0; font-family:inherit; overflow-y:auto; border-top:1.5px solid rgba(128,128,128,0.18); margin-top:6px; word-break:break-word;"></div>
+            </div>
+
+        </section>
+
+        <!-- Modal création dossier -->
+        <!-- Modal créer/éditer dossier -->
+        <div id="blocnote-folder-modal" class="modal modal-center" style="display:none; z-index:10010;">
+            <div class="modal-content content-center">
+                <h3 id="blocnote-folder-modal-title" style="text-align:center; color:var(--primary-dark); margin-bottom:16px; font-family:'Mogra',cursive; font-weight:normal;">📁 Nouveau dossier</h3>
+                <input id="blocnote-folder-name" placeholder="Nom du dossier..." style="width:100%; padding:10px 14px; border-radius:12px; border:1px solid rgba(128,128,128,0.25); background:var(--card-bg); color:var(--text-color); font-size:0.95rem; box-sizing:border-box; margin-bottom:14px;" />
+                <p style="font-size:0.82rem; opacity:0.55; margin-bottom:10px;">Couleur associée :</p>
+                <div style="display:flex; justify-content:center; margin-bottom:18px;">
+                    <input type="color" id="blocnote-folder-color-picker" value="#00CED1"
+                        style="width:60px; height:60px; border:none; border-radius:50%; cursor:pointer; padding:0; background:none;" />
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="saveFolder()" class="btn-primary btn-validated-click" style="flex:1;">Enregistrer</button>
+                    <button onclick="document.getElementById('blocnote-folder-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal éditer un fragment -->
+        <div id="blocnote-fragment-modal" class="modal modal-center" style="display:none; z-index:10010;">
+            <div class="modal-content content-center">
+                <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:14px; font-family:'Mogra',cursive; font-weight:normal;">✏️ Modifier</h3>
+                <div id="blocnote-fragment-editor" contenteditable="true"
+                    style="min-height:80px; background:var(--card-bg); border:1px solid rgba(128,128,128,0.25); border-radius:12px; padding:12px 14px; font-size:0.9rem; color:var(--text-color); line-height:1.6; margin-bottom:14px; outline:none;"></div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="saveFragmentEdit()" class="btn-primary btn-validated-click" style="flex:1;">Sauver</button>
+                    <button onclick="document.getElementById('blocnote-fragment-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal titre de fusion -->
+        <div id="merge-title-modal" style="display:none; position:fixed; inset:0; z-index:10030; align-items:center; justify-content:center; background:rgba(0,0,0,0.45);">
+            <div style="background:var(--card-bg); border-radius:20px; padding:24px; max-width:320px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+                <div style="font-size:1.5rem; text-align:center; margin-bottom:8px;">🔗</div>
+                <h3 style="text-align:center; margin-bottom:6px; font-size:1rem;">Titre de la note fusionnée</h3>
+                <p style="font-size:0.82rem; opacity:0.6; text-align:center; margin-bottom:16px;">Les éléments sélectionnés ont chacun un titre. Quel titre donner à la note fusionnée ?</p>
+                <input id="merge-title-input" type="text" placeholder="Titre..." style="width:100%; box-sizing:border-box; margin-bottom:16px;">
+                <div style="display:flex; gap:10px;">
+                    <button onclick="confirmMergeWithTitle()" class="btn-primary btn-validated-click" style="flex:1;">Fusionner</button>
+                    <button onclick="document.getElementById('merge-title-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal surlignage couleur -->
+        <div id="highlight-picker-modal" style="display:none; position:fixed; inset:0; z-index:10030; align-items:center; justify-content:center; background:rgba(0,0,0,0.45);">
+            <div style="background:var(--card-bg); border-radius:20px; padding:20px 24px; max-width:280px; width:90%; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+                <p style="font-size:0.85rem; opacity:0.7; margin-bottom:14px;">Choisir une couleur de surlignage</p>
+                <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;">
+                    <button onmousedown="event.preventDefault(); applyTextHighlight('#FFE033')" style="width:36px; height:36px; border-radius:50%; background:#FFE033; border:2px solid rgba(255,255,255,0.2); cursor:pointer;" title="Jaune"></button>
+                    <button onmousedown="event.preventDefault(); applyTextHighlight('#FF9EAA')" style="width:36px; height:36px; border-radius:50%; background:#FF9EAA; border:2px solid rgba(255,255,255,0.2); cursor:pointer;" title="Rose"></button>
+                    <button onmousedown="event.preventDefault(); applyTextHighlight('#9ECFFF')" style="width:36px; height:36px; border-radius:50%; background:#9ECFFF; border:2px solid rgba(255,255,255,0.2); cursor:pointer;" title="Bleu"></button>
+                    <button onmousedown="event.preventDefault(); applyTextHighlight('#85FFBD')" style="width:36px; height:36px; border-radius:50%; background:#85FFBD; border:2px solid rgba(255,255,255,0.2); cursor:pointer;" title="Vert"></button>
+                    <button onmousedown="event.preventDefault(); applyTextHighlight('#D4A0FF')" style="width:36px; height:36px; border-radius:50%; background:#D4A0FF; border:2px solid rgba(255,255,255,0.2); cursor:pointer;" title="Violet"></button>
+                    <button onmousedown="event.preventDefault(); applyTextHighlight('#FFB347')" style="width:36px; height:36px; border-radius:50%; background:#FFB347; border:2px solid rgba(255,255,255,0.2); cursor:pointer;" title="Orange"></button>
+                </div>
+                <button onmousedown="event.preventDefault(); applyTextHighlight('transparent')" style="background:none; border:1px solid rgba(128,128,128,0.3); border-radius:12px; padding:6px 16px; font-size:0.8rem; color:var(--text-color); cursor:pointer; margin-bottom:8px;">✕ Effacer le surlignage</button>
+                <br>
+                <button onclick="document.getElementById('highlight-picker-modal').style.display='none'" style="background:none; border:none; font-size:0.78rem; opacity:0.5; cursor:pointer; margin-top:4px;">Annuler</button>
+            </div>
+        </div>
+
+        <!-- Modal confirmation générique -->
+        <div id="confirm-modal" class="modal modal-center" style="display:none; z-index:10020;">
+            <div class="modal-content content-center" style="max-width:320px; text-align:center;">
+                <div id="confirm-modal-icon" style="font-size:2rem; margin-bottom:10px;">🗑️</div>
+                <h3 id="confirm-modal-title" style="color:var(--primary-dark); font-family:'Mogra',cursive; font-weight:normal; margin-bottom:10px;">Supprimer ?</h3>
+                <p id="confirm-modal-msg" style="font-size:0.88rem; opacity:0.75; margin-bottom:20px; line-height:1.5;"></p>
+                <div style="display:flex; gap:10px;">
+                    <button id="confirm-modal-ok" class="btn-primary btn-validated-click" style="flex:1; background:var(--danger); border-color:var(--danger);">Supprimer</button>
+                    <button onclick="closeConfirmModal()" class="btn-secondary" style="flex:1;">Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal remboursement -->
+        <div id="tricount-rembours-modal" class="modal modal-center" style="display:none; z-index:10010;">
+            <div class="modal-content content-center">
+                <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:16px; font-family:'Mogra',cursive; font-weight:normal;">💸 Remboursement</h3>
+                <div id="tricount-rembours-lines" style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;"></div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="saveTricountRemboursement()" class="btn-primary btn-validated-click" style="flex:1;">Confirmer</button>
+                    <button onclick="document.getElementById('tricount-rembours-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal confirmation suppression groupe -->
+        <div id="tricount-delete-modal" class="modal modal-center" style="display:none; z-index:10020;">
+            <div class="modal-content content-center">
+                <div style="text-align:center; font-size:2rem; margin-bottom:10px;">🗑️</div>
+                <h3 style="text-align:center; color:var(--danger); margin-bottom:8px; font-family:'Mogra',cursive; font-weight:normal;">Supprimer le groupe ?</h3>
+                <p id="tricount-delete-name" style="text-align:center; opacity:0.6; font-size:0.85rem; margin-bottom:20px;"></p>
+                <p style="text-align:center; font-size:0.8rem; opacity:0.45; margin-bottom:20px;">Toutes les dépenses associées seront supprimées définitivement.</p>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="confirmDeleteTricountGroup()" style="flex:1; background:var(--danger); border:none; color:white; border-radius:14px; padding:12px; cursor:pointer; font-family:'Mogra',cursive; font-weight:normal;">Supprimer</button>
+                    <button onclick="document.getElementById('tricount-delete-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal rejoindre un groupe -->
+        <div id="tricount-join-modal" class="modal modal-center" style="display:none; z-index:10010;">
+            <div class="modal-content content-center">
+                <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:20px; font-family:'Mogra',cursive; font-weight:normal;">🔑 Rejoindre un groupe</h3>
+                <label>Code du groupe</label>
+                <input type="text" id="tricount-join-code" placeholder="Ex: AB12CD" style="text-transform:uppercase; letter-spacing:3px; font-size:1.1rem; text-align:center;" maxlength="6">
+                <p style="font-size:0.78rem; opacity:0.5; margin-top:6px; text-align:center;">Demande le code à l'organisateur du groupe.</p>
+                <div style="display:flex; gap:10px; margin-top:16px;">
+                    <button onclick="joinTricountGroup()" class="btn-primary btn-validated-click" style="flex:1;">Rejoindre</button>
+                    <button onclick="document.getElementById('tricount-join-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal détail dette -->
+        <div id="tricount-debt-detail-modal" class="modal modal-center" style="display:none; z-index:10010;">
+            <div class="modal-content content-center" style="max-height:80vh; overflow-y:auto;">
+                <h3 id="tricount-debt-detail-title" style="text-align:center; color:var(--primary-dark); margin-bottom:4px; font-family:'Mogra',cursive; font-weight:normal; font-size:1rem;"></h3>
+                <p id="tricount-debt-detail-total" style="text-align:center; font-family:'Mogra',cursive; font-weight:normal; color:var(--danger); font-size:1.2rem; margin-bottom:14px;"></p>
+                <div id="tricount-debt-detail-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"></div>
+                <button onclick="document.getElementById('tricount-debt-detail-modal').style.display='none'" class="btn-secondary" style="width:100%;">Fermer</button>
+            </div>
+        </div>
+
+        <!-- Modal créer groupe -->
+        <div id="tricount-create-modal" class="modal modal-center" style="display:none; z-index:10010;">
+            <div class="modal-content content-center">
+                <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:20px; font-family:'Mogra',cursive; font-weight:normal;">💰 Nouveau Groupe</h3>
+                <label>Nom du groupe</label>
+                <input type="text" id="tricount-group-name-input" placeholder="Ex: Vacances, Coloc...">
+                <div style="display:flex; gap:10px; margin-top:12px;">
+                    <div style="flex:1;">
+                        <label>Du</label>
+                        <input type="date" id="tricount-group-date-start" style="width:100%; box-sizing:border-box; margin-top:4px;">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Au</label>
+                        <input type="date" id="tricount-group-date-end" style="width:100%; box-sizing:border-box; margin-top:4px;">
+                    </div>
+                </div>
+                <label style="margin-top:12px;">Participants</label>
+                <div style="position:relative;">
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="tricount-members-input" placeholder="Nom du participant..." style="flex:1;" oninput="filterTricountFriends()" onkeydown="if(event.key==='Enter'){addTricountMember();}">
+                        <button onclick="addTricountMember()" style="background:var(--primary); border:none; color:white; border-radius:14px; padding:0 16px; cursor:pointer; font-size:1.1rem;">+</button>
+                    </div>
+                    <div id="tricount-friends-suggestions" style="display:none; position:absolute; top:100%; left:0; right:40px; background:var(--card-bg); border:1px solid rgba(128,128,128,0.2); border-radius:14px; margin-top:4px; z-index:100; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+                </div>
+                <div id="tricount-members-tags" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;"></div>
+                <p style="font-size:0.78rem; opacity:0.5; margin-top:6px;">Vous êtes automatiquement ajouté.</p>
+                <div style="display:flex; gap:10px; margin-top:16px;">
+                    <button onclick="saveTricountGroup()" class="btn-primary btn-validated-click" style="flex:1;">Créer</button>
+                    <button onclick="document.getElementById('tricount-create-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal participants -->
+        <div id="tricount-members-modal" class="modal modal-center" style="display:none; z-index:10010;">
+            <div class="modal-content content-center">
+                <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:16px; font-family:'Mogra',cursive; font-weight:normal;">👥 Participants</h3>
+                <div id="tricount-members-modal-list" style="display:flex; flex-direction:column; gap:8px; max-height:40vh; overflow-y:auto;"></div>
+                <button onclick="document.getElementById('tricount-members-modal').style.display='none'" class="btn-secondary" style="margin-top:16px; width:100%;">Fermer</button>
+            </div>
+        </div>
+
+        <!-- Modal ajouter dépense -->
+        <div id="tricount-expense-modal" class="modal modal-center" style="display:none; z-index:10010;">
+            <div class="modal-content content-center">
+                <h3 style="text-align:center; color:var(--primary-dark); margin-bottom:16px; font-family:'Mogra',cursive; font-weight:normal;">+ Dépense</h3>
+
+                <label>Description</label>
+                <input type="text" id="tricount-expense-desc" placeholder="Ex: Restaurant, Hôtel...">
+
+                <div style="display:flex; gap:10px; margin-top:12px;">
+                    <div style="flex:1;">
+                        <label>Montant</label>
+                        <input type="number" id="tricount-expense-amount" placeholder="0.00" min="0" step="0.01" oninput="updateTricountSplitInfo()">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Date</label>
+                        <input type="date" id="tricount-expense-date" style="width:100%; box-sizing:border-box;">
+                    </div>
+                </div>
+
+                <label style="margin-top:12px;">Payé par</label>
+                <select id="tricount-paid-by" style="width:100%; padding:10px 14px; border-radius:14px; border:1px solid rgba(128,128,128,0.3); background:var(--card-bg); color:var(--text-color); font-size:0.9rem;"></select>
+
+                <label style="margin-top:12px;">Répartition</label>
+                <div style="display:flex; gap:6px; margin-top:6px;">
+                    <button id="split-mode-equal"   onclick="setSplitMode('equal')"   class="split-mode-btn active-mode" style="flex:1; border:1px solid rgba(0,206,209,0.4); border-radius:12px; padding:7px; font-size:0.78rem; cursor:pointer; background:var(--primary); color:white;">Égale</button>
+                    <button id="split-mode-percent" onclick="setSplitMode('percent')" class="split-mode-btn"              style="flex:1; border:1px solid rgba(128,128,128,0.3); border-radius:12px; padding:7px; font-size:0.78rem; cursor:pointer; background:var(--card-bg); color:var(--text-color);">%</button>
+                    <button id="split-mode-fixed"   onclick="setSplitMode('fixed')"   class="split-mode-btn"              style="flex:1; border:1px solid rgba(128,128,128,0.3); border-radius:12px; padding:7px; font-size:0.78rem; cursor:pointer; background:var(--card-bg); color:var(--text-color);">Montant</button>
+                </div>
+
+                <!-- Mode égale : pills -->
+                <div id="split-section-equal" style="margin-top:8px;">
+                    <div id="tricount-split-pills" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+                    <p id="tricount-split-info" style="font-size:0.75rem; opacity:0.5; margin:5px 0 0;"></p>
+                </div>
+
+                <!-- Mode % et montant fixe : tableau par personne -->
+                <div id="split-section-custom" style="display:none; margin-top:8px;">
+                    <div id="tricount-split-custom-rows" style="display:flex; flex-direction:column; gap:6px;"></div>
+                    <p id="tricount-split-custom-info" style="font-size:0.75rem; margin:6px 0 0;"></p>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:16px;">
+                    <button onclick="saveTricountExpense()" class="btn-primary btn-validated-click" style="flex:1;">Ajouter</button>
+                    <button onclick="document.getElementById('tricount-expense-modal').style.display='none'" class="btn-secondary" style="flex:1;">Annuler</button>
+                </div>
+            </div>
+        </div>
 
         <section id="profile-page" style="display:none;">
             <div class="header-action header-centered"><h2>Mon Profil</h2></div>
@@ -632,5 +1075,7 @@
     <script src="friends_events.js?v=v6"></script>
     <script src="jsevents.js?v=v6"></script>
     <script src="notifications.js?v=v1"></script>
+    <script src="tricount.js?v=v1"></script>
+    <script src="blocnote.js?v=v1"></script>
 </body>
 </html>

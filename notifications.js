@@ -24,9 +24,12 @@ async function requestNotificationPermission() {
     console.log("[FCM] requestNotificationPermission appelé, messaging=", messaging);
     if (!messaging) { console.log("[FCM] messaging null, abandon"); return; }
     try {
-        const permission = await Notification.requestPermission();
-        console.log("[FCM] permission:", permission);
-        if (permission !== 'granted') return;
+        if (Notification.permission === 'denied') { console.log("[FCM] permission refusée, abandon"); return; }
+        if (Notification.permission !== 'granted') {
+            const permission = await Notification.requestPermission();
+            console.log("[FCM] permission:", permission);
+            if (permission !== 'granted') return;
+        }
         const token = await messaging.getToken({ vapidKey: VAPID_KEY });
         console.log("[FCM] token:", token);
         if (token && currentUser) {

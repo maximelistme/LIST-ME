@@ -226,13 +226,38 @@ if ('serviceWorker' in navigator) {
 }
 
 // ---- NAVIGATION ENTRE PAGES ----
+function openSidebar() {
+    document.getElementById('sidebar').style.left = '0';
+    document.getElementById('sidebar-overlay').style.display = 'block';
+}
+function closeSidebar() {
+    document.getElementById('sidebar').style.left = '-280px';
+    document.getElementById('sidebar-overlay').style.display = 'none';
+}
+
 function showPage(p) {
     document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
     const target = document.getElementById(`${p}-page`);
     if (target) target.style.display = 'block';
-    document.querySelectorAll('.nav-bubble').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.sidebar-btn').forEach(btn => btn.classList.remove('active'));
     const currentNavBtn = document.getElementById(`nav-btn-${p}`);
     if (currentNavBtn) currentNavBtn.classList.add('active');
+
+    // Bouton raccourci dans la navbar
+    const shortcut = document.getElementById('nav-shortcut-btn');
+    if (shortcut) {
+        if (p === 'tasks') {
+            shortcut.style.display = 'block';
+            shortcut.textContent = '📅 Calendrier';
+            shortcut.onclick = () => showPage('calendar');
+        } else if (p === 'calendar') {
+            shortcut.style.display = 'block';
+            shortcut.textContent = '📋 Tâches';
+            shortcut.onclick = () => showPage('tasks');
+        } else {
+            shortcut.style.display = 'none';
+        }
+    }
 
     if (p === 'calendar' && typeof renderCalendar === 'function') renderCalendar();
     if (p === 'todo' && typeof renderTodo === 'function') renderTodo();
@@ -243,6 +268,8 @@ function showPage(p) {
         if (typeof syncCurrentShoppingItems === 'function') syncCurrentShoppingItems();
     }
     if (p === 'profile' && typeof renderGlobalFriends === 'function') renderGlobalFriends();
+    if (p === 'tricount' && typeof initTricount === 'function') initTricount();
+    if (p === 'blocnote' && typeof initBlocNote === 'function') initBlocNote();
 }
 
 // ---- SWITCH VUE TÂCHES (Actives / Archives) ----
