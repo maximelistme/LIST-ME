@@ -6,7 +6,9 @@
 auth.onAuthStateChanged((user) => {
     if (user) {
         currentUser = user;
-        document.getElementById('main-nav').style.display = 'flex';
+        document.getElementById('main-nav').style.display = 'none';
+        const hbtn = document.getElementById('hamburger-btn');
+        if (hbtn) hbtn.style.display = 'block';
         if (document.getElementById('profile-user-email')) document.getElementById('profile-user-email').innerText = user.email || "";
         if (typeof requestNotificationPermission === 'function') requestNotificationPermission();
 
