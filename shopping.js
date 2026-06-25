@@ -36,7 +36,7 @@ function renderShoppingCategories() {
             <input type="text" id="shopping-search" placeholder="Rechercher..." oninput="handleShoppingSearch(this.value)" value="${shoppingSearchQuery}" style="width:100%; padding: 12px 12px 12px 34px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.3); box-sizing:border-box;">
         </div>
     </div>`;
-    container.innerHTML += `<div onclick="openCustomCardModal()" style="grid-column: 1 / -1; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:white; padding:10px; border-radius:20px; text-align:center; cursor:pointer; width: 70%; margin: 0 auto 10px auto; font-weight:bold; font-size:0.95rem; box-shadow:0 3px 8px rgba(0,0,0,0.25);">+ Nouveau Produit</div>`;
+    container.innerHTML += `<div onclick="openCustomCardModal()" style="grid-column: 1 / -1; background:var(--primary); color:white; padding:10px; border-radius:20px; text-align:center; cursor:pointer; width: 70%; margin: 0 auto 10px auto; font-weight:bold; font-size:0.95rem; box-shadow:0 3px 8px rgba(0,0,0,0.25);">+ Nouveau Produit</div>`;
 
     // Recherche globale
     if (shoppingSearchQuery.trim().length > 0) {
