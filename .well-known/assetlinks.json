@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.github.maximelistme.twa",
+    "sha256_cert_fingerprints": [
+      "41:D9:98:BB:04:37:B4:0B:95:B5:8C:48:64:FA:FC:28:71:67:C8:65:B9:0D:0B:A4:44:5F:81:B5:1D:22:0B:D5"
+    ]
+  }
+}]
