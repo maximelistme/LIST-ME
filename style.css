@@ -39,6 +39,7 @@ body {
         linear-gradient(45deg, transparent 37%, var(--bg-line) 37%, var(--bg-line) 38%, transparent 38%, transparent 62%, var(--bg-line) 62%, var(--bg-line) 63%, transparent 63%);
     background-size: 40px 40px, 60px 60px; background-attachment: fixed;
     color: var(--text-color); transition: background 0.3s ease;
+    overscroll-behavior-y: none;
 }
 
 .navbar h1, h2, h3, .calendar-title, #add-task-btn, .bubble, #modal-title, .time-label, .theme-option, .weekly-day-title, #todo-modal-title, #cal-modal-date-title, .nav-bubble, .sub-menu-tab,
