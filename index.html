@@ -1042,7 +1042,12 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+    <script>
+      // Ne charge firebase-messaging que sur le web (pas en natif Capacitor)
+      if (!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) {
+        document.write('<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"><\/script>');
+      }
+    </script>
 
     <!-- Modal participants -->
     <div id="participants-modal" class="modal modal-center" style="display:none; z-index:10010;">
@@ -1072,9 +1077,8 @@
     <script src="tasks.js?v=v6"></script>
     <script src="calendar.js?v=v6"></script>
     <script src="shopping.js?v=v6"></script>
-    <script src="friends_events.js?v=v6"></script>
     <script src="jsevents.js?v=v6"></script>
-    <script src="notifications.js?v=v1"></script>
+    <script src="notifications.js?v=v3"></script>
     <script src="tricount.js?v=v1"></script>
     <script src="blocnote.js?v=v1"></script>
 </body>
