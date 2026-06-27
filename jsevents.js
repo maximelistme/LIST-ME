@@ -111,6 +111,7 @@ function startRealtimeSync(userId) {
             hasShownWelcomeThisSession = true;
         }
         if (viewState === 'day' && typeof renderCalendar === 'function') renderCalendar();
+        if (typeof scheduleLocalNotifications === 'function') scheduleLocalNotifications();
     });
 
     unsubscribeDaily = db.collection("dailyTodo").where("userId", "==", userId).onSnapshot((snapshot) => {
@@ -135,6 +136,7 @@ function startRealtimeSync(userId) {
         birthdays = [];
         snapshot.forEach((doc) => { let data = doc.data(); data.id = doc.id; birthdays.push(data); });
         if (viewState === 'day' && typeof renderCalendar === 'function') renderCalendar();
+        if (typeof scheduleLocalNotifications === 'function') scheduleLocalNotifications();
     });
 
     sharedListsUnsubscribe = db.collection("shoppingLists").where("members", "array-contains", userId).onSnapshot((snapshot) => {
@@ -167,6 +169,7 @@ function startFriendSync(fUid, fName, mode) {
                 sharedTasks.push(data);
             });
             if (viewState === 'day' && typeof renderCalendar === 'function') renderCalendar();
+            if (typeof scheduleLocalNotifications === 'function') scheduleLocalNotifications();
         });
     }
 }
