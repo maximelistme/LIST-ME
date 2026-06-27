@@ -50,5 +50,4 @@ function runNotificationEngine() {
 }
 setInterval(runNotificationEngine, 30000);
 
-function requestNotificationPermission() { try { if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") { Notification.requestPermission().catch(e => console.warn("Notif bloquée", e)); } } catch(e) { console.warn(e); } }
 function sendNotification(title, body) { if ("Notification" in window && Notification.permission === "granted") { if (navigator.serviceWorker && navigator.serviceWorker.controller) { navigator.serviceWorker.ready.then(reg => { reg.showNotification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png" }); }); } else { new Notification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png" }); } } }
